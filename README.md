@@ -1,13 +1,33 @@
-# YN Studio
+# YN Studio Fresh — Updated
 
-Responsive React + Supabase marketplace.
+## Included in this version
+- Customer cart redesign with quantity controls and order summary.
+- Customer checkout now requires payment through the YN Studio ABA/KHQR flow and a payment receipt upload.
+- Official `public/QR.PNG` KHQR included.
+- Customer orders keep `payment pending` until admin verifies the payment.
+- Admin Orders show customer name/email, payment method, payment status, and a signed receipt link.
+- Admin Wallet Deposits show the linked customer.
+- Admin Transactions show the linked customer.
+- Admin Customers show wallet balance, order count, and transaction count.
+- Admin-only dark mode. Customer pages remain light.
 
-## Local setup
-1. Copy `.env.example` to `.env.local`.
-2. Put your Supabase URL and anon key in `.env.local`.
-3. Run `npm install`.
-4. Run `npm run dev`.
-5. Run `npm run build` before deploying.
+## Supabase migration
+Run `supabase-order-payment.sql` in Supabase SQL Editor before deploying. It adds the order payment fields and automatically creates wallets for new/existing customers.
 
-## Authentication
-The app uses Supabase Auth with persistent sessions. A customer who has no session is sent to `/login`; after signing in, they reach the marketplace. Returning customers with a valid session go directly to the marketplace. Logging out clears the session.
+## Local
+```bash
+npm install
+npm run dev
+```
+
+## Render
+Build command:
+```text
+npm install; npm run build
+```
+
+Set these Render environment variables:
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
