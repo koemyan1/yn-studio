@@ -45,75 +45,32 @@ where not exists (
   where w.user_id = auth.users.id
 );
 
--- IMPORTANT: Order payments and wallet deposits are separate.
--- Approving an order payment NEVER changes the customer's wallet balance.
+-- Order payment approval is intentionally separate from wallet deposits.
+-- Approving an order payment only changes the order; it never changes wallet balance.
 create or replace function public.admin_approve_order_payment(p_order_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
+returns void language plpgsql security definer set search_path=public as $$
 begin
-  if not exists (select 1 from public.profiles where user_id = auth.uid() and role = 'admin') then
+  if not exists (select 1 from public.profiles where user_id=auth.uid() and role='admin') then
     raise exception 'Admin access required';
   end if;
-
-  update public.orders
-  set payment_status = 'paid', status = 'paid'
-  where id = p_order_id;
-
-  if not found then
-    raise exception 'Order not found';
-  end if;
-end;
-$$;
-
+  update public.orders set payment_status='paid', status='paid' where id=p_order_id;
+  if not found then raise exception 'Order not found'; end if;
+end; $$;
 grant execute on function public.admin_approve_order_payment(uuid) to authenticated;
 
--- Admin-only wallet adjustment. This is ONLY for the customer's wallet page.
-create or replace function public.admin_adjust_wallet(
-  p_user_id uuid,
-  p_amount numeric,
-  p_description text default null
-)
-returns numeric
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  new_balance numeric;
+-- Admin-only wallet adjustment. This is the ONLY admin operation that changes a wallet balance.
+create or replace function public.admin_adjust_wallet(p_user_id uuid,p_amount numeric,p_description text default null)
+returns numeric language plpgsql security definer set search_path=public as $$
+declare new_balance numeric;
 begin
-  if not exists (select 1 from public.profiles where user_id = auth.uid() and role = 'admin') then
+  if not exists (select 1 from public.profiles where user_id=auth.uid() and role='admin') then
     raise exception 'Admin access required';
   end if;
-  if p_amount = 0 then
-    raise exception 'Amount cannot be zero';
-  end if;
-
-  insert into public.wallets (user_id, balance)
-  values (p_user_id, 0)
-  on conflict (user_id) do nothing;
-
-  update public.wallets
-  set balance = coalesce(balance,0) + p_amount
-  where user_id = p_user_id
-  returning balance into new_balance;
-
-  if new_balance is null then
-    raise exception 'Customer wallet not found';
-  end if;
-
-  insert into public.wallet_transactions (user_id, amount, type, description)
-  values (
-    p_user_id,
-    p_amount,
-    case when p_amount > 0 then 'admin_credit' else 'admin_debit' end,
-    coalesce(p_description, case when p_amount > 0 then 'Admin added money' else 'Admin deducted money' end)
-  );
-
+  if p_amount=0 then raise exception 'Amount cannot be zero'; end if;
+  insert into public.wallets(user_id,balance) values(p_user_id,0) on conflict(user_id) do nothing;
+  update public.wallets set balance=coalesce(balance,0)+p_amount where user_id=p_user_id returning balance into new_balance;
+  insert into public.wallet_transactions(user_id,amount,type,description)
+  values(p_user_id,p_amount,case when p_amount>0 then 'admin_credit' else 'admin_debit' end,coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end));
   return new_balance;
-end;
-$$;
-
+end; $$;
 grant execute on function public.admin_adjust_wallet(uuid,numeric,text) to authenticated;

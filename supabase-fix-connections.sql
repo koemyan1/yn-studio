@@ -1,7 +1,7 @@
 -- YN Studio connection/duplicate-cart fix
 -- Run this AFTER the original schema. Review the duplicate cart rows before running in production.
 
--- 1) Checkout payments use the same deposit_requests table as Wallet.
+-- 1) Legacy compatibility: old order-linked deposit requests can remain in the table, but new order payments no longer create wallet deposit requests.
 alter table public.deposit_requests
   add column if not exists order_id uuid references public.orders(id) on delete set null;
 
@@ -33,7 +33,7 @@ where c.id = r.id and r.rn > 1;
 create unique index if not exists carts_one_per_user_idx
 on public.carts(user_id);
 
--- 3) Prevent two checkout payment requests for the same order.
+-- 3) Keep any legacy order-linked deposit requests unique per order.
 create unique index if not exists deposit_requests_one_per_order_idx
 on public.deposit_requests(order_id)
 where order_id is not null;
