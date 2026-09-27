@@ -1,45 +1,2047 @@
-import React,{useEffect,useMemo,useState} from 'react';
+import React,{useEffect,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import{BrowserRouter,Routes,Route,Link,NavLink,useNavigate,useParams}from'react-router-dom';
 import{Home,Tags,ShoppingCart,ClipboardList,Wallet,LayoutDashboard,Package,Users,ArrowLeft,Plus,Minus,Trash2,Heart,Search,LogOut,Menu,ImagePlus,ChevronRight,CheckCircle2,Clock3,Settings,ReceiptText,Upload,Store}from'lucide-react';
-import{supabase}from'./supabase';import'./style.css';
-type P={id:string,name:string,description?:string,price:number,original_price?:number,main_image_url?:string,status:string,category_id?:string,currency?:string,created_at?:string};
-type CartItem={id:string,quantity:number,price:number,selected_options:any,product_id:string,products?:P};
-const money=(n:any)=>'$'+Number(n||0).toFixed(2); const uid=async()=> (await supabase.auth.getUser()).data.user?.id;
-function Toast({msg}:{msg:string}){return msg?<div className="toast">{msg}</div>:null}
-function Login(){const nav=useNavigate();const[email,setE]=useState(''),[p,setP]=useState(''),[name,setN]=useState(''),[signup,setSignup]=useState(false),[busy,setBusy]=useState(false);async function go(e:React.FormEvent){e.preventDefault();setBusy(true);if(signup){const{data,error}=await supabase.auth.signUp({email,password:p});if(error){alert(error.message);setBusy(false);return}if(data.user)await supabase.from('profiles').upsert({user_id:data.user.id,name:name||email.split('@')[0],email,role:'customer'});alert('Account created. If email confirmation is enabled, check your inbox.');setSignup(false)}else{const{data,error}=await supabase.auth.signInWithPassword({email,password:p});if(error){alert(error.message);setBusy(false);return}const{data:r}=await supabase.from('profiles').select('role').eq('user_id',data.user.id).maybeSingle();nav(r?.role==='admin'?'/admin':'/')}setBusy(false)}return <main className="auth"><div className="authBrand"><div className="logo">YN</div><h1>Shop smarter.<br/>Keep it simple.</h1><p>Marketplace, orders and wallet — all in one beautiful place.</p></div><form className="glass login" onSubmit={go}><span className="eyebrow">YN STUDIO</span><h2>{signup?'Create account':'Welcome back'}</h2>{signup&&<input required placeholder="Your name" value={name} onChange={e=>setN(e.target.value)}/>}<input required type="email" placeholder="Email" value={email} onChange={e=>setE(e.target.value)}/><input required minLength={6} type="password" placeholder="Password" value={p} onChange={e=>setP(e.target.value)}/><button disabled={busy}>{busy?'Please wait…':signup?'Create account':'Sign in'}</button><button type="button" className="textBtn" onClick={()=>setSignup(!signup)}>{signup?'Already have an account? Sign in':'New here? Create an account'}</button></form></main>}
-const Nav=()=> <nav className="bottom"><NavLink to="/"><Home/>Home</NavLink><NavLink to="/categories"><Tags/>Categories</NavLink><NavLink to="/cart"><ShoppingCart/>Cart</NavLink><NavLink to="/orders"><ClipboardList/>Orders</NavLink><NavLink to="/wallet"><Wallet/>Wallet</NavLink></nav>;
-function Top({title='YN Studio',back=false}:{title?:string,back?:boolean}){const nav=useNavigate();return <header className="top">{back?<button className="icon" onClick={()=>nav(-1)}><ArrowLeft/></button>:<div className="miniLogo">YN</div>}<b>{title}</b><Link className="icon" to="/login"><LogOut/></Link></header>}
-function ProductCard({p}:{p:P}){return <Link className="product" to={'/product/'+p.id}>{p.main_image_url?<img src={p.main_image_url}/>:<div className="ph">YN</div>}<button className="heart"><Heart/></button><div className="pcopy"><strong>{p.name}</strong><div><span>{money(p.price)}</span>{p.original_price&&<del>{money(p.original_price)}</del>}</div></div></Link>}
-function Shop(){const[p,setP]=useState<P[]>([]),[q,setQ]=useState('');useEffect(()=>{supabase.from('products').select('*').eq('status','published').order('created_at',{ascending:false}).then(({data})=>setP(data||[]))},[]);const shown=p.filter(x=>x.name.toLowerCase().includes(q.toLowerCase()));return <><main className="shop"><div className="brandrow"><div><span className="eyebrow">MARKETPLACE</span><h1>YN Studio</h1></div><Link className="avatar" to="/wallet">YN</Link></div><div className="search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search anything…"/></div><section className="hero"><div><small>FRESH PICKS</small><h2>Little things.<br/>Better days.</h2><p>Discover products selected for you.</p></div><div className="orb">YN</div></section><div className="sectionHead"><h2>{q?'Search results':'New for you'}</h2><Link to="/categories">See all <ChevronRight/></Link></div><div className="grid">{shown.map(x=><ProductCard p={x} key={x.id}/>)}</div>{!shown.length&&<Empty text="No products yet. Publish one from Admin."/>}</main><Nav/></>}
-function Categories(){const[c,setC]=useState<any[]>([]),[p,setP]=useState<P[]>([]),[sel,setSel]=useState('');useEffect(()=>{supabase.from('categories').select('*').eq('status','active').then(({data})=>setC(data||[]));supabase.from('products').select('*').eq('status','published').then(({data})=>setP(data||[]))},[]);return <><main className="shop"><Top title="Categories"/><div className="chips"><button className={!sel?'on':''} onClick={()=>setSel('')}>All</button>{c.map(x=><button className={sel===x.id?'on':''} onClick={()=>setSel(x.id)} key={x.id}>{x.name}</button>)}</div><div className="grid">{p.filter(x=>!sel||x.category_id===sel).map(x=><ProductCard p={x} key={x.id}/>)}</div></main><Nav/></>}
-function Product(){const{id}=useParams();const[p,setP]=useState<P|null>(null),[imgs,setImgs]=useState<any[]>([]),[opts,setOpts]=useState<any[]>([]),[pick,setPick]=useState<any>({}),[qty,setQty]=useState(1),[msg,setMsg]=useState('');useEffect(()=>{(async()=>{const{data}=await supabase.from('products').select('*').eq('id',id).single();setP(data);setImgs((await supabase.from('product_images').select('*').eq('product_id',id).order('sort_order')).data||[]);const os=(await supabase.from('product_options').select('*').eq('product_id',id).order('sort_order')).data||[];for(const o of os)o.values=(await supabase.from('product_option_values').select('*').eq('option_id',o.id).order('sort_order')).data||[];setOpts(os)})()},[id]);async function add(buy=false){const user=await uid();if(!user)return location.href='/login';if(opts.some(o=>!pick[o.name]))return setMsg('Please select all options first.');let{data:cart}=await supabase.from('carts').select('*').eq('user_id',user).maybeSingle();if(!cart){cart=(await supabase.from('carts').insert({user_id:user}).select().single()).data}const{error}=await supabase.from('cart_items').insert({cart_id:cart.id,product_id:p!.id,quantity:qty,selected_options:pick,price:p!.price});if(error)return setMsg(error.message);if(buy)location.href='/cart';else setMsg('Added to cart ✓')}if(!p)return <Loader/>;return <main className="detail"><Top title="Product" back/><div className="gallery">{(imgs[0]?.image_url||p.main_image_url)?<img src={imgs[0]?.image_url||p.main_image_url}/>:<div className="ph big">YN</div>}</div><section className="detailCard"><span className="eyebrow">YN MARKETPLACE</span><h1>{p.name}</h1><div className="price">{money(p.price)} {p.original_price&&<del>{money(p.original_price)}</del>}</div><p className="desc">{p.description||'No description provided.'}</p>{opts.map(o=><div className="variant" key={o.id}><b>{o.name}</b><div className="chips">{o.values.map((v:any)=><button className={pick[o.name]===v.value?'on':''} onClick={()=>setPick({...pick,[o.name]:v.value})}>{v.value}</button>)}</div></div>)}<div className="qty"><b>Quantity</b><div><button onClick={()=>setQty(Math.max(1,qty-1))}><Minus/></button><span>{qty}</span><button onClick={()=>setQty(qty+1)}><Plus/></button></div></div>{msg&&<p className="notice">{msg}</p>}<div className="stickyActions"><button className="secondary" onClick={()=>add(false)}>Add to cart</button><button onClick={()=>add(true)}>Buy now</button></div></section></main>}
-function Cart(){const[items,setItems]=useState<CartItem[]>([]);async function load(){const u=await uid();if(!u)return;const c=(await supabase.from('carts').select('id').eq('user_id',u).maybeSingle()).data;if(c){
-const {data}=await supabase.from('cart_items').select('*,products(*)').eq('cart_id',c.id);
-setItems((data as any)||[]);
-}}useEffect(()=>{load()},[]);async function qty(i:CartItem,n:number){if(n<1)return;await supabase.from('cart_items').update({quantity:n}).eq('id',i.id);load()}async function del(id:string){await supabase.from('cart_items').delete().eq('id',id);load()}const total=items.reduce((a,x)=>a+x.price*x.quantity,0);return <><main className="shop"><Top title="Your Cart"/>{items.map(i=><div className="cartrow"><img src={i.products?.main_image_url||''}/><div className="grow"><b>{i.products?.name}</b><small>{Object.entries(i.selected_options||{}).map(([k,v])=>`${k}: ${v}`).join(' · ')}</small><strong>{money(i.price)}</strong></div><div className="cartcontrols"><button onClick={()=>del(i.id)}><Trash2/></button><div><button onClick={()=>qty(i,i.quantity-1)}>-</button><span>{i.quantity}</span><button onClick={()=>qty(i,i.quantity+1)}>+</button></div></div></div>)}{!items.length&&<Empty text="Your cart is empty."/>}{items.length>0&&<div className="checkoutbar"><div><small>Subtotal</small><b>{money(total)}</b></div><Link className="button" to="/checkout">Checkout</Link></div>}</main><Nav/></>}
-function Checkout(){const nav=useNavigate();const[items,setItems]=useState<CartItem[]>([]),[busy,setBusy]=useState(false);useEffect(()=>{(async()=>{const u=await uid();if(!u)return;const c=(await supabase.from('carts').select('id').eq('user_id',u).maybeSingle()).data;if(c){
-const {data}=await supabase.from('cart_items').select('*,products(*)').eq('cart_id',c.id);
-setItems((data as any)||[]);
-}})()},[]);const total=items.reduce((a,x)=>a+x.price*x.quantity,0);async function place(){setBusy(true);const u=await uid();if(!u)return nav('/login');const num='YN-'+Date.now().toString().slice(-8);const{o,error}=await supabase.from('orders').insert({order_number:num,user_id:u,subtotal:total,fees:0,total,status:'pending',payment_status:'pending'}).select().single().then(({data,error})=>({o:data,error}));if(error){alert(error.message);setBusy(false);return}for(const i of items)await supabase.from('order_items').insert({order_id:o.id,product_id:i.product_id,product_name:i.products?.name||'Product',product_image:i.products?.main_image_url,quantity:i.quantity,unit_price:i.price,selected_options:i.selected_options,subtotal:i.price*i.quantity});const c=(await supabase.from('carts').select('id').eq('user_id',u).single()).data;await supabase.from('cart_items').delete().eq('cart_id',c.id);nav('/orders')}return <main className="shop"><Top title="Checkout" back/><div className="panel"><h2>Order summary</h2>{items.map(i=><div className="line"><span>{i.products?.name} × {i.quantity}</span><b>{money(i.price*i.quantity)}</b></div>)}<hr/><div className="line total"><span>Total</span><b>{money(total)}</b></div><p className="muted">Your order will be sent to YN Studio admin for processing.</p><button className="wide" disabled={!items.length||busy} onClick={place}>{busy?'Creating order…':'Confirm order'}</button></div></main>}
-function Orders(){const[o,setO]=useState<any[]>([]);useEffect(()=>{
-uid().then(async (u)=>{
-if(!u)return;
-const {data}=await supabase.from('orders').select('*,order_items(*)').eq('user_id',u).order('created_at',{ascending:false});
-setO(data||[]);
-});
-},[]);return <><main className="shop"><Top title="Orders"/>{o.map(x=><div className="ordercard"><div className="line"><b>#{x.order_number}</b><Status s={x.status}/></div><small>{new Date(x.created_at).toLocaleString()}</small>{x.order_items?.map((i:any)=><div className="miniitem"><img src={i.product_image||''}/><span>{i.product_name} × {i.quantity}</span><b>{money(i.subtotal)}</b></div>)}<div className="line total"><span>Total</span><b>{money(x.total)}</b></div></div>)}{!o.length&&<Empty text="No orders yet."/>}</main><Nav/></>}
-function WalletPage(){const[w,setW]=useState<any>(null),[tx,setTx]=useState<any[]>([]),[deps,setDeps]=useState<any[]>([]),[amount,setAmount]=useState(''),[method,setMethod]=useState('ABA / KHQR'),[file,setFile]=useState<File|null>(null),[msg,setMsg]=useState('');async function load(){const u=await uid();if(!u)return;let w=(await supabase.from('wallets').select('*').eq('user_id',u).maybeSingle()).data;if(!w)w=(await supabase.from('wallets').insert({user_id:u}).select().single()).data;setW(w);setTx((await supabase.from('wallet_transactions').select('*').eq('user_id',u).order('created_at',{ascending:false})).data||[]);setDeps((await supabase.from('deposit_requests').select('*').eq('user_id',u).order('created_at',{ascending:false})).data||[])}useEffect(()=>{load()},[]);async function deposit(){const u=await uid();if(!u||!Number(amount))return;let url='';if(file){const path=`${u}/${crypto.randomUUID()}-${file.name}`;const r=await supabase.storage.from('deposit-receipts').upload(path,file);if(r.error)return setMsg(r.error.message);url=path}const{error}=await supabase.from('deposit_requests').insert({user_id:u,amount:Number(amount),payment_method:method,receipt_url:url});setMsg(error?error.message:'Deposit request sent ✓');if(!error){setAmount('');setFile(null);load()}}return <><main className="shop"><Top title="Wallet"/><section className="walletHero"><small>AVAILABLE BALANCE</small><h1>{money(w?.balance)}</h1><span>YN Wallet</span></section><div className="panel"><h2>Add money</h2><label>Amount<input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0.00"/></label><label>Payment method<select value={method} onChange={e=>setMethod(e.target.value)}><option>ABA / KHQR</option><option>Cash</option><option>Bank transfer</option></select></label><label className="upload"><Upload/> Upload payment receipt<input hidden type="file" accept="image/*" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>{file&&<small>{file.name}</small>}<button className="wide" onClick={deposit}>Submit deposit request</button>{msg&&<p className="notice">{msg}</p>}</div><h2>Recent activity</h2>{deps.map(d=><div className="transaction"><div><b>Deposit request</b><small>{d.payment_method}</small></div><div><b>+{money(d.amount)}</b><Status s={d.status}/></div></div>)}{tx.map(t=><div className="transaction"><div><b>{t.description||t.type}</b><small>{new Date(t.created_at).toLocaleDateString()}</small></div><b>{money(t.amount)}</b></div>)}</main><Nav/></>}
-const adminLinks=[['/admin',LayoutDashboard,'Dashboard'],['/admin/products',Package,'Products'],['/admin/categories',Tags,'Categories'],['/admin/orders',ClipboardList,'Orders'],['/admin/customers',Users,'Customers'],['/admin/wallet',Wallet,'Wallet'],['/admin/transactions',ReceiptText,'Transactions'],['/admin/settings',Settings,'Settings']];
-function AdminShell({children,title}:{children:any,title:string}){return <div className="admin"><aside><div className="adminBrand"><div className="miniLogo">YN</div><b>YN Studio</b></div>{adminLinks.map(([to,I,label]:any)=><NavLink end={to==='/admin'} to={to}><I/>{label}</NavLink>)}<NavLink to="/"><Store/>Marketplace</NavLink></aside><main><div className="adminTop"><div><span className="eyebrow">ADMIN CONSOLE</span><h1>{title}</h1></div><Link className="button secondary" to="/">View store</Link></div>{children}</main></div>}
-function AdminDashboard(){const[s,setS]=useState<any>({});useEffect(()=>{(async()=>{const tables=['products','orders','profiles','deposit_requests'];const vals:any={};for(const t of tables){let q:any=supabase.from(t).select('*',{count:'exact',head:true});if(t==='deposit_requests')q=q.eq('status','pending');vals[t]=(await q).count||0}setS(vals)})()},[]);return <AdminShell title="Dashboard"><div className="stats"><Stat n={s.products} t="Products"/><Stat n={s.orders} t="Orders"/><Stat n={s.profiles} t="Customers"/><Stat n={s.deposit_requests} t="Pending deposits"/></div><div className="welcome"><div><span className="eyebrow">YN STUDIO</span><h2>Your marketplace, under control.</h2><p>Publish products, process customer orders and review wallet deposits from one place.</p></div><Link className="button" to="/admin/products/new"><Plus/> Add product</Link></div></AdminShell>}
-function AdminProducts(){const[p,setP]=useState<P[]>([]);async function load(){setP((await supabase.from('products').select('*').order('created_at',{ascending:false})).data||[])}useEffect(()=>{load()},[]);async function toggle(x:P){await supabase.from('products').update({status:x.status==='published'?'unpublished':'published'}).eq('id',x.id);load()}return <AdminShell title="Products"><div className="toolbar"><Link className="button" to="/admin/products/new"><Plus/>Add product</Link></div><div className="table">{p.map(x=><div className="tr"><img src={x.main_image_url||''}/><div className="grow"><b>{x.name}</b><small>{x.status}</small></div><b>{money(x.price)}</b><button className="secondary" onClick={()=>toggle(x)}>{x.status==='published'?'Unpublish':'Publish'}</button></div>)}</div></AdminShell>}
-function AddProduct(){const nav=useNavigate();const[name,setName]=useState(''),[desc,setDesc]=useState(''),[price,setPrice]=useState(''),[orig,setOrig]=useState(''),[sku,setSku]=useState(''),[cat,setCat]=useState(''),[cats,setCats]=useState<any[]>([]),[imgs,setImgs]=useState<File[]>([]),[opts,setOpts]=useState([{name:'',values:''}]),[busy,setBusy]=useState(false);useEffect(()=>{supabase.from('categories').select('*').eq('status','active').then(({data})=>setCats(data||[]))},[]);async function save(status:string){if(!name||!price)return alert('Product name and price are required.');setBusy(true);const{data,error}=await supabase.from('products').insert({name,description:desc,price:Number(price),original_price:orig?Number(orig):null,category_id:cat||null,sku:sku||null,currency:'USD',status}).select().single();if(error){alert(error.message);setBusy(false);return}let cover='';for(let i=0;i<imgs.length;i++){const f=imgs[i],path=`${data.id}/${crypto.randomUUID()}-${f.name}`;const u=await supabase.storage.from('product-images').upload(path,f);if(!u.error){const url=supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;if(!i)cover=url;await supabase.from('product_images').insert({product_id:data.id,image_url:url,sort_order:i})}}if(cover)await supabase.from('products').update({main_image_url:cover}).eq('id',data.id);for(let i=0;i<opts.length;i++){if(!opts[i].name.trim())continue;const o=(await supabase.from('product_options').insert({product_id:data.id,name:opts[i].name,sort_order:i}).select().single()).data;if(o)for(const [j,v] of opts[i].values.split(',').map(v=>v.trim()).filter(Boolean).entries())await supabase.from('product_option_values').insert({option_id:o.id,value:v,sort_order:j})}setBusy(false);nav('/admin/products')}return <AdminShell title="Add Product"><div className="editor"><section className="panel"><h2>Product information</h2><label>Name<input value={name} onChange={e=>setName(e.target.value)} placeholder="Product name"/></label><label>Description<textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Tell customers about this product"/></label><div className="two"><label>Customer price<input type="number" step=".01" value={price} onChange={e=>setPrice(e.target.value)}/></label><label>Original price<input type="number" step=".01" value={orig} onChange={e=>setOrig(e.target.value)}/></label></div><div className="two"><label>Category<select value={cat} onChange={e=>setCat(e.target.value)}><option value="">No category</option>{cats.map(c=><option value={c.id}>{c.name}</option>)}</select></label><label>SKU<input value={sku} onChange={e=>setSku(e.target.value)}/></label></div></section><section className="panel"><h2>Photos</h2><label className="drop"><ImagePlus/><b>Choose product photos</b><span>Multiple images supported</span><input hidden type="file" multiple accept="image/*" onChange={e=>setImgs(Array.from(e.target.files||[]))}/></label><div className="previews">{imgs.map(f=><img src={URL.createObjectURL(f)}/>)}</div></section><section className="panel"><div className="line"><div><h2>Options / variants</h2><p className="muted">Create anything: Color, Size, Style…</p></div><button className="secondary" onClick={()=>setOpts([...opts,{name:'',values:''}])}><Plus/> Add</button></div>{opts.map((o,i)=><div className="option"><input placeholder="Option name" value={o.name} onChange={e=>setOpts(opts.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/><input placeholder="Black, White, Pink" value={o.values} onChange={e=>setOpts(opts.map((x,j)=>j===i?{...x,values:e.target.value}:x))}/><button className="icon" onClick={()=>setOpts(opts.filter((_,j)=>j!==i))}><Trash2/></button></div>)}</section><div className="actions"><button disabled={busy} className="secondary" onClick={()=>save('draft')}>Save draft</button><button disabled={busy} onClick={()=>save('published')}>{busy?'Saving…':'Publish product'}</button></div></div></AdminShell>}
-function AdminCategories(){const[c,setC]=useState<any[]>([]),[name,setName]=useState('');async function load(){setC((await supabase.from('categories').select('*').order('created_at')).data||[])}useEffect(()=>{load()},[]);async function add(){if(!name)return;await supabase.from('categories').insert({name,status:'active'});setName('');load()}return <AdminShell title="Categories"><div className="panel inline"><input value={name} onChange={e=>setName(e.target.value)} placeholder="New category name"/><button onClick={add}><Plus/>Add</button></div><div className="table">{c.map(x=><div className="tr"><Tags/><div className="grow"><b>{x.name}</b><small>{x.status}</small></div><button className="icon" onClick={async()=>{await supabase.from('categories').delete().eq('id',x.id);load()}}><Trash2/></button></div>)}</div></AdminShell>}
-function AdminOrders(){const[o,setO]=useState<any[]>([]);async function load(){setO((await supabase.from('orders').select('*,profiles:user_id(name,email)').order('created_at',{ascending:false})).data||[])}useEffect(()=>{load()},[]);async function status(id:string,s:string){await supabase.from('orders').update({status:s,payment_status:s==='paid'||s==='processing'||s==='shipped'||s==='completed'?'paid':'pending'}).eq('id',id);load()}return <AdminShell title="Orders"><div className="table">{o.map(x=><div className="tr"><div className="grow"><b>#{x.order_number}</b><small>{x.profiles?.name||x.profiles?.email||'Customer'} · {money(x.total)}</small></div><select value={x.status} onChange={e=>status(x.id,e.target.value)}>{['pending','payment pending','paid','processing','shipped','completed','cancelled'].map(s=><option value={s}>{s}</option>)}</select></div>)}</div></AdminShell>}
-function AdminCustomers(){const[c,setC]=useState<any[]>([]);useEffect(()=>{supabase.from('profiles').select('*').order('created_at',{ascending:false}).then(({data})=>setC(data||[]))},[]);return <AdminShell title="Customers"><div className="table">{c.map(x=><div className="tr"><div className="avatar">{(x.name||'C')[0]}</div><div className="grow"><b>{x.name||'Customer'}</b><small>{x.email} · {x.role}</small></div><Status s={x.status}/></div>)}</div></AdminShell>}
-function AdminWallet(){const[d,setD]=useState<any[]>([]);async function load(){setD((await supabase.from('deposit_requests').select('*,profiles:user_id(name,email)').order('created_at',{ascending:false})).data||[])}useEffect(()=>{load()},[]);async function review(id:string,approve:boolean){const{error}=await supabase.rpc('review_deposit',{p_deposit_id:id,p_approve:approve});if(error)alert(error.message);load()}return <AdminShell title="Wallet Deposits"><div className="table">{d.map(x=><div className="tr"><div className="grow"><b>{x.profiles?.name||x.profiles?.email||'Customer'}</b><small>{x.payment_method} · {new Date(x.created_at).toLocaleString()}</small></div><b>{money(x.amount)}</b><Status s={x.status}/>{x.status==='pending'&&<div className="row"><button className="secondary" onClick={()=>review(x.id,false)}>Reject</button><button onClick={()=>review(x.id,true)}>Approve</button></div>}</div>)}</div></AdminShell>}
-function AdminTransactions(){const[t,setT]=useState<any[]>([]);useEffect(()=>{supabase.from('wallet_transactions').select('*').order('created_at',{ascending:false}).then(({data})=>setT(data||[]))},[]);return <AdminShell title="Transactions"><div className="table">{t.map(x=><div className="tr"><ReceiptText/><div className="grow"><b>{x.description||x.type}</b><small>{new Date(x.created_at).toLocaleString()}</small></div><b>{money(x.amount)}</b></div>)}</div></AdminShell>}
-function AdminSettings(){return <AdminShell title="Settings"><div className="panel"><h2>YN Studio</h2><p>Marketplace backend: Supabase</p><p className="muted">Brand and operational settings can be expanded here without changing the marketplace architecture.</p><Link className="button" to="/login">Sign out</Link></div></AdminShell>}
-function Status({s}:{s:string}){return <span className={'status '+String(s).replaceAll(' ','-')}>{s}</span>}function Empty({text}:{text:string}){return <div className="empty"><ShoppingCart/><h3>{text}</h3></div>}function Loader(){return <div className="loader"><div className="miniLogo">YN</div></div>}function Stat({n,t}:{n:any,t:string}){return <div className="stat"><small>{t}</small><strong>{n??'—'}</strong></div>}
-function App(){return <Routes><Route path="/login" element={<Login/>}/><Route path="/" element={<Shop/>}/><Route path="/categories" element={<Categories/>}/><Route path="/product/:id" element={<Product/>}/><Route path="/cart" element={<Cart/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/wallet" element={<WalletPage/>}/><Route path="/admin" element={<AdminDashboard/>}/><Route path="/admin/products" element={<AdminProducts/>}/><Route path="/admin/products/new" element={<AddProduct/>}/><Route path="/admin/categories" element={<AdminCategories/>}/><Route path="/admin/orders" element={<AdminOrders/>}/><Route path="/admin/customers" element={<AdminCustomers/>}/><Route path="/admin/wallet" element={<AdminWallet/>}/><Route path="/admin/transactions" element={<AdminTransactions/>}/><Route path="/admin/settings" element={<AdminSettings/>}/></Routes>};createRoot(document.getElementById('root')!).render(<BrowserRouter><App/></BrowserRouter>)
+import{supabase}from'./supabase';
+import'./style.css';
+
+type P={
+  id:string,
+  name:string,
+  description?:string,
+  price:number,
+  original_price?:number,
+  main_image_url?:string,
+  status:string,
+  category_id?:string,
+  currency?:string,
+  created_at?:string
+};
+
+type CartItem={
+  id:string,
+  quantity:number,
+  price:number,
+  selected_options:any,
+  product_id:string,
+  products?:P
+};
+
+const money=(n:any)=>'$'+Number(n||0).toFixed(2);
+
+const uid=async()=>{
+  return (await supabase.auth.getUser()).data.user?.id;
+};
+
+function Toast({msg}:{msg:string}){
+  return msg?<div className="toast">{msg}</div>:null;
+}
+
+function Login(){
+  const nav=useNavigate();
+  const[email,setE]=useState('');
+  const[p,setP]=useState('');
+  const[name,setN]=useState('');
+  const[signup,setSignup]=useState(false);
+  const[busy,setBusy]=useState(false);
+
+  async function go(e:React.FormEvent){
+    e.preventDefault();
+    setBusy(true);
+
+    if(signup){
+      const{data,error}=await supabase.auth.signUp({
+        email,
+        password:p
+      });
+
+      if(error){
+        alert(error.message);
+        setBusy(false);
+        return;
+      }
+
+      if(data.user){
+        await supabase.from('profiles').upsert({
+          user_id:data.user.id,
+          name:name||email.split('@')[0],
+          email,
+          role:'customer'
+        });
+      }
+
+      alert('Account created. If email confirmation is enabled, check your inbox.');
+      setSignup(false);
+    }else{
+      const{data,error}=await supabase.auth.signInWithPassword({
+        email,
+        password:p
+      });
+
+      if(error){
+        alert(error.message);
+        setBusy(false);
+        return;
+      }
+
+      const{data:r}=await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id',data.user.id)
+        .maybeSingle();
+
+      nav(r?.role==='admin'?'/admin':'/');
+    }
+
+    setBusy(false);
+  }
+
+  return(
+    <main className="auth">
+      <div className="authBrand">
+        <div className="logo">YN</div>
+        <h1>Shop smarter.<br/>Keep it simple.</h1>
+        <p>Marketplace, orders and wallet — all in one beautiful place.</p>
+      </div>
+
+      <form className="glass login" onSubmit={go}>
+        <span className="eyebrow">YN STUDIO</span>
+        <h2>{signup?'Create account':'Welcome back'}</h2>
+
+        {signup&&
+          <input
+            required
+            placeholder="Your name"
+            value={name}
+            onChange={e=>setN(e.target.value)}
+          />
+        }
+
+        <input
+          required
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e=>setE(e.target.value)}
+        />
+
+        <input
+          required
+          minLength={6}
+          type="password"
+          placeholder="Password"
+          value={p}
+          onChange={e=>setP(e.target.value)}
+        />
+
+        <button disabled={busy}>
+          {busy?'Please wait…':signup?'Create account':'Sign in'}
+        </button>
+
+        <button
+          type="button"
+          className="textBtn"
+          onClick={()=>setSignup(!signup)}
+        >
+          {signup?'Already have an account? Sign in':'New here? Create an account'}
+        </button>
+      </form>
+    </main>
+  );
+}
+
+const Nav=()=>(
+  <nav className="bottom">
+    <NavLink to="/"><Home/>Home</NavLink>
+    <NavLink to="/categories"><Tags/>Categories</NavLink>
+    <NavLink to="/cart"><ShoppingCart/>Cart</NavLink>
+    <NavLink to="/orders"><ClipboardList/>Orders</NavLink>
+    <NavLink to="/wallet"><Wallet/>Wallet</NavLink>
+  </nav>
+);
+
+function Top({title='YN Studio',back=false}:{title?:string,back?:boolean}){
+  const nav=useNavigate();
+
+  return(
+    <header className="top">
+      {back?
+        <button className="icon" onClick={()=>nav(-1)}>
+          <ArrowLeft/>
+        </button>
+        :
+        <div className="miniLogo">YN</div>
+      }
+
+      <b>{title}</b>
+
+      <Link className="icon" to="/login">
+        <LogOut/>
+      </Link>
+    </header>
+  );
+}
+
+function ProductCard({p}:{p:P}){
+  return(
+    <Link className="product" to={'/product/'+p.id}>
+      {p.main_image_url?
+        <img src={p.main_image_url}/>
+        :
+        <div className="ph">YN</div>
+      }
+
+      <button className="heart">
+        <Heart/>
+      </button>
+
+      <div className="pcopy">
+        <strong>{p.name}</strong>
+
+        <div>
+          <span>{money(p.price)}</span>
+          {p.original_price&&
+            <del>{money(p.original_price)}</del>
+          }
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function Shop(){
+  const[p,setP]=useState<P[]>([]);
+  const[q,setQ]=useState('');
+
+  useEffect(()=>{
+    supabase
+      .from('products')
+      .select('*')
+      .eq('status','published')
+      .order('created_at',{ascending:false})
+      .then(({data})=>setP(data||[]));
+  },[]);
+
+  const shown=p.filter(x=>
+    x.name.toLowerCase().includes(q.toLowerCase())
+  );
+
+  return(
+    <>
+      <main className="shop">
+        <div className="brandrow">
+          <div>
+            <span className="eyebrow">MARKETPLACE</span>
+            <h1>YN Studio</h1>
+          </div>
+
+          <Link className="avatar" to="/wallet">YN</Link>
+        </div>
+
+        <div className="search">
+          <Search/>
+          <input
+            value={q}
+            onChange={e=>setQ(e.target.value)}
+            placeholder="Search anything…"
+          />
+        </div>
+
+        <section className="hero">
+          <div>
+            <small>FRESH PICKS</small>
+            <h2>Little things.<br/>Better days.</h2>
+            <p>Discover products selected for you.</p>
+          </div>
+
+          <div className="orb">YN</div>
+        </section>
+
+        <div className="sectionHead">
+          <h2>{q?'Search results':'New for you'}</h2>
+
+          <Link to="/categories">
+            See all <ChevronRight/>
+          </Link>
+        </div>
+
+        <div className="grid">
+          {shown.map(x=>
+            <ProductCard p={x} key={x.id}/>
+          )}
+        </div>
+
+        {!shown.length&&
+          <Empty text="No products yet. Publish one from Admin."/>
+        }
+      </main>
+
+      <Nav/>
+    </>
+  );
+}
+
+function Categories(){
+  const[c,setC]=useState<any[]>([]);
+  const[p,setP]=useState<P[]>([]);
+  const[sel,setSel]=useState('');
+
+  useEffect(()=>{
+    supabase
+      .from('categories')
+      .select('*')
+      .eq('status','active')
+      .then(({data})=>setC(data||[]));
+
+    supabase
+      .from('products')
+      .select('*')
+      .eq('status','published')
+      .then(({data})=>setP(data||[]));
+  },[]);
+
+  return(
+    <>
+      <main className="shop">
+        <Top title="Categories"/>
+
+        <div className="chips">
+          <button
+            className={!sel?'on':''}
+            onClick={()=>setSel('')}
+          >
+            All
+          </button>
+
+          {c.map(x=>
+            <button
+              className={sel===x.id?'on':''}
+              onClick={()=>setSel(x.id)}
+              key={x.id}
+            >
+              {x.name}
+            </button>
+          )}
+        </div>
+
+        <div className="grid">
+          {p
+            .filter(x=>!sel||x.category_id===sel)
+            .map(x=>
+              <ProductCard p={x} key={x.id}/>
+            )
+          }
+        </div>
+      </main>
+
+      <Nav/>
+    </>
+  );
+}
+
+function Product(){
+  const{id}=useParams();
+
+  const[p,setP]=useState<P|null>(null);
+  const[imgs,setImgs]=useState<any[]>([]);
+  const[opts,setOpts]=useState<any[]>([]);
+  const[pick,setPick]=useState<any>({});
+  const[qty,setQty]=useState(1);
+  const[msg,setMsg]=useState('');
+
+  useEffect(()=>{
+    (async()=>{
+      const{data}=await supabase
+        .from('products')
+        .select('*')
+        .eq('id',id)
+        .single();
+
+      setP(data);
+
+      setImgs(
+        (await supabase
+          .from('product_images')
+          .select('*')
+          .eq('product_id',id)
+          .order('sort_order')
+        ).data||[]
+      );
+
+      const os=
+        (await supabase
+          .from('product_options')
+          .select('*')
+          .eq('product_id',id)
+          .order('sort_order')
+        ).data||[];
+
+      for(const o of os){
+        o.values=
+          (await supabase
+            .from('product_option_values')
+            .select('*')
+            .eq('option_id',o.id)
+            .order('sort_order')
+          ).data||[];
+      }
+
+      setOpts(os);
+    })();
+  },[id]);
+
+  async function add(buy=false){
+    const user=await uid();
+
+    if(!user){
+      location.href='/login';
+      return;
+    }
+
+    if(opts.some(o=>!pick[o.name])){
+      setMsg('Please select all options first.');
+      return;
+    }
+
+    let cart:
+      {id:string}|null=
+      (await supabase
+        .from('carts')
+        .select('id')
+        .eq('user_id',user)
+        .maybeSingle()
+      ).data;
+
+    /*
+      FIX:
+      Supabase can return null here, so we explicitly
+      verify the newly-created cart before using cart.id.
+    */
+    if(!cart){
+      const{
+        data:newCart,
+        error:cartError
+      }=await supabase
+        .from('carts')
+        .insert({user_id:user})
+        .select('id')
+        .single();
+
+      if(cartError||!newCart){
+        setMsg(cartError?.message||'Could not create your cart.');
+        return;
+      }
+
+      cart=newCart;
+    }
+
+    const{error}=await supabase
+      .from('cart_items')
+      .insert({
+        cart_id:cart.id,
+        product_id:p!.id,
+        quantity:qty,
+        selected_options:pick,
+        price:p!.price
+      });
+
+    if(error){
+      setMsg(error.message);
+      return;
+    }
+
+    if(buy){
+      location.href='/cart';
+    }else{
+      setMsg('Added to cart ✓');
+    }
+  }
+
+  if(!p)return <Loader/>;
+
+  return(
+    <main className="detail">
+      <Top title="Product" back/>
+
+      <div className="gallery">
+        {(imgs[0]?.image_url||p.main_image_url)?
+          <img src={imgs[0]?.image_url||p.main_image_url}/>
+          :
+          <div className="ph big">YN</div>
+        }
+      </div>
+
+      <section className="detailCard">
+        <span className="eyebrow">YN MARKETPLACE</span>
+
+        <h1>{p.name}</h1>
+
+        <div className="price">
+          {money(p.price)}
+          {p.original_price&&
+            <del>{money(p.original_price)}</del>
+          }
+        </div>
+
+        <p className="desc">
+          {p.description||'No description provided.'}
+        </p>
+
+        {opts.map(o=>
+          <div className="variant" key={o.id}>
+            <b>{o.name}</b>
+
+            <div className="chips">
+              {o.values.map((v:any)=>
+                <button
+                  key={v.id}
+                  className={pick[o.name]===v.value?'on':''}
+                  onClick={()=>
+                    setPick({
+                      ...pick,
+                      [o.name]:v.value
+                    })
+                  }
+                >
+                  {v.value}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="qty">
+          <b>Quantity</b>
+
+          <div>
+            <button
+              onClick={()=>
+                setQty(Math.max(1,qty-1))
+              }
+            >
+              <Minus/>
+            </button>
+
+            <span>{qty}</span>
+
+            <button onClick={()=>setQty(qty+1)}>
+              <Plus/>
+            </button>
+          </div>
+        </div>
+
+        {msg&&
+          <p className="notice">{msg}</p>
+        }
+
+        <div className="stickyActions">
+          <button
+            className="secondary"
+            onClick={()=>add(false)}
+          >
+            Add to cart
+          </button>
+
+          <button onClick={()=>add(true)}>
+            Buy now
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function Cart(){
+  const[items,setItems]=useState<CartItem[]>([]);
+
+  async function load(){
+    const u=await uid();
+
+    if(!u)return;
+
+    const c=
+      (await supabase
+        .from('carts')
+        .select('id')
+        .eq('user_id',u)
+        .maybeSingle()
+      ).data;
+
+    if(c){
+      const{data}=await supabase
+        .from('cart_items')
+        .select('*,products(*)')
+        .eq('cart_id',c.id);
+
+      setItems((data as any)||[]);
+    }else{
+      setItems([]);
+    }
+  }
+
+  useEffect(()=>{
+    load();
+  },[]);
+
+  async function qty(i:CartItem,n:number){
+    if(n<1)return;
+
+    await supabase
+      .from('cart_items')
+      .update({quantity:n})
+      .eq('id',i.id);
+
+    load();
+  }
+
+  async function del(id:string){
+    await supabase
+      .from('cart_items')
+      .delete()
+      .eq('id',id);
+
+    load();
+  }
+
+  const total=items.reduce(
+    (a,x)=>a+x.price*x.quantity,
+    0
+  );
+
+  return(
+    <>
+      <main className="shop">
+        <Top title="Your Cart"/>
+
+        {items.map(i=>
+          <div className="cartrow" key={i.id}>
+            <img src={i.products?.main_image_url||''}/>
+
+            <div className="grow">
+              <b>{i.products?.name}</b>
+
+              <small>
+                {Object.entries(i.selected_options||{})
+                  .map(([k,v])=>`${k}: ${v}`)
+                  .join(' · ')
+                }
+              </small>
+
+              <strong>{money(i.price)}</strong>
+            </div>
+
+            <div className="cartcontrols">
+              <button onClick={()=>del(i.id)}>
+                <Trash2/>
+              </button>
+
+              <div>
+                <button
+                  onClick={()=>qty(i,i.quantity-1)}
+                >
+                  -
+                </button>
+
+                <span>{i.quantity}</span>
+
+                <button
+                  onClick={()=>qty(i,i.quantity+1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!items.length&&
+          <Empty text="Your cart is empty."/>
+        }
+
+        {items.length>0&&
+          <div className="checkoutbar">
+            <div>
+              <small>Subtotal</small>
+              <b>{money(total)}</b>
+            </div>
+
+            <Link className="button" to="/checkout">
+              Checkout
+            </Link>
+          </div>
+        }
+      </main>
+
+      <Nav/>
+    </>
+  );
+}
+
+function Checkout(){
+  const nav=useNavigate();
+
+  const[items,setItems]=useState<CartItem[]>([]);
+  const[busy,setBusy]=useState(false);
+
+  useEffect(()=>{
+    (async()=>{
+      const u=await uid();
+
+      if(!u)return;
+
+      const c=
+        (await supabase
+          .from('carts')
+          .select('id')
+          .eq('user_id',u)
+          .maybeSingle()
+        ).data;
+
+      if(c){
+        const{data}=await supabase
+          .from('cart_items')
+          .select('*,products(*)')
+          .eq('cart_id',c.id);
+
+        setItems((data as any)||[]);
+      }
+    })();
+  },[]);
+
+  const total=items.reduce(
+    (a,x)=>a+x.price*x.quantity,
+    0
+  );
+
+  async function place(){
+    setBusy(true);
+
+    const u=await uid();
+
+    if(!u){
+      setBusy(false);
+      nav('/login');
+      return;
+    }
+
+    const num='YN-'+Date.now().toString().slice(-8);
+
+    const{
+      o,
+      error
+    }=await supabase
+      .from('orders')
+      .insert({
+        order_number:num,
+        user_id:u,
+        subtotal:total,
+        fees:0,
+        total,
+        status:'pending',
+        payment_status:'pending'
+      })
+      .select()
+      .single()
+      .then(({data,error})=>({
+        o:data,
+        error
+      }));
+
+    if(error||!o){
+      alert(error?.message||'Could not create order.');
+      setBusy(false);
+      return;
+    }
+
+    for(const i of items){
+      await supabase
+        .from('order_items')
+        .insert({
+          order_id:o.id,
+          product_id:i.product_id,
+          product_name:i.products?.name||'Product',
+          product_image:i.products?.main_image_url,
+          quantity:i.quantity,
+          unit_price:i.price,
+          selected_options:i.selected_options,
+          subtotal:i.price*i.quantity
+        });
+    }
+
+    const{
+      data:c,
+      error:cartError
+    }=await supabase
+      .from('carts')
+      .select('id')
+      .eq('user_id',u)
+      .maybeSingle();
+
+    if(cartError){
+      alert(cartError.message);
+      setBusy(false);
+      return;
+    }
+
+    if(c){
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('cart_id',c.id);
+    }
+
+    nav('/orders');
+  }
+
+  return(
+    <main className="shop">
+      <Top title="Checkout" back/>
+
+      <div className="panel">
+        <h2>Order summary</h2>
+
+        {items.map(i=>
+          <div className="line" key={i.id}>
+            <span>
+              {i.products?.name} × {i.quantity}
+            </span>
+
+            <b>{money(i.price*i.quantity)}</b>
+          </div>
+        )}
+
+        <hr/>
+
+        <div className="line total">
+          <span>Total</span>
+          <b>{money(total)}</b>
+        </div>
+
+        <p className="muted">
+          Your order will be sent to YN Studio admin for processing.
+        </p>
+
+        <button
+          className="wide"
+          disabled={!items.length||busy}
+          onClick={place}
+        >
+          {busy?'Creating order…':'Confirm order'}
+        </button>
+      </div>
+    </main>
+  );
+}
+
+function Orders(){
+  const[o,setO]=useState<any[]>([]);
+
+  useEffect(()=>{
+    uid().then(async(u)=>{
+      if(!u)return;
+
+      const{
+        data,
+        error
+      }=await supabase
+        .from('orders')
+        .select('*,order_items(*)')
+        .eq('user_id',u)
+        .order('created_at',{ascending:false});
+
+      if(error){
+        console.error(error);
+        return;
+      }
+
+      setO(data||[]);
+    });
+  },[]);
+
+  return(
+    <>
+      <main className="shop">
+        <Top title="Orders"/>
+
+        {o.map(x=>
+          <div className="ordercard" key={x.id}>
+            <div className="line">
+              <b>#{x.order_number}</b>
+              <Status s={x.status}/>
+            </div>
+
+            <small>
+              {new Date(x.created_at).toLocaleString()}
+            </small>
+
+            {x.order_items?.map((i:any)=>
+              <div className="miniitem" key={i.id}>
+                <img src={i.product_image||''}/>
+
+                <span>
+                  {i.product_name} × {i.quantity}
+                </span>
+
+                <b>{money(i.subtotal)}</b>
+              </div>
+            )}
+
+            <div className="line total">
+              <span>Total</span>
+              <b>{money(x.total)}</b>
+            </div>
+          </div>
+        )}
+
+        {!o.length&&
+          <Empty text="No orders yet."/>
+        }
+      </main>
+
+      <Nav/>
+    </>
+  );
+}
+
+function WalletPage(){
+  const[w,setW]=useState<any>(null);
+  const[tx,setTx]=useState<any[]>([]);
+  const[deps,setDeps]=useState<any[]>([]);
+  const[amount,setAmount]=useState('');
+  const[method,setMethod]=useState('ABA / KHQR');
+  const[file,setFile]=useState<File|null>(null);
+  const[msg,setMsg]=useState('');
+
+  async function load(){
+    const u=await uid();
+
+    if(!u)return;
+
+    let w=
+      (await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id',u)
+        .maybeSingle()
+      ).data;
+
+    if(!w){
+      w=
+        (await supabase
+          .from('wallets')
+          .insert({user_id:u})
+          .select()
+          .single()
+        ).data;
+    }
+
+    setW(w);
+
+    setTx(
+      (await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('user_id',u)
+        .order('created_at',{ascending:false})
+      ).data||[]
+    );
+
+    setDeps(
+      (await supabase
+        .from('deposit_requests')
+        .select('*')
+        .eq('user_id',u)
+        .order('created_at',{ascending:false})
+      ).data||[]
+    );
+  }
+
+  useEffect(()=>{
+    load();
+  },[]);
+
+  async function deposit(){
+    const u=await uid();
+
+    if(!u||!Number(amount))return;
+
+    let url='';
+
+    if(file){
+      const path=
+        `${u}/${crypto.randomUUID()}-${file.name}`;
+
+      const r=
+        await supabase
+          .storage
+          .from('deposit-receipts')
+          .upload(path,file);
+
+      if(r.error){
+        return setMsg(r.error.message);
+      }
+
+      url=path;
+    }
+
+    const{error}=await supabase
+      .from('deposit_requests')
+      .insert({
+        user_id:u,
+        amount:Number(amount),
+        payment_method:method,
+        receipt_url:url
+      });
+
+    setMsg(
+      error
+        ? error.message
+        : 'Deposit request sent ✓'
+    );
+
+    if(!error){
+      setAmount('');
+      setFile(null);
+      load();
+    }
+  }
+
+  return(
+    <>
+      <main className="shop">
+        <Top title="Wallet"/>
+
+        <section className="walletHero">
+          <small>AVAILABLE BALANCE</small>
+          <h1>{money(w?.balance)}</h1>
+          <span>YN Wallet</span>
+        </section>
+
+        <div className="panel">
+          <h2>Add money</h2>
+
+          <label>
+            Amount
+            <input
+              type="number"
+              value={amount}
+              onChange={e=>setAmount(e.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+
+          <label>
+            Payment method
+            <select
+              value={method}
+              onChange={e=>setMethod(e.target.value)}
+            >
+              <option>ABA / KHQR</option>
+              <option>Cash</option>
+              <option>Bank transfer</option>
+            </select>
+          </label>
+
+          <label className="upload">
+            <Upload/>
+            Upload payment receipt
+
+            <input
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={e=>
+                setFile(e.target.files?.[0]||null)
+              }
+            />
+          </label>
+
+          {file&&
+            <small>{file.name}</small>
+          }
+
+          <button
+            className="wide"
+            onClick={deposit}
+          >
+            Submit deposit request
+          </button>
+
+          {msg&&
+            <p className="notice">{msg}</p>
+          }
+        </div>
+
+        <h2>Recent activity</h2>
+
+        {deps.map(d=>
+          <div className="transaction" key={d.id}>
+            <div>
+              <b>Deposit request</b>
+              <small>{d.payment_method}</small>
+            </div>
+
+            <div>
+              <b>+{money(d.amount)}</b>
+              <Status s={d.status}/>
+            </div>
+          </div>
+        )}
+
+        {tx.map(t=>
+          <div className="transaction" key={t.id}>
+            <div>
+              <b>{t.description||t.type}</b>
+              <small>
+                {new Date(t.created_at).toLocaleDateString()}
+              </small>
+            </div>
+
+            <b>{money(t.amount)}</b>
+          </div>
+        )}
+      </main>
+
+      <Nav/>
+    </>
+  );
+}
+
+const adminLinks=[
+  ['/admin',LayoutDashboard,'Dashboard'],
+  ['/admin/products',Package,'Products'],
+  ['/admin/categories',Tags,'Categories'],
+  ['/admin/orders',ClipboardList,'Orders'],
+  ['/admin/customers',Users,'Customers'],
+  ['/admin/wallet',Wallet,'Wallet'],
+  ['/admin/transactions',ReceiptText,'Transactions'],
+  ['/admin/settings',Settings,'Settings']
+];
+
+function AdminShell({
+  children,
+  title
+}:{
+  children:any,
+  title:string
+}){
+  return(
+    <div className="admin">
+      <aside>
+        <div className="adminBrand">
+          <div className="miniLogo">YN</div>
+          <b>YN Studio</b>
+        </div>
+
+        {adminLinks.map(([to,I,label]:any)=>
+          <NavLink
+            end={to==='/admin'}
+            to={to}
+            key={to}
+          >
+            <I/>
+            {label}
+          </NavLink>
+        )}
+
+        <NavLink to="/">
+          <Store/>
+          Marketplace
+        </NavLink>
+      </aside>
+
+      <main>
+        <div className="adminTop">
+          <div>
+            <span className="eyebrow">ADMIN CONSOLE</span>
+            <h1>{title}</h1>
+          </div>
+
+          <Link className="button secondary" to="/">
+            View store
+          </Link>
+        </div>
+
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function AdminDashboard(){
+  const[s,setS]=useState<any>({});
+
+  useEffect(()=>{
+    (async()=>{
+      const tables=[
+        'products',
+        'orders',
+        'profiles',
+        'deposit_requests'
+      ];
+
+      const vals:any={};
+
+      for(const t of tables){
+        let q:any=
+          supabase
+            .from(t)
+            .select('*',{count:'exact',head:true});
+
+        if(t==='deposit_requests'){
+          q=q.eq('status','pending');
+        }
+
+        vals[t]=(await q).count||0;
+      }
+
+      setS(vals);
+    })();
+  },[]);
+
+  return(
+    <AdminShell title="Dashboard">
+      <div className="stats">
+        <Stat n={s.products} t="Products"/>
+        <Stat n={s.orders} t="Orders"/>
+        <Stat n={s.profiles} t="Customers"/>
+        <Stat n={s.deposit_requests} t="Pending deposits"/>
+      </div>
+
+      <div className="welcome">
+        <div>
+          <span className="eyebrow">YN STUDIO</span>
+          <h2>Your marketplace, under control.</h2>
+          <p>
+            Publish products, process customer orders and review wallet deposits from one place.
+          </p>
+        </div>
+
+        <Link
+          className="button"
+          to="/admin/products/new"
+        >
+          <Plus/>
+          Add product
+        </Link>
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminProducts(){
+  const[p,setP]=useState<P[]>([]);
+
+  async function load(){
+    setP(
+      (await supabase
+        .from('products')
+        .select('*')
+        .order('created_at',{ascending:false})
+      ).data||[]
+    );
+  }
+
+  useEffect(()=>{
+    load();
+  },[]);
+
+  async function toggle(x:P){
+    await supabase
+      .from('products')
+      .update({
+        status:
+          x.status==='published'
+            ?'unpublished'
+            :'published'
+      })
+      .eq('id',x.id);
+
+    load();
+  }
+
+  return(
+    <AdminShell title="Products">
+      <div className="toolbar">
+        <Link
+          className="button"
+          to="/admin/products/new"
+        >
+          <Plus/>
+          Add product
+        </Link>
+      </div>
+
+      <div className="table">
+        {p.map(x=>
+          <div className="tr" key={x.id}>
+            <img src={x.main_image_url||''}/>
+
+            <div className="grow">
+              <b>{x.name}</b>
+              <small>{x.status}</small>
+            </div>
+
+            <b>{money(x.price)}</b>
+
+            <button
+              className="secondary"
+              onClick={()=>toggle(x)}
+            >
+              {x.status==='published'
+                ?'Unpublish'
+                :'Publish'
+              }
+            </button>
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function AddProduct(){
+  const nav=useNavigate();
+
+  const[name,setName]=useState('');
+  const[desc,setDesc]=useState('');
+  const[price,setPrice]=useState('');
+  const[orig,setOrig]=useState('');
+  const[sku,setSku]=useState('');
+  const[cat,setCat]=useState('');
+  const[cats,setCats]=useState<any[]>([]);
+  const[imgs,setImgs]=useState<File[]>([]);
+  const[opts,setOpts]=useState([
+    {name:'',values:''}
+  ]);
+  const[busy,setBusy]=useState(false);
+
+  useEffect(()=>{
+    supabase
+      .from('categories')
+      .select('*')
+      .eq('status','active')
+      .then(({data})=>setCats(data||[]));
+  },[]);
+
+  async function save(status:string){
+    if(!name||!price){
+      alert('Product name and price are required.');
+      return;
+    }
+
+    setBusy(true);
+
+    const{
+      data,
+      error
+    }=await supabase
+      .from('products')
+      .insert({
+        name,
+        description:desc,
+        price:Number(price),
+        original_price:orig?Number(orig):null,
+        category_id:cat||null,
+        sku:sku||null,
+        currency:'USD',
+        status
+      })
+      .select()
+      .single();
+
+    if(error||!data){
+      alert(error?.message||'Could not create product.');
+      setBusy(false);
+      return;
+    }
+
+    let cover='';
+
+    for(let i=0;i<imgs.length;i++){
+      const f=imgs[i];
+
+      const path=
+        `${data.id}/${crypto.randomUUID()}-${f.name}`;
+
+      const u=
+        await supabase
+          .storage
+          .from('product-images')
+          .upload(path,f);
+
+      if(!u.error){
+        const url=
+          supabase
+            .storage
+            .from('product-images')
+            .getPublicUrl(path)
+            .data
+            .publicUrl;
+
+        if(!i)cover=url;
+
+        await supabase
+          .from('product_images')
+          .insert({
+            product_id:data.id,
+            image_url:url,
+            sort_order:i
+          });
+      }
+    }
+
+    if(cover){
+      await supabase
+        .from('products')
+        .update({main_image_url:cover})
+        .eq('id',data.id);
+    }
+
+    for(let i=0;i<opts.length;i++){
+      if(!opts[i].name.trim())continue;
+
+      const o=
+        (await supabase
+          .from('product_options')
+          .insert({
+            product_id:data.id,
+            name:opts[i].name,
+            sort_order:i
+          })
+          .select()
+          .single()
+        ).data;
+
+      if(o){
+        for(
+          const[j,v]
+          of opts[i]
+            .values
+            .split(',')
+            .map(v=>v.trim())
+            .filter(Boolean)
+            .entries()
+        ){
+          await supabase
+            .from('product_option_values')
+            .insert({
+              option_id:o.id,
+              value:v,
+              sort_order:j
+            });
+        }
+      }
+    }
+
+    setBusy(false);
+    nav('/admin/products');
+  }
+
+  return(
+    <AdminShell title="Add Product">
+      <div className="editor">
+        <section className="panel">
+          <h2>Product information</h2>
+
+          <label>
+            Name
+            <input
+              value={name}
+              onChange={e=>setName(e.target.value)}
+              placeholder="Product name"
+            />
+          </label>
+
+          <label>
+            Description
+            <textarea
+              value={desc}
+              onChange={e=>setDesc(e.target.value)}
+              placeholder="Tell customers about this product"
+            />
+          </label>
+
+          <div className="two">
+            <label>
+              Customer price
+              <input
+                type="number"
+                step=".01"
+                value={price}
+                onChange={e=>setPrice(e.target.value)}
+              />
+            </label>
+
+            <label>
+              Original price
+              <input
+                type="number"
+                step=".01"
+                value={orig}
+                onChange={e=>setOrig(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="two">
+            <label>
+              Category
+
+              <select
+                value={cat}
+                onChange={e=>setCat(e.target.value)}
+              >
+                <option value="">No category</option>
+
+                {cats.map(c=>
+                  <option
+                    value={c.id}
+                    key={c.id}
+                  >
+                    {c.name}
+                  </option>
+                )}
+              </select>
+            </label>
+
+            <label>
+              SKU
+
+              <input
+                value={sku}
+                onChange={e=>setSku(e.target.value)}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="panel">
+          <h2>Photos</h2>
+
+          <label className="drop">
+            <ImagePlus/>
+            <b>Choose product photos</b>
+            <span>Multiple images supported</span>
+
+            <input
+              hidden
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={e=>
+                setImgs(
+                  Array.from(
+                    e.target.files||[]
+                  )
+                )
+              }
+            />
+          </label>
+
+          <div className="previews">
+            {imgs.map(f=>
+              <img
+                src={URL.createObjectURL(f)}
+                key={f.name}
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="line">
+            <div>
+              <h2>Options / variants</h2>
+              <p className="muted">
+                Create anything: Color, Size, Style…
+              </p>
+            </div>
+
+            <button
+              className="secondary"
+              onClick={()=>
+                setOpts([
+                  ...opts,
+                  {name:'',values:''}
+                ])
+              }
+            >
+              <Plus/>
+              Add
+            </button>
+          </div>
+
+          {opts.map((o,i)=>
+            <div className="option" key={i}>
+              <input
+                placeholder="Option name"
+                value={o.name}
+                onChange={e=>
+                  setOpts(
+                    opts.map((x,j)=>
+                      j===i
+                        ?{...x,name:e.target.value}
+                        :x
+                    )
+                  )
+                }
+              />
+
+              <input
+                placeholder="Black, White, Pink"
+                value={o.values}
+                onChange={e=>
+                  setOpts(
+                    opts.map((x,j)=>
+                      j===i
+                        ?{...x,values:e.target.value}
+                        :x
+                    )
+                  )
+                }
+              />
+
+              <button
+                className="icon"
+                onClick={()=>
+                  setOpts(
+                    opts.filter((_,j)=>j!==i)
+                  )
+                }
+              >
+                <Trash2/>
+              </button>
+            </div>
+          )}
+        </section>
+
+        <div className="actions">
+          <button
+            disabled={busy}
+            className="secondary"
+            onClick={()=>save('draft')}
+          >
+            Save draft
+          </button>
+
+          <button
+            disabled={busy}
+            onClick={()=>save('published')}
+          >
+            {busy?'Saving…':'Publish product'}
+          </button>
+        </div>
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminCategories(){
+  const[c,setC]=useState<any[]>([]);
+  const[name,setName]=useState('');
+
+  async function load(){
+    setC(
+      (await supabase
+        .from('categories')
+        .select('*')
+        .order('created_at')
+      ).data||[]
+    );
+  }
+
+  useEffect(()=>{
+    load();
+  },[]);
+
+  async function add(){
+    if(!name)return;
+
+    await supabase
+      .from('categories')
+      .insert({
+        name,
+        status:'active'
+      });
+
+    setName('');
+    load();
+  }
+
+  return(
+    <AdminShell title="Categories">
+      <div className="panel inline">
+        <input
+          value={name}
+          onChange={e=>setName(e.target.value)}
+          placeholder="New category name"
+        />
+
+        <button onClick={add}>
+          <Plus/>
+          Add
+        </button>
+      </div>
+
+      <div className="table">
+        {c.map(x=>
+          <div className="tr" key={x.id}>
+            <Tags/>
+
+            <div className="grow">
+              <b>{x.name}</b>
+              <small>{x.status}</small>
+            </div>
+
+            <button
+              className="icon"
+              onClick={async()=>{
+                await supabase
+                  .from('categories')
+                  .delete()
+                  .eq('id',x.id);
+
+                load();
+              }}
+            >
+              <Trash2/>
+            </button>
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminOrders(){
+  const[o,setO]=useState<any[]>([]);
+
+  async function load(){
+    setO(
+      (await supabase
+        .from('orders')
+        .select('*,profiles:user_id(name,email)')
+        .order('created_at',{ascending:false})
+      ).data||[]
+    );
+  }
+
+  useEffect(()=>{
+    load();
+  },[]);
+
+  async function status(id:string,s:string){
+    await supabase
+      .from('orders')
+      .update({
+        status:s,
+        payment_status:
+          s==='paid'||
+          s==='processing'||
+          s==='shipped'||
+          s==='completed'
+            ?'paid'
+            :'pending'
+      })
+      .eq('id',id);
+
+    load();
+  }
+
+  return(
+    <AdminShell title="Orders">
+      <div className="table">
+        {o.map(x=>
+          <div className="tr" key={x.id}>
+            <div className="grow">
+              <b>#{x.order_number}</b>
+
+              <small>
+                {x.profiles?.name||
+                  x.profiles?.email||
+                  'Customer'
+                }
+                {' · '}
+                {money(x.total)}
+              </small>
+            </div>
+
+            <select
+              value={x.status}
+              onChange={e=>
+                status(x.id,e.target.value)
+              }
+            >
+              {[
+                'pending',
+                'payment pending',
+                'paid',
+                'processing',
+                'shipped',
+                'completed',
+                'cancelled'
+              ].map(s=>
+                <option value={s} key={s}>
+                  {s}
+                </option>
+              )}
+            </select>
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminCustomers(){
+  const[c,setC]=useState<any[]>([]);
+
+  useEffect(()=>{
+    supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at',{ascending:false})
+      .then(({data})=>setC(data||[]));
+  },[]);
+
+  return(
+    <AdminShell title="Customers">
+      <div className="table">
+        {c.map(x=>
+          <div className="tr" key={x.id}>
+            <div className="avatar">
+              {(x.name||'C')[0]}
+            </div>
+
+            <div className="grow">
+              <b>{x.name||'Customer'}</b>
+              <small>
+                {x.email} · {x.role}
+              </small>
+            </div>
+
+            <Status s={x.status}/>
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminWallet(){
+  const[d,setD]=useState<any[]>([]);
+
+  async function load(){
+    setD(
+      (await supabase
+        .from('deposit_requests')
+        .select('*,profiles:user_id(name,email)')
+        .order('created_at',{ascending:false})
+      ).data||[]
+    );
+  }
+
+  useEffect(()=>{
+    load();
+  },[]);
+
+  async function review(
+    id:string,
+    approve:boolean
+  ){
+    const{error}=await supabase.rpc(
+      'review_deposit',
+      {
+        p_deposit_id:id,
+        p_approve:approve
+      }
+    );
+
+    if(error)alert(error.message);
+
+    load();
+  }
+
+  return(
+    <AdminShell title="Wallet Deposits">
+      <div className="table">
+        {d.map(x=>
+          <div className="tr" key={x.id}>
+            <div className="grow">
+              <b>
+                {x.profiles?.name||
+                  x.profiles?.email||
+                  'Customer'
+                }
+              </b>
+
+              <small>
+                {x.payment_method}
+                {' · '}
+                {new Date(
+                  x.created_at
+                ).toLocaleString()}
+              </small>
+            </div>
+
+            <b>{money(x.amount)}</b>
+
+            <Status s={x.status}/>
+
+            {x.status==='pending'&&
+              <div className="row">
+                <button
+                  className="secondary"
+                  onClick={()=>
+                    review(x.id,false)
+                  }
+                >
+                  Reject
+                </button>
+
+                <button
+                  onClick={()=>
+                    review(x.id,true)
+                  }
+                >
+                  Approve
+                </button>
+              </div>
+            }
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminTransactions(){
+  const[t,setT]=useState<any[]>([]);
+
+  useEffect(()=>{
+    supabase
+      .from('wallet_transactions')
+      .select('*')
+      .order('created_at',{ascending:false})
+      .then(({data})=>setT(data||[]));
+  },[]);
+
+  return(
+    <AdminShell title="Transactions">
+      <div className="table">
+        {t.map(x=>
+          <div className="tr" key={x.id}>
+            <ReceiptText/>
+
+            <div className="grow">
+              <b>{x.description||x.type}</b>
+
+              <small>
+                {new Date(
+                  x.created_at
+                ).toLocaleString()}
+              </small>
+            </div>
+
+            <b>{money(x.amount)}</b>
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}
+
+function AdminSettings(){
+  return(
+    <AdminShell title="Settings">
+      <div className="panel">
+        <h2>YN Studio</h2>
+        <p>Marketplace backend: Supabase</p>
+
+        <p className="muted">
+          Brand and operational settings can be expanded here without changing the marketplace architecture.
+        </p>
+
+        <Link
+          className="button"
+          to="/login"
+        >
+          Sign out
+        </Link>
+      </div>
+    </AdminShell>
+  );
+}
+
+function Status({s}:{s:string}){
+  return(
+    <span
+      className={
+        'status '+
+        String(s).replaceAll(' ','-')
+      }
+    >
+      {s}
+    </span>
+  );
+}
+
+function Empty({text}:{text:string}){
+  return(
+    <div className="empty">
+      <ShoppingCart/>
+      <h3>{text}</h3>
+    </div>
+  );
+}
+
+function Loader(){
+  return(
+    <div className="loader">
+      <div className="miniLogo">YN</div>
+    </div>
+  );
+}
+
+function Stat({n,t}:{n:any,t:string}){
+  return(
+    <div className="stat">
+      <small>{t}</small>
+      <strong>{n??'—'}</strong>
+    </div>
+  );
+}
+
+function App(){
+  return(
+    <Routes>
+      <Route path="/login" element={<Login/>}/>
+      <Route path="/" element={<Shop/>}/>
+      <Route path="/categories" element={<Categories/>}/>
+      <Route path="/product/:id" element={<Product/>}/>
+      <Route path="/cart" element={<Cart/>}/>
+      <Route path="/checkout" element={<Checkout/>}/>
+      <Route path="/orders" element={<Orders/>}/>
+      <Route path="/wallet" element={<WalletPage/>}/>
+
+      <Route path="/admin" element={<AdminDashboard/>}/>
+      <Route path="/admin/products" element={<AdminProducts/>}/>
+      <Route path="/admin/products/new" element={<AddProduct/>}/>
+      <Route path="/admin/categories" element={<AdminCategories/>}/>
+      <Route path="/admin/orders" element={<AdminOrders/>}/>
+      <Route path="/admin/customers" element={<AdminCustomers/>}/>
+      <Route path="/admin/wallet" element={<AdminWallet/>}/>
+      <Route path="/admin/transactions" element={<AdminTransactions/>}/>
+      <Route path="/admin/settings" element={<AdminSettings/>}/>
+    </Routes>
+  );
+}
+
+createRoot(
+  document.getElementById('root')!
+).render(
+  <BrowserRouter>
+    <App/>
+  </BrowserRouter>
+);
