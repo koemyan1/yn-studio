@@ -58,19 +58,55 @@ begin
 end; $$;
 grant execute on function public.admin_approve_order_payment(uuid) to authenticated;
 
--- Admin-only wallet adjustment. This is the ONLY admin operation that changes a wallet balance.
+-- Admin-only wallet adjustment. This changes the wallet balance and records a ledger entry when the existing ledger schema supports it.
 create or replace function public.admin_adjust_wallet(p_user_id uuid,p_amount numeric,p_description text default null)
-returns numeric language plpgsql security definer set search_path=public as $$
-declare new_balance numeric;
+returns numeric
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  new_balance numeric;
 begin
-  if not exists (select 1 from public.profiles where user_id=auth.uid() and role='admin') then
+  if not exists (
+    select 1 from public.profiles
+    where user_id=auth.uid() and role='admin'
+  ) then
     raise exception 'Admin access required';
   end if;
-  if p_amount=0 then raise exception 'Amount cannot be zero'; end if;
-  insert into public.wallets(user_id,balance) values(p_user_id,0) on conflict(user_id) do nothing;
-  update public.wallets set balance=coalesce(balance,0)+p_amount where user_id=p_user_id returning balance into new_balance;
-  insert into public.wallet_transactions(user_id,amount,type,description)
-  values(p_user_id,p_amount,case when p_amount>0 then 'admin_credit' else 'admin_debit' end,coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end));
+
+  if p_amount is null or p_amount=0 then
+    raise exception 'Amount cannot be zero';
+  end if;
+
+  insert into public.wallets(user_id,balance)
+  values(p_user_id,0)
+  on conflict(user_id) do nothing;
+
+  update public.wallets
+  set balance=coalesce(balance,0)+p_amount
+  where user_id=p_user_id
+  returning balance into new_balance;
+
+  if new_balance is null then
+    raise exception 'Customer wallet could not be updated';
+  end if;
+
+  -- Keep the wallet adjustment working even if an older database has a
+  -- slightly different wallet_transactions schema.
+  begin
+    insert into public.wallet_transactions(user_id,amount,type,description)
+    values(
+      p_user_id,
+      p_amount,
+      case when p_amount>0 then 'admin_credit' else 'admin_debit' end,
+      coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end)
+    );
+  exception when undefined_column or undefined_table then
+    null;
+  end;
+
   return new_balance;
-end; $$;
+end;
+$$;
 grant execute on function public.admin_adjust_wallet(uuid,numeric,text) to authenticated;
