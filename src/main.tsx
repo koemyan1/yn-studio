@@ -14,7 +14,116 @@ function ProductCard({p}:{p:P}){return <Link className="product" to={'/product/'
 function Shop(){const[p,setP]=useState<P[]>([]),[q,setQ]=useState('');useEffect(()=>{supabase.from('products').select('*').eq('status','published').order('created_at',{ascending:false}).then(({data})=>setP(data||[]))},[]);const shown=p.filter(x=>x.name.toLowerCase().includes(q.toLowerCase()));return <><main className="shop"><div className="brandrow"><div><span className="eyebrow">MARKETPLACE</span><h1>YN Studio</h1></div><Link className="avatar" to="/wallet">YN</Link></div><div className="search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search anything…"/></div><section className="hero"><div><small>FRESH PICKS</small><h2>Little things.<br/>Better days.</h2><p>Discover products selected for you.</p></div><div className="orb">YN</div></section><div className="sectionHead"><h2>{q?'Search results':'New for you'}</h2><Link to="/categories">See all <ChevronRight/></Link></div><div className="grid">{shown.map(x=><ProductCard p={x} key={x.id}/>)}</div>{!shown.length&&<Empty text="No products yet. Publish one from Admin."/>}</main><Nav/></>}
 function Categories(){const[c,setC]=useState<any[]>([]),[p,setP]=useState<P[]>([]),[sel,setSel]=useState('');useEffect(()=>{supabase.from('categories').select('*').eq('status','active').then(({data})=>setC(data||[]));supabase.from('products').select('*').eq('status','published').then(({data})=>setP(data||[]))},[]);return <><main className="shop"><Top title="Categories"/><div className="chips"><button className={!sel?'on':''} onClick={()=>setSel('')}>All</button>{c.map(x=><button className={sel===x.id?'on':''} onClick={()=>setSel(x.id)} key={x.id}>{x.name}</button>)}</div><div className="grid">{p.filter(x=>!sel||x.category_id===sel).map(x=><ProductCard p={x} key={x.id}/>)}</div></main><Nav/></>}
 function Product(){const{id}=useParams();const[p,setP]=useState<P|null>(null),[imgs,setImgs]=useState<any[]>([]),[opts,setOpts]=useState<any[]>([]),[pick,setPick]=useState<any>({}),[qty,setQty]=useState(1),[msg,setMsg]=useState('');useEffect(()=>{(async()=>{const{data}=await supabase.from('products').select('*').eq('id',id).single();setP(data);setImgs((await supabase.from('product_images').select('*').eq('product_id',id).order('sort_order')).data||[]);const os=(await supabase.from('product_options').select('*').eq('product_id',id).order('sort_order')).data||[];for(const o of os)o.values=(await supabase.from('product_option_values').select('*').eq('option_id',o.id).order('sort_order')).data||[];setOpts(os)})()},[id]);async function add(buy=false){const user=await uid();if(!user)return location.href='/login';if(opts.some(o=>!pick[o.name]))return setMsg('Please select all options first.');let{data:cart}=await supabase.from('carts').select('*').eq('user_id',user).maybeSingle();if(!cart){cart=(await supabase.from('carts').insert({user_id:user}).select().single()).data}const{error}=await supabase.from('cart_items').insert({cart_id:cart.id,product_id:p!.id,quantity:qty,selected_options:pick,price:p!.price});if(error)return setMsg(error.message);if(buy)location.href='/cart';else setMsg('Added to cart ✓')}if(!p)return <Loader/>;return <main className="detail"><Top title="Product" back/><div className="gallery">{(imgs[0]?.image_url||p.main_image_url)?<img src={imgs[0]?.image_url||p.main_image_url}/>:<div className="ph big">YN</div>}</div><section className="detailCard"><span className="eyebrow">YN MARKETPLACE</span><h1>{p.name}</h1><div className="price">{money(p.price)} {p.original_price&&<del>{money(p.original_price)}</del>}</div><p className="desc">{p.description||'No description provided.'}</p>{opts.map(o=><div className="variant" key={o.id}><b>{o.name}</b><div className="chips">{o.values.map((v:any)=><button className={pick[o.name]===v.value?'on':''} onClick={()=>setPick({...pick,[o.name]:v.value})}>{v.value}</button>)}</div></div>)}<div className="qty"><b>Quantity</b><div><button onClick={()=>setQty(Math.max(1,qty-1))}><Minus/></button><span>{qty}</span><button onClick={()=>setQty(qty+1)}><Plus/></button></div></div>{msg&&<p className="notice">{msg}</p>}<div className="stickyActions"><button className="secondary" onClick={()=>add(false)}>Add to cart</button><button onClick={()=>add(true)}>Buy now</button></div></section></main>}
-function Cart(){const[items,setItems]=useState<CartItem[]>([]),[loading,setLoading]=useState(true);async function load(){const u=await uid();if(!u){setLoading(false);return}const c=(await supabase.from('carts').select('id').eq('user_id',u).maybeSingle()).data;if(c){const{data}=await supabase.from('cart_items').select('*,products(*)').eq('cart_id',c.id);setItems((data||[]) as any)}else setItems([]);setLoading(false)}useEffect(()=>{load()},[]);async function qty(i:CartItem,n:number){if(n<1){await del(i.id);return}const{error}=await supabase.from('cart_items').update({quantity:n}).eq('id',i.id);if(error)alert(error.message);await load()}async function del(id:string){const{error}=await supabase.from('cart_items').delete().eq('id',id);if(error)alert(error.message);await load()}const subtotal=items.reduce((a,x)=>a+x.price*x.quantity,0);const count=items.reduce((a,x)=>a+x.quantity,0);return <><main className="shop cartPage"><Top title="Your Cart"/><div className="cartHeader"><div><span className="eyebrow">YOUR BAG</span><h1>Ready when you are.</h1><p>{count} {count===1?'item':'items'} in your cart</p></div><div className="cartBadge"><ShoppingCart/><b>{count}</b></div></div>{loading?<Loader/>:!items.length?<Empty text="Your cart is empty."/>:<><section className="cartList">{items.map(i=><article className="cartItem" key={i.id}><div className="cartImage">{i.products?.main_image_url?<img src={i.products.main_image_url} alt={i.products?.name||'Product'}/>:<div className="ph">YN</div>}</div><div className="cartInfo"><div className="cartInfoTop"><div><b>{i.products?.name||'Product'}</b><small>{Object.entries(i.selected_options||{}).map(([k,v])=>`${k}: ${v}`).join(' · ')||'Standard item'}</small></div><button className="cartRemove" onClick={()=>del(i.id)} aria-label="Remove item"><Trash2/></button></div><div className="cartInfoBottom"><strong>{money(i.price)}</strong><div className="qtyControl"><button onClick={()=>qty(i,i.quantity-1)} aria-label="Decrease"><Minus/></button><span>{i.quantity}</span><button onClick={()=>qty(i,i.quantity+1)} aria-label="Increase"><Plus/></button></div></div></div></article>)}</section><section className="cartSummary"><div className="summaryTop"><div><span className="eyebrow">ORDER TOTAL</span><h2>Checkout</h2></div><div className="summaryTotal">{money(subtotal)}</div></div><div className="summaryLine"><span>Subtotal</span><b>{money(subtotal)}</b></div><div className="summaryLine"><span>Payment</span><span>ABA / KHQR</span></div><div className="summaryHint"><CreditCard/><span>Pay securely with the YN Studio KHQR and upload your payment receipt at checkout.</span></div><Link className="button checkoutButton" to="/checkout">Continue to payment <ChevronRight/></Link></section></>}</main><Nav/></>}
+function Orders(){
+  const [orders,setOrders] = useState<any[]>([]);
+  const [loading,setLoading] = useState(true);
+
+  useEffect(()=>{
+    (async()=>{
+      const user = await uid();
+
+      if(!user){
+        setLoading(false);
+        return;
+      }
+
+      const {data,error} = await supabase
+        .from('orders')
+        .select('*,order_items(*)')
+        .eq('user_id',user)
+        .order('created_at',{ascending:false});
+
+      if(error){
+        console.error(error);
+        setLoading(false);
+        return;
+      }
+
+      setOrders(data || []);
+      setLoading(false);
+    })();
+  },[]);
+
+  if(loading){
+    return (
+      <>
+        <main className="shop">
+          <Top title="Orders"/>
+          <Loader/>
+        </main>
+        <Nav/>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <main className="shop">
+        <Top title="Orders"/>
+
+        <div className="sectionHead">
+          <div>
+            <span className="eyebrow">YOUR ORDERS</span>
+            <h2>Order history</h2>
+          </div>
+        </div>
+
+        {!orders.length && (
+          <Empty text="No orders yet."/>
+        )}
+
+        {orders.map(order => (
+          <div className="ordercard" key={order.id}>
+
+            <div className="line">
+              <b>#{order.order_number}</b>
+              <Status s={order.status || 'pending'}/>
+            </div>
+
+            <small>
+              {order.created_at
+                ? new Date(order.created_at).toLocaleString()
+                : ''}
+            </small>
+
+            {order.order_items?.map((item:any)=>(
+              <div className="miniitem" key={item.id}>
+                {item.product_image ? (
+                  <img
+                    src={item.product_image}
+                    alt={item.product_name || 'Product'}
+                  />
+                ) : (
+                  <div className="ph">YN</div>
+                )}
+
+                <span>
+                  {item.product_name || 'Product'} × {item.quantity}
+                </span>
+
+                <b>{money(item.subtotal)}</b>
+              </div>
+            ))}
+
+            <div className="line total">
+              <span>Total</span>
+              <b>{money(order.total)}</b>
+            </div>
+
+            {order.payment_status && (
+              <div className="orderPaymentStatus">
+                Payment: <b>{order.payment_status}</b>
+              </div>
+            )}
+
+          </div>
+        ))}
+      </main>
+
+      <Nav/>
+    </>
+  );
+}function Cart(){const[items,setItems]=useState<CartItem[]>([]),[loading,setLoading]=useState(true);async function load(){const u=await uid();if(!u){setLoading(false);return}const c=(await supabase.from('carts').select('id').eq('user_id',u).maybeSingle()).data;if(c){const{data}=await supabase.from('cart_items').select('*,products(*)').eq('cart_id',c.id);setItems((data||[]) as any)}else setItems([]);setLoading(false)}useEffect(()=>{load()},[]);async function qty(i:CartItem,n:number){if(n<1){await del(i.id);return}const{error}=await supabase.from('cart_items').update({quantity:n}).eq('id',i.id);if(error)alert(error.message);await load()}async function del(id:string){const{error}=await supabase.from('cart_items').delete().eq('id',id);if(error)alert(error.message);await load()}const subtotal=items.reduce((a,x)=>a+x.price*x.quantity,0);const count=items.reduce((a,x)=>a+x.quantity,0);return <><main className="shop cartPage"><Top title="Your Cart"/><div className="cartHeader"><div><span className="eyebrow">YOUR BAG</span><h1>Ready when you are.</h1><p>{count} {count===1?'item':'items'} in your cart</p></div><div className="cartBadge"><ShoppingCart/><b>{count}</b></div></div>{loading?<Loader/>:!items.length?<Empty text="Your cart is empty."/>:<><section className="cartList">{items.map(i=><article className="cartItem" key={i.id}><div className="cartImage">{i.products?.main_image_url?<img src={i.products.main_image_url} alt={i.products?.name||'Product'}/>:<div className="ph">YN</div>}</div><div className="cartInfo"><div className="cartInfoTop"><div><b>{i.products?.name||'Product'}</b><small>{Object.entries(i.selected_options||{}).map(([k,v])=>`${k}: ${v}`).join(' · ')||'Standard item'}</small></div><button className="cartRemove" onClick={()=>del(i.id)} aria-label="Remove item"><Trash2/></button></div><div className="cartInfoBottom"><strong>{money(i.price)}</strong><div className="qtyControl"><button onClick={()=>qty(i,i.quantity-1)} aria-label="Decrease"><Minus/></button><span>{i.quantity}</span><button onClick={()=>qty(i,i.quantity+1)} aria-label="Increase"><Plus/></button></div></div></div></article>)}</section><section className="cartSummary"><div className="summaryTop"><div><span className="eyebrow">ORDER TOTAL</span><h2>Checkout</h2></div><div className="summaryTotal">{money(subtotal)}</div></div><div className="summaryLine"><span>Subtotal</span><b>{money(subtotal)}</b></div><div className="summaryLine"><span>Payment</span><span>ABA / KHQR</span></div><div className="summaryHint"><CreditCard/><span>Pay securely with the YN Studio KHQR and upload your payment receipt at checkout.</span></div><Link className="button checkoutButton" to="/checkout">Continue to payment <ChevronRight/></Link></section></>}</main><Nav/></>}
 function Checkout(){const nav=useNavigate();const[items,setItems]=useState<CartItem[]>([]),[busy,setBusy]=useState(false),[file,setFile]=useState<File|null>(null),[showAba,setShowAba]=useState(false),[msg,setMsg]=useState('');useEffect(()=>{(async()=>{const u=await uid();if(!u){nav('/login');return}const{data:c}=await supabase.from('carts').select('id').eq('user_id',u).maybeSingle();if(!c){setItems([]);return}const{data,error}=await supabase.from('cart_items').select('*').eq('cart_id',c.id);if(error){setMsg(error.message);return}const ids=[...new Set((data||[]).map((x:any)=>x.product_id).filter(Boolean))];let ps:any[]=[];if(ids.length){const r=await supabase.from('products').select('*').in('id',ids);if(r.error){setMsg(r.error.message);return}ps=r.data||[]}const by=new Map(ps.map((x:any)=>[x.id,x]));setItems((data||[]).map((x:any)=>({...x,products:by.get(x.product_id)})) as any)})()},[nav]);const total=items.reduce((a,x)=>a+Number(x.price||x.products?.price||0)*Number(x.quantity||0),0);async function place(){if(busy)return;if(!items.length){setMsg('Your cart is empty.');return}if(!file){setMsg('Please upload your payment receipt first.');return}setBusy(true);setMsg('');const u=await uid();if(!u){nav('/login');return}const path=`${u}/order-${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const upload=await supabase.storage.from('deposit-receipts').upload(path,file);if(upload.error){setMsg(upload.error.message);setBusy(false);return}const num='YN-'+Date.now().toString().slice(-8);const{data:o,error}=await supabase.from('orders').insert({order_number:num,user_id:u,subtotal:total,fees:0,total,status:'payment pending',payment_status:'pending',payment_method:'ABA / KHQR',payment_receipt_url:path}).select().single();if(error){setMsg(error.message);setBusy(false);return}for(const i of items){const price=Number(i.price||i.products?.price||0);const{error:itemError}=await supabase.from('order_items').insert({order_id:o.id,product_id:i.product_id,product_name:i.products?.name||'Product',product_image:i.products?.main_image_url,quantity:i.quantity,unit_price:price,selected_options:i.selected_options,subtotal:price*Number(i.quantity||0)});if(itemError){setMsg(itemError.message);setBusy(false);return}}const c=(await supabase.from('carts').select('id').eq('user_id',u).maybeSingle()).data;if(c)await supabase.from('cart_items').delete().eq('cart_id',c.id);nav('/orders')}return <><main className="shop checkoutPage"><Top title="Payment" back/><div className="checkoutLayout"><section className="checkoutMain"><div className="checkoutIntro"><span className="eyebrow">SECURE CHECKOUT</span><h1>Complete your payment.</h1><p>Pay for this order using ABA, then upload your receipt. Your payment will be reviewed by YN Studio.</p></div><div className="checkoutPayment panel"><div className="paymentHeader"><div><span className="eyebrow">PAYMENT METHOD</span><h2>ABA</h2><p>Tap the button to view the YN Studio payment QR.</p></div><CreditCard/></div><button className="abaPaymentButton" type="button" onClick={()=>setShowAba(true)}><span className="paymentIcon abaIcon">ABA</span><span><b>Pay with ABA</b><small>Open payment QR</small></span><ChevronRight/></button><label className="receiptUpload"><Upload/><span><b>{file?'Payment receipt selected':'Upload payment receipt'}</b><small>{file?file.name:'PNG, JPG or other image'}</small></span><input hidden type="file" accept="image/*" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>{msg&&<p className="notice">{msg}</p>}</div></section><aside className="checkoutAside"><div className="panel orderSummary"><span className="eyebrow">YOUR ORDER</span><h2>Summary</h2>{items.map(i=><div className="summaryLine" key={i.id}><span>{i.products?.name||'Product'} × {i.quantity}</span><b>{money(Number(i.price||i.products?.price||0)*Number(i.quantity||0))}</b></div>)}<hr/><div className="summaryLine grand"><span>Total</span><b>{money(total)}</b></div><button className="wide" disabled={!items.length||busy||!file} onClick={place}>{busy?'Submitting payment…':'I paid — submit order'} <CheckCircle2/></button><small className="summaryFoot">The order stays payment pending until an admin approves the payment.</small></div></aside></div></main>{showAba&&<div className="payModal" role="dialog" aria-modal="true" onClick={()=>setShowAba(false)}><div className="payModalCard" onClick={e=>e.stopPropagation()}><button className="icon payClose" onClick={()=>setShowAba(false)} aria-label="Close"><X/></button><span className="eyebrow">ABA PAYMENT</span><h2>Pay YN Studio</h2><p className="payLead">Use ABA Mobile to make the payment shown below.</p><div className="qrFrame"><img src="/QR.PNG" alt="YN Studio ABA payment QR"/></div><div className="payMeta"><div><small>MERCHANT</small><b>YN studio by K.KORN</b></div></div><button className="wide" onClick={()=>setShowAba(false)}>Done</button></div></div>}<Nav/></>}
 function WalletPage(){
  const[w,setW]=useState<any>(null),[tx,setTx]=useState<any[]>([]),[deps,setDeps]=useState<any[]>([]),[amount,setAmount]=useState(''),[method,setMethod]=useState('ABA / KHQR'),[file,setFile]=useState<File|null>(null),[msg,setMsg]=useState(''),[payInfo,setPayInfo]=useState<'aba'|'qr'|null>(null);
