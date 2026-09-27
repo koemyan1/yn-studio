@@ -67,6 +67,7 @@ set search_path=public
 as $$
 declare
   new_balance numeric;
+  v_wallet_id uuid;
 begin
   if not exists (
     select 1 from public.profiles
@@ -83,27 +84,44 @@ begin
   values(p_user_id,0)
   on conflict(user_id) do nothing;
 
+  select id into v_wallet_id
+  from public.wallets
+  where user_id=p_user_id
+  limit 1;
+
+  if v_wallet_id is null then
+    raise exception 'Customer wallet could not be created';
+  end if;
+
   update public.wallets
   set balance=coalesce(balance,0)+p_amount
-  where user_id=p_user_id
+  where id=v_wallet_id
   returning balance into new_balance;
 
   if new_balance is null then
     raise exception 'Customer wallet could not be updated';
   end if;
 
-  -- Keep the wallet adjustment working even if an older database has a
-  -- slightly different wallet_transactions schema.
+  -- wallet_transactions requires wallet_id in this database.
+  -- Keep user_id as well when that column exists.
   begin
-    insert into public.wallet_transactions(user_id,amount,type,description)
+    insert into public.wallet_transactions(wallet_id,user_id,amount,type,description)
     values(
+      v_wallet_id,
       p_user_id,
       p_amount,
       case when p_amount>0 then 'admin_credit' else 'admin_debit' end,
       coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end)
     );
-  exception when undefined_column or undefined_table then
-    null;
+  exception when undefined_column then
+    -- Older schemas may not have user_id; wallet_id is still required.
+    insert into public.wallet_transactions(wallet_id,amount,type,description)
+    values(
+      v_wallet_id,
+      p_amount,
+      case when p_amount>0 then 'admin_credit' else 'admin_debit' end,
+      coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end)
+    );
   end;
 
   return new_balance;
