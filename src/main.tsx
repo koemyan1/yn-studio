@@ -133,6 +133,34 @@ function WalletPage(){
   </div></div>}
  </>
 }
+function AdminShell({title,children}:{title:string;children:React.ReactNode}){
+  const nav=useNavigate();
+  const items=[
+    ['/admin','Dashboard',LayoutDashboard],
+    ['/admin/products','Products',Package],
+    ['/admin/categories','Categories',Tags],
+    ['/admin/orders','Orders',ClipboardList],
+    ['/admin/customers','Customers',Users],
+    ['/admin/wallet','Wallet',Wallet],
+    ['/admin/transactions','Transactions',ReceiptText],
+    ['/admin/settings','Settings',Settings],
+  ] as const;
+  async function logout(){await supabase.auth.signOut();nav('/login',{replace:true})}
+  return <div className="admin">
+    <aside>
+      <div className="adminBrand"><div className="miniLogo">YN</div><div><b>YN Studio</b><small>Admin</small></div></div>
+      {items.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/admin'}><Icon/><span>{label}</span></NavLink>)}
+      <button className="secondary adminLogout" onClick={logout}><LogOut/><span>Sign out</span></button>
+    </aside>
+    <main>
+      <div className="adminTop">
+        <div><span className="eyebrow">YN STUDIO ADMIN</span><h1>{title}</h1></div>
+        <Link className="secondary button" to="/"><Store/> View shop</Link>
+      </div>
+      {children}
+    </main>
+  </div>
+}
 function AdminDashboard(){const[s,setS]=useState<any>({});useEffect(()=>{(async()=>{const tables=['products','orders','profiles','deposit_requests'];const vals:any={};for(const t of tables){let q:any=supabase.from(t).select('*',{count:'exact',head:true});if(t==='deposit_requests')q=q.eq('status','pending');vals[t]=(await q).count||0}setS(vals)})()},[]);return <AdminShell title="Dashboard"><div className="stats"><Stat n={s.products} t="Products"/><Stat n={s.orders} t="Orders"/><Stat n={s.profiles} t="Customers"/><Stat n={s.deposit_requests} t="Pending deposits"/></div><div className="welcome"><div><span className="eyebrow">YN STUDIO</span><h2>Your marketplace, under control.</h2><p>Publish products, process customer orders and review wallet deposits from one place.</p></div><Link className="button" to="/admin/products/new"><Plus/> Add product</Link></div></AdminShell>}
 function AdminProducts(){const[p,setP]=useState<P[]>([]);async function load(){setP((await supabase.from('products').select('*').order('created_at',{ascending:false})).data||[])}useEffect(()=>{load()},[]);async function toggle(x:P){await supabase.from('products').update({status:x.status==='published'?'unpublished':'published'}).eq('id',x.id);load()}return <AdminShell title="Products"><div className="toolbar"><Link className="button" to="/admin/products/new"><Plus/>Add product</Link></div><div className="table">{p.map(x=><div className="tr"><img src={x.main_image_url||''}/><div className="grow"><b>{x.name}</b><small>{x.status}</small></div><b>{money(x.price)}</b><button className="secondary" onClick={()=>toggle(x)}>{x.status==='published'?'Unpublish':'Publish'}</button></div>)}</div></AdminShell>}
 function AddProduct(){const nav=useNavigate();const[name,setName]=useState(''),[desc,setDesc]=useState(''),[price,setPrice]=useState(''),[orig,setOrig]=useState(''),[sku,setSku]=useState(''),[cat,setCat]=useState(''),[cats,setCats]=useState<any[]>([]),[imgs,setImgs]=useState<File[]>([]),[opts,setOpts]=useState([{name:'',values:''}]),[busy,setBusy]=useState(false);useEffect(()=>{supabase.from('categories').select('*').eq('status','active').then(({data})=>setCats(data||[]))},[]);async function save(status:string){if(!name||!price)return alert('Product name and price are required.');setBusy(true);const{data,error}=await supabase.from('products').insert({name,description:desc,price:Number(price),original_price:orig?Number(orig):null,category_id:cat||null,sku:sku||null,currency:'USD',status}).select().single();if(error){alert(error.message);setBusy(false);return}let cover='';for(let i=0;i<imgs.length;i++){const f=imgs[i],path=`${data.id}/${crypto.randomUUID()}-${f.name}`;const u=await supabase.storage.from('product-images').upload(path,f);if(!u.error){const url=supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;if(!i)cover=url;await supabase.from('product_images').insert({product_id:data.id,image_url:url,sort_order:i})}}if(cover)await supabase.from('products').update({main_image_url:cover}).eq('id',data.id);for(let i=0;i<opts.length;i++){if(!opts[i].name.trim())continue;const o=(await supabase.from('product_options').insert({product_id:data.id,name:opts[i].name,sort_order:i}).select().single()).data;if(o)for(const [j,v] of opts[i].values.split(',').map(v=>v.trim()).filter(Boolean).entries())await supabase.from('product_option_values').insert({option_id:o.id,value:v,sort_order:j})}setBusy(false);nav('/admin/products')}return <AdminShell title="Add Product"><div className="editor"><section className="panel"><h2>Product information</h2><label>Name<input value={name} onChange={e=>setName(e.target.value)} placeholder="Product name"/></label><label>Description<textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Tell customers about this product"/></label><div className="two"><label>Customer price<input type="number" step=".01" value={price} onChange={e=>setPrice(e.target.value)}/></label><label>Original price<input type="number" step=".01" value={orig} onChange={e=>setOrig(e.target.value)}/></label></div><div className="two"><label>Category<select value={cat} onChange={e=>setCat(e.target.value)}><option value="">No category</option>{cats.map(c=><option value={c.id}>{c.name}</option>)}</select></label><label>SKU<input value={sku} onChange={e=>setSku(e.target.value)}/></label></div></section><section className="panel"><h2>Photos</h2><label className="drop"><ImagePlus/><b>Choose product photos</b><span>Multiple images supported</span><input hidden type="file" multiple accept="image/*" onChange={e=>setImgs(Array.from(e.target.files||[]))}/></label><div className="previews">{imgs.map(f=><img src={URL.createObjectURL(f)}/>)}</div></section><section className="panel"><div className="line"><div><h2>Options / variants</h2><p className="muted">Create anything: Color, Size, Style…</p></div><button className="secondary" onClick={()=>setOpts([...opts,{name:'',values:''}])}><Plus/> Add</button></div>{opts.map((o,i)=><div className="option"><input placeholder="Option name" value={o.name} onChange={e=>setOpts(opts.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/><input placeholder="Black, White, Pink" value={o.values} onChange={e=>setOpts(opts.map((x,j)=>j===i?{...x,values:e.target.value}:x))}/><button className="icon" onClick={()=>setOpts(opts.filter((_,j)=>j!==i))}><Trash2/></button></div>)}</section><div className="actions"><button disabled={busy} className="secondary" onClick={()=>save('draft')}>Save draft</button><button disabled={busy} onClick={()=>save('published')}>{busy?'Saving…':'Publish product'}</button></div></div></AdminShell>}
