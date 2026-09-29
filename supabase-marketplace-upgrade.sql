@@ -31,24 +31,3 @@ drop policy if exists "admins delete banner images" on storage.objects;
 create policy "admins delete banner images" on storage.objects for delete using (
  bucket_id='banner-images' and exists(select 1 from public.profiles p where p.user_id=auth.uid() and p.role='admin')
 );
-
--- Additional marketplace settings and optional image for each product choice.
-alter table public.product_option_values add column if not exists choice_image_url text;
-
-create table if not exists public.app_settings (
-  id text primary key,
-  banner_rotation_seconds numeric(6,2) not null default 3.5,
-  updated_at timestamptz not null default now()
-);
-insert into public.app_settings (id,banner_rotation_seconds)
-values ('main',3.5)
-on conflict (id) do nothing;
-alter table public.app_settings enable row level security;
-drop policy if exists "app settings public read" on public.app_settings;
-create policy "app settings public read" on public.app_settings for select using (true);
-drop policy if exists "admins manage app settings" on public.app_settings;
-create policy "admins manage app settings" on public.app_settings for all using (
-  exists(select 1 from public.profiles p where p.user_id=auth.uid() and p.role='admin')
-) with check (
-  exists(select 1 from public.profiles p where p.user_id=auth.uid() and p.role='admin')
-);
