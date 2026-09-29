@@ -125,3 +125,14 @@ html[lang="km"] body,html[lang="km"] button,html[lang="km"] input,html[lang="km"
   .notificationButton{transition:none!important}
 }
 .authDivider{display:flex;align-items:center;gap:12px;margin:2px 0;color:var(--muted);font-size:12px;font-weight:800}.authDivider:before,.authDivider:after{content:"";height:1px;background:var(--line);flex:1}.googleBtn{background:#fff!important;color:var(--ink)!important;border:1px solid var(--line);box-shadow:none}.googleBtn:hover{border-color:#c9b4e9;box-shadow:0 8px 24px rgba(72,35,120,.08)}.googleMark{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;font-weight:950;color:#4285f4;background:#f4f7ff}.verifyCard{text-align:left}.authHint{color:var(--muted);font-size:13px;line-height:1.5;margin:0}.otpInput{text-align:center;font-size:28px;font-weight:900;letter-spacing:.35em;padding-left:.55em}.notificationButton{position:relative}.notificationBellIcon{transition:transform .2s ease}.notificationButton:hover .notificationBellIcon{transform:rotate(-10deg) scale(1.05)}
+
+
+/* YN Studio brand logo */
+.miniLogo,.logo{background:transparent;overflow:hidden;}
+.miniLogo img,.logo img{display:block;width:100%;height:100%;object-fit:contain;}
+.ph img{display:block;width:100%;height:100%;object-fit:contain;padding:18%;}
+.ph.big img{padding:12%;}
+.orb{background:transparent;box-shadow:none;overflow:hidden;}
+.orb img{display:block;width:100%;height:100%;object-fit:contain;}
+.orderThumb span{display:grid;place-items:center;overflow:hidden;}
+.orderThumb span img{width:100%;height:100%;object-fit:contain;}
