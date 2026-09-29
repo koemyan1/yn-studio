@@ -133,3 +133,92 @@ begin
 end $$;
 drop trigger if exists yn_notify_wallet_transaction on public.wallet_transactions;
 create trigger yn_notify_wallet_transaction after insert on public.wallet_transactions for each row execute function public.yn_notify_wallet_transaction();
+
+-- YN Studio live customer messaging
+create table if not exists public.support_messages (
+  id uuid primary key default gen_random_uuid(),
+  ticket_id uuid not null references public.support_tickets(id) on delete cascade,
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  sender_role text not null check (sender_role in ('customer','admin')),
+  message text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.support_messages enable row level security;
+drop policy if exists "support messages own read" on public.support_messages;
+create policy "support messages own read" on public.support_messages for select using (
+  exists(select 1 from public.support_tickets t where t.id=support_messages.ticket_id and (t.user_id=auth.uid() or exists(select 1 from public.profiles p where p.user_id=auth.uid() and p.role='admin')))
+);
+drop policy if exists "support messages customer insert" on public.support_messages;
+create policy "support messages customer insert" on public.support_messages for insert with check (
+  sender_id=auth.uid() and sender_role='customer' and exists(select 1 from public.support_tickets t where t.id=support_messages.ticket_id and t.user_id=auth.uid())
+);
+drop policy if exists "support messages admin insert" on public.support_messages;
+create policy "support messages admin insert" on public.support_messages for insert with check (
+  sender_id=auth.uid() and sender_role='admin' and exists(select 1 from public.profiles p where p.user_id=auth.uid() and p.role='admin')
+);
+
+-- Realtime chat updates
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.support_messages;
+  EXCEPTION WHEN duplicate_object THEN
+    NULL;
+  END;
+END $$;
+
+-- Keep the support ticket row in sync with the live chat and create in-app notifications.
+create or replace function public.yn_notify_support_message() returns trigger language plpgsql security definer set search_path=public as $$
+declare
+  subject_text text;
+begin
+  select subject into subject_text from public.support_tickets where id=new.ticket_id;
+  update public.support_tickets
+    set updated_at=now(),
+        status=case when new.sender_role='admin' then 'replied' else 'open' end,
+        admin_reply=case when new.sender_role='admin' then new.message else admin_reply end
+    where id=new.ticket_id;
+
+  if new.sender_role='customer' then
+    insert into public.notifications(user_id,target_role,title,message,type,link)
+      values(null,'admin','New customer message',coalesce(subject_text,'Customer chat')||' · '||left(new.message,180),'support','/admin/support');
+  else
+    insert into public.notifications(user_id,target_role,title,message,type,link)
+      select t.user_id,'customer','New message from YN Studio',left(new.message,180),'support','/support'
+      from public.support_tickets t where t.id=new.ticket_id;
+  end if;
+  return new;
+end $$;
+drop trigger if exists yn_notify_support_message on public.support_messages;
+create trigger yn_notify_support_message after insert on public.support_messages for each row execute function public.yn_notify_support_message();
+
+-- Notify the admin when a customer account is created. The Telegram integration
+-- listens to admin notifications, so this also works for Google sign-in profiles.
+create or replace function public.yn_notify_customer_account() returns trigger language plpgsql security definer set search_path=public as $$
+begin
+  if coalesce(new.role,'customer')='customer' then
+    insert into public.notifications(user_id,target_role,title,message,type,link)
+      values(null,'admin','New customer account',coalesce(new.name,'Customer')||coalesce(' · '||new.email,''),'account','/admin/customers');
+  end if;
+  return new;
+end $$;
+drop trigger if exists yn_notify_customer_account on public.profiles;
+create trigger yn_notify_customer_account after insert on public.profiles for each row execute function public.yn_notify_customer_account();
+
+-- Telegram setup notes:
+-- 1) Deploy supabase/functions/telegram-alert from this project.
+-- 2) Add Edge Function secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, YN_TELEGRAM_WEBHOOK_SECRET.
+-- 3) In Supabase Dashboard > Database > Webhooks, create an INSERT webhook for
+--    public.notifications pointing to the telegram-alert Edge Function.
+-- 4) Add header: x-yn-webhook-secret = the same YN_TELEGRAM_WEBHOOK_SECRET value.
+
+-- The live chat now owns support notifications. Keep the legacy ticket trigger
+-- from generating a duplicate alert when a new chat thread is created.
+create or replace function public.yn_notify_support() returns trigger language plpgsql security definer set search_path=public as $$
+begin
+  if tg_op='UPDATE' and coalesce(new.admin_reply,'') is distinct from coalesce(old.admin_reply,'') then
+    insert into public.notifications(user_id,target_role,title,message,type,link)
+      values(new.user_id,'customer','Customer service replied',coalesce(new.admin_reply,'Your support ticket was updated.'),'support','/support');
+  end if;
+  return new;
+end $$;
