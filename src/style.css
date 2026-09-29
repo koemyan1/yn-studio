@@ -67,3 +67,60 @@ html[lang="km"] body,html[lang="km"] button,html[lang="km"] input,html[lang="km"
 .supportForm{display:grid;gap:14px;padding:18px}.supportForm textarea,.adminSupportCard textarea{width:100%;resize:vertical}.supportList{display:grid;gap:10px;margin-top:16px}.supportTicket{background:#fff;border:1px solid #eee8f5;border-radius:19px;padding:17px}.supportTicket p{line-height:1.55}.supportReply{background:#f8f5fb;border-radius:15px;padding:12px;margin:10px 0}.supportReply p{margin:5px 0}.supportReply small{color:#7c3aed;font-weight:800;letter-spacing:.08em}
 .adminNotificationList,.adminSupportList{display:grid;gap:12px}.adminNotification{width:100%;display:flex;align-items:center;gap:14px;text-align:left;border:1px solid #e9e3ef;background:var(--admin-card,#fff);border-radius:18px;padding:16px;cursor:pointer}.adminNotification.unread{border-color:#bfa2e8;box-shadow:0 8px 25px rgba(100,60,150,.08)}.adminNotification>span{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#f1e8fb;color:#7c3aed}.adminSupportCard{background:var(--admin-card,#fff);border:1px solid #e9e3ef;border-radius:20px;padding:18px}.adminSupportCard .line{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.adminSupportCard .line>div{display:flex;flex-direction:column;gap:4px}.adminSupportCard .line small{color:#777}.adminSupportCard textarea{margin-top:12px}
 @media(max-width:650px){.profileStats b{font-size:20px}.profileQuickGrid a{padding:14px}.transactionDetail{padding:22px 17px}.detailRows div{flex-direction:column;gap:5px}.detailRows b{text-align:left}.notificationCard{padding:13px}}
+
+/* Notification bell polish */
+.notificationButton{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  padding:0;
+  border-radius:14px;
+  background:linear-gradient(180deg,#ffffff,#faf7ff);
+  color:#5b21b6;
+  border:1px solid #e9def7;
+  box-shadow:0 5px 16px rgba(91,33,182,.08);
+  text-decoration:none;
+  overflow:visible;
+}
+.notificationButton:hover{
+  color:#7c3aed;
+  border-color:#d9c5f4;
+  background:#fff;
+  box-shadow:0 9px 22px rgba(91,33,182,.16);
+  transform:translateY(-2px);
+}
+.notificationButton:active{transform:scale(.96)}
+.notificationButton .notificationBellIcon{
+  width:20px;
+  height:20px;
+  stroke-width:2.2;
+}
+.notificationButton::after{
+  content:"";
+  position:absolute;
+  top:7px;
+  right:7px;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#7c3aed;
+  border:2px solid #fff;
+  box-sizing:content-box;
+}
+.profileAccountActions .profilePanelHead>svg{
+  width:21px;
+  height:21px;
+  color:var(--purple);
+}
+.profileAccountActions{align-self:start}
+@media (max-width:600px){
+  .notificationButton{width:42px;height:42px;min-width:42px;border-radius:13px}
+  .notificationButton::after{top:6px;right:6px}
+}
+@media (prefers-reduced-motion:reduce){
+  .notificationButton{transition:none!important}
+}
