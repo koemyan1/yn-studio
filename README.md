@@ -32,9 +32,10 @@ VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 ```
 
-
-## Khmer Wedding E-Invitation
-- Admin: `/admin/weddings`
-- Public invitation: `/invitation/:slug`
-- Create/edit/publish invitations with photos, gallery, MP3, Khmer wording, schedule, venue and Google Maps link.
-- Run `supabase-wedding-invitation.sql` in Supabase SQL Editor first.
+## Rewards, Coupons & Support Chat
+- Admin coupons: `/admin/coupons`
+- Customer rewards: `/rewards`
+- Customer/admin support chat supports image messages.
+- Admin can send refund credits, gift envelopes, and coupons directly inside chat.
+- Customers can claim chat rewards and apply coupon codes at checkout.
+- Run `supabase-rewards-coupons.sql` in Supabase SQL Editor after the existing marketplace/order-payment SQL.
