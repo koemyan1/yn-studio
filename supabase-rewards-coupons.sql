@@ -151,13 +151,12 @@ begin
   if r.type in ('refund','envelope') then
     if coalesce(r.amount,0)<=0 then raise exception 'Invalid reward amount'; end if;
     insert into public.wallets(user_id,balance) values(auth.uid(),0) on conflict(user_id) do nothing;
-    select id into v_wallet_id from public.wallets where user_id=auth.uid() limit 1;
-    update public.wallets set balance=coalesce(balance,0)+r.amount where id=v_wallet_id returning balance into new_balance;
-    begin
-      insert into public.wallet_transactions(wallet_id,user_id,amount,type,description) values(v_wallet_id,auth.uid(),r.amount,'reward',case when r.type='refund' then 'Customer service refund' else 'Customer service envelope' end);
-    exception when undefined_column then
-      insert into public.wallet_transactions(wallet_id,amount,type,description) values(v_wallet_id,r.amount,'reward',case when r.type='refund' then 'Customer service refund' else 'Customer service envelope' end);
-    end;
+    select id, coalesce(balance,0) into v_wallet_id, new_balance from public.wallets where user_id=auth.uid() limit 1 for update;
+    update public.wallets set balance=new_balance+r.amount where id=v_wallet_id;
+    insert into public.wallet_transactions(wallet_id,user_id,amount,balance_before,balance_after,type,description)
+    values(v_wallet_id,auth.uid(),r.amount,new_balance,new_balance+r.amount,'reward',
+      case when r.type='refund' then 'Customer service refund' else 'Customer service envelope' end);
+    new_balance := new_balance+r.amount;
   elsif r.type='coupon' then
     if r.coupon_id is null then raise exception 'Coupon reward is missing a coupon'; end if;
     insert into public.coupon_assignments(coupon_id,user_id,status,assigned_by,claimed_at) values(r.coupon_id,auth.uid(),'claimed',r.admin_id,now())

@@ -58,7 +58,7 @@ begin
 end; $$;
 grant execute on function public.admin_approve_order_payment(uuid) to authenticated;
 
--- Admin-only wallet adjustment. This changes the wallet balance and records a ledger entry when the existing ledger schema supports it.
+-- Admin-only wallet adjustment with full before/after ledger values.
 create or replace function public.admin_adjust_wallet(p_user_id uuid,p_amount numeric,p_description text default null)
 returns numeric
 language plpgsql
@@ -66,63 +66,28 @@ security definer
 set search_path=public
 as $$
 declare
+  old_balance numeric;
   new_balance numeric;
   v_wallet_id uuid;
 begin
-  if not exists (
-    select 1 from public.profiles
-    where user_id=auth.uid() and role='admin'
-  ) then
+  if not exists (select 1 from public.profiles where user_id=auth.uid() and role='admin') then
     raise exception 'Admin access required';
   end if;
-
   if p_amount is null or p_amount=0 then
     raise exception 'Amount cannot be zero';
   end if;
 
-  insert into public.wallets(user_id,balance)
-  values(p_user_id,0)
-  on conflict(user_id) do nothing;
+  insert into public.wallets(user_id,balance) values(p_user_id,0) on conflict(user_id) do nothing;
+  select id, coalesce(balance,0) into v_wallet_id, old_balance from public.wallets where user_id=p_user_id limit 1 for update;
+  if v_wallet_id is null then raise exception 'Customer wallet could not be created'; end if;
 
-  select id into v_wallet_id
-  from public.wallets
-  where user_id=p_user_id
-  limit 1;
+  new_balance := old_balance + p_amount;
+  update public.wallets set balance=new_balance where id=v_wallet_id;
 
-  if v_wallet_id is null then
-    raise exception 'Customer wallet could not be created';
-  end if;
-
-  update public.wallets
-  set balance=coalesce(balance,0)+p_amount
-  where id=v_wallet_id
-  returning balance into new_balance;
-
-  if new_balance is null then
-    raise exception 'Customer wallet could not be updated';
-  end if;
-
-  -- wallet_transactions requires wallet_id in this database.
-  -- Keep user_id as well when that column exists.
-  begin
-    insert into public.wallet_transactions(wallet_id,user_id,amount,type,description)
-    values(
-      v_wallet_id,
-      p_user_id,
-      p_amount,
-      case when p_amount>0 then 'admin_credit' else 'admin_debit' end,
-      coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end)
-    );
-  exception when undefined_column then
-    -- Older schemas may not have user_id; wallet_id is still required.
-    insert into public.wallet_transactions(wallet_id,amount,type,description)
-    values(
-      v_wallet_id,
-      p_amount,
-      case when p_amount>0 then 'admin_credit' else 'admin_debit' end,
-      coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end)
-    );
-  end;
+  insert into public.wallet_transactions(wallet_id,user_id,amount,balance_before,balance_after,type,description)
+  values(v_wallet_id,p_user_id,p_amount,old_balance,new_balance,
+    case when p_amount>0 then 'admin_credit' else 'admin_debit' end,
+    coalesce(p_description,case when p_amount>0 then 'Admin added money' else 'Admin deducted money' end));
 
   return new_balance;
 end;
