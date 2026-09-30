@@ -31,3 +31,10 @@ Set these Render environment variables:
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 ```
+
+
+## Khmer Wedding E-Invitation
+- Admin: `/admin/weddings`
+- Public invitation: `/invitation/:slug`
+- Create/edit/publish invitations with photos, gallery, MP3, Khmer wording, schedule, venue and Google Maps link.
+- Run `supabase-wedding-invitation.sql` in Supabase SQL Editor first.
