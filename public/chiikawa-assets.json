@@ -1,0 +1,9 @@
+{
+  "theme": "YN Studio Secret Kawaii Theme",
+  "activationCode": "KAWAII",
+  "characterAssets": [
+    {"name":"Chiikawa","url":"https://images.squarespace-cdn.com/content/v1/6670add926f2a64cd00fb0e7/7828ba38-8302-4215-b4e9-2873c2a27ecc/characters%2Bchiikawa%2Bphonetic%2Band%2Bname%2Bcopy.png","source":"https://www.chiikawaofficial.com/characters/"},
+    {"name":"Pochette no-Yoroi-san","url":"https://images.squarespace-cdn.com/content/v1/6670add926f2a64cd00fb0e7/4ac8817e-e557-481c-9017-5f34aba9eb27/characters%2Bpouchette%2Bphonetic%2Band%2Bname%2Bcopy.png","source":"https://www.chiikawaofficial.com/characters/"}
+  ],
+  "note": "The app references these official-hosted character images remotely; verify trademark/copyright/usage permissions before commercial deployment."
+}
