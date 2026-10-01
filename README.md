@@ -39,3 +39,7 @@ VITE_SUPABASE_ANON_KEY
 - Admin can send refund credits, gift envelopes, and coupons directly inside chat.
 - Customers can claim chat rewards and apply coupon codes at checkout.
 - Run `supabase-rewards-coupons.sql` in Supabase SQL Editor after the existing marketplace/order-payment SQL.
+
+
+## Customer login fix
+Run `supabase-login-fix.sql` once in Supabase. New Auth users automatically receive a customer profile. If Supabase Email Confirmation is enabled, customers must enter the 6-digit verification code before signing in; disable Confirm email if immediate password login is desired.

@@ -20,7 +20,7 @@ function Login(){
      else alert(error.message);
      setBusy(false);return;
    }
-   if(data.user){const profile={user_id:data.user.id,name:name||email.split('@')[0],email,role:'customer'};await supabase.from('profiles').upsert(profile);setVerify(true)}
+   if(data.user){setVerify(true)}
    setBusy(false);
  }
  async function verifyCode(e:React.FormEvent){
@@ -49,6 +49,9 @@ function Login(){
      setBusy(false);return;
    }
    const{data:r}=await supabase.from('profiles').select('role').eq('user_id',data.user.id).maybeSingle();
+   // Auth is the source of truth for login. If a legacy account is missing a
+   // profile row, still let the customer in; the SQL trigger/migration below
+   // will create the profile automatically for new accounts.
    nav(r?.role==='admin'?'/admin':'/',{replace:true});setBusy(false);
  }
  async function google(){
