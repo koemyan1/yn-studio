@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import{BrowserRouter,Routes,Route,Link,NavLink,useNavigate,useParams,useLocation}from'react-router-dom';
-import{Home,Tags,ShoppingCart,ClipboardList,Wallet,LayoutDashboard,Package,Users,ArrowLeft,Plus,Minus,Trash2,Heart,Search,LogOut,Menu,ImagePlus,ChevronRight,CheckCircle2,Clock3,Settings,ReceiptText,Upload,Store,Copy,X,CreditCard,Moon,Sun,UserRound,Pencil,Images,Eye,EyeOff,Bell,MessageCircle,ArrowRight,Info,CalendarDays,MapPin,Music2,Link2,Send,Save,ExternalLink,FileText,Camera,RefreshCw,TicketPercent,Gift,Image as ImageIcon,Paperclip,SendHorizontal,ShieldCheck,Undo2,PlusCircle}from'lucide-react';
+import{Home,Tags,ShoppingCart,ClipboardList,Wallet,LayoutDashboard,Package,Users,ArrowLeft,ArrowDownLeft,TrendingUp,Plus,Minus,Trash2,Heart,Search,LogOut,Menu,ImagePlus,ChevronRight,CheckCircle2,Clock3,Settings,ReceiptText,Upload,Store,Copy,X,CreditCard,Moon,Sun,UserRound,Pencil,Images,Eye,EyeOff,Bell,MessageCircle,ArrowRight,Info,CalendarDays,MapPin,Music2,Link2,Send,Save,ExternalLink,FileText,Camera,RefreshCw,TicketPercent,Gift,Image as ImageIcon,Paperclip,SendHorizontal,ShieldCheck,Undo2,PlusCircle}from'lucide-react';
 import{supabase}from'./supabase';import'./style.css';
 type P={id:string,name:string,description?:string,price:number,display_price?:number,original_price?:number,main_image_url?:string,status:string,category_id?:string,currency?:string,created_at?:string};
 type CartItem={id:string,quantity:number,price:number,selected_options:any,product_id:string,products?:P};
