@@ -75,3 +75,16 @@ For local development, use your local Vite URL as an allowed redirect where requ
 Do not disable email confirmation if you want customers to be blocked until they enter the 6-digit code.
 
 The customer keeps using the same Supabase user ID, so existing orders, wallet transactions, wishlists, notifications and support records remain connected to the account.
+
+
+## 5. Render/Vite environment variables
+
+The Supabase client is initialized at build time by Vite. On Render, add these
+under the web service's Environment settings and redeploy after changing them:
+
+- `VITE_SUPABASE_URL` = `https://fdqrmzlnahrrqfervlde.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = your Supabase publishable/anon key
+
+Alternatively, the app also accepts `VITE_SUPABASE_PUBLISHABLE_KEY`.
+
+Do not use a `service_role` or `sb_secret_...` key in these Vite variables.
