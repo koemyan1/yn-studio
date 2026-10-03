@@ -77,14 +77,15 @@ Do not disable email confirmation if you want customers to be blocked until they
 The customer keeps using the same Supabase user ID, so existing orders, wallet transactions, wishlists, notifications and support records remain connected to the account.
 
 
-## 5. Render/Vite environment variables
+## Custom OTP server (current YN Studio flow)
 
-The Supabase client is initialized at build time by Vite. On Render, add these
-under the web service's Environment settings and redeploy after changing them:
+The current app no longer calls `supabase.auth.signUp()` for customer registration. It calls the YN Studio `/api/auth/*` endpoints.
 
-- `VITE_SUPABASE_URL` = `https://fdqrmzlnahrrqfervlde.supabase.co`
-- `VITE_SUPABASE_ANON_KEY` = your Supabase publishable/anon key
+- The server creates the Supabase Auth user with `email_confirm: false`.
+- The server generates and hashes a 6-digit OTP.
+- The server stores only the hash in `public.email_otps`.
+- The server sends the code through the configured SMTP account.
+- After successful verification, the server marks the Supabase Auth email as confirmed.
+- The frontend then signs in normally with `signInWithPassword()`.
 
-Alternatively, the app also accepts `VITE_SUPABASE_PUBLISHABLE_KEY`.
-
-Do not use a `service_role` or `sb_secret_...` key in these Vite variables.
+Keep Supabase Email confirmation **OFF** while using this flow.

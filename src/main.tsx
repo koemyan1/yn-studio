@@ -10,44 +10,45 @@ const isKm=()=>localStorage.getItem('yn-lang')==='km'; const tr=(en:string,km:st
 function Toast({msg}:{msg:string}){return msg?<div className="toast">{msg}</div>:null}
 function Login(){
  const nav=useNavigate();
- const[email,setE]=useState(''),[p,setP]=useState(''),[name,setN]=useState(''),[signup,setSignup]=useState(false),[verify,setVerify]=useState(false),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[resendBusy,setResendBusy]=useState(false);
+ const[email,setE]=useState(''),[p,setP]=useState(''),[name,setN]=useState(''),[signup,setSignup]=useState(false),[verify,setVerify]=useState(false),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[resendBusy,setResendBusy]=useState(false),[pendingUserId,setPendingUserId]=useState('');
  useEffect(()=>{(async()=>{const{data}=await supabase.auth.getSession();if(!data.session)return;let{data:r}=await supabase.from('profiles').select('role').eq('user_id',data.session.user.id).maybeSingle();if(!r){const u=data.session.user;const pr=await supabase.from('profiles').insert({user_id:u.id,name:u.user_metadata?.name||u.user_metadata?.full_name||u.email?.split('@')[0]||'Customer',email:u.email||'',role:'customer'}).select('role').maybeSingle();r=pr.data}nav(r?.role==='admin'?'/admin':'/',{replace:true})})()},[nav]);
+
  async function sendCode(){
    setBusy(true);
-   const{data,error}=await supabase.auth.signUp({email,password:p,options:{data:{name:name||email.split('@')[0],role:'customer'}}});
-   if(error){
-     if(error.message.toLowerCase().includes('already registered')){alert(tr('This email is already registered. Please sign in instead.','អ៊ីមែលនេះមានគណនីរួចហើយ។ សូមចូលគណនីជំនួសវិញ។'));setSignup(false)}
-     else alert(error.message);
-     setBusy(false);return;
-   }
-   if(data.user){const profile={user_id:data.user.id,name:name||email.split('@')[0],email,role:'customer'};await supabase.from('profiles').upsert(profile);setVerify(true)}
-   setBusy(false);
+   try{
+     const res=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:p,name:name||email.split('@')[0]})});
+     const body=await res.json().catch(()=>({}));
+     if(!res.ok){alert(body.error||tr('Unable to create account.','មិនអាចបង្កើតគណនីបានទេ។'));return}
+     setPendingUserId(body.userId||'');setVerify(true);
+   }catch(e){alert(tr('Unable to connect to the signup server. Please try again.','មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានទេ។ សូមព្យាយាមម្តងទៀត។'))}
+   finally{setBusy(false)}
  }
  async function verifyCode(e:React.FormEvent){
    e.preventDefault();setBusy(true);
-   const{data,error}=await supabase.auth.verifyOtp({email,token:code.trim(),type:'signup'});
-   if(error){alert(tr('Invalid or expired code. Please request a new code.','លេខកូដមិនត្រឹមត្រូវ ឬផុតកំណត់។ សូមស្នើលេខកូដថ្មី។'));setBusy(false);return}
-   if(data.user){const profile={user_id:data.user.id,name:name||email.split('@')[0],email,role:'customer'};await supabase.from('profiles').upsert(profile);nav('/',{replace:true})}
-   setBusy(false);
+   try{
+     const res=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:pendingUserId,email,code:code.trim()})});
+     const body=await res.json().catch(()=>({}));
+     if(!res.ok){alert(body.error||tr('Invalid or expired code.','លេខកូដមិនត្រឹមត្រូវ ឬផុតកំណត់។'));return}
+     const{data,error}=await supabase.auth.signInWithPassword({email,password:p});
+     if(error){alert(error.message);return}
+     const u=data.user;
+     if(u){const profile={user_id:u.id,name:name||email.split('@')[0],email,role:'customer'};await supabase.from('profiles').upsert(profile);nav('/',{replace:true})}
+   }catch(e){alert(tr('Unable to connect to the verification server.','មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបញ្ជាក់បានទេ។'))}
+   finally{setBusy(false)}
  }
  async function resend(){
    setResendBusy(true);
-   const{error}=await supabase.auth.resend({type:'signup',email});
-   if(error)alert(error.message);else alert(tr('A new verification code was sent to your email.','លេខកូដបញ្ជាក់ថ្មីត្រូវបានផ្ញើទៅអ៊ីមែលរបស់អ្នក។'));
-   setResendBusy(false);
+   try{
+     const res=await fetch('/api/auth/resend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:pendingUserId,email})});
+     const body=await res.json().catch(()=>({}));
+     if(!res.ok)alert(body.error||tr('Unable to resend code.','មិនអាចផ្ញើលេខកូដម្តងទៀតបានទេ។'));else alert(tr('A new verification code was sent to your email.','លេខកូដបញ្ជាក់ថ្មីត្រូវបានផ្ញើទៅអ៊ីមែលរបស់អ្នក។'));
+   }catch(e){alert(tr('Unable to connect to the signup server.','មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានទេ។'))}
+   finally{setResendBusy(false)}
  }
  async function signIn(e:React.FormEvent){
    e.preventDefault();setBusy(true);
    const{data,error}=await supabase.auth.signInWithPassword({email,password:p});
-   if(error){
-     const msg=error.message.toLowerCase();
-     if(msg.includes('email not confirmed')){
-       const r=await supabase.auth.resend({type:'signup',email});
-       if(!r.error){setVerify(true);alert(tr('Your email is not verified. We sent you a new 6-digit code.','អ៊ីមែលរបស់អ្នកមិនទាន់បានបញ្ជាក់ទេ។ យើងបានផ្ញើលេខកូដ 6 ខ្ទង់ថ្មី។'))}
-       else alert(r.error.message);
-     }else alert(error.message);
-     setBusy(false);return;
-   }
+   if(error){alert(error.message);setBusy(false);return}
    const{data:r}=await supabase.from('profiles').select('role').eq('user_id',data.user.id).maybeSingle();
    nav(r?.role==='admin'?'/admin':'/',{replace:true});setBusy(false);
  }
@@ -56,8 +57,9 @@ function Login(){
    const{error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});
    if(error){alert(error.message);setBusy(false)}
  }
- if(verify)return <main className="auth"><div className="authBrand"><div className="logo"><img src="/yn-logo.png" alt="YN Studio" /></div><h1>{tr('One more step.','នៅសល់មួយជំហានទៀត។')}<br/>{tr('Verify your email.','បញ្ជាក់អ៊ីមែលរបស់អ្នក។')}</h1><p>{tr(`We sent a 6-digit code to ${email}.`,`យើងបានផ្ញើលេខកូដ 6 ខ្ទង់ទៅ ${email}។`)}</p></div><form className="glass login verifyCard" onSubmit={verifyCode}><span className="eyebrow">EMAIL VERIFICATION</span><h2>{tr('Enter your code','បញ្ចូលលេខកូដ')}</h2><p className="authHint">{tr('The code expires. Check your Gmail inbox and spam folder.','លេខកូដមានពេលកំណត់។ សូមពិនិត្យ Gmail និង Spam។')}</p><input className="otpInput" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" placeholder="000000" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))}/><button disabled={busy||code.length!==6}>{busy?tr('Verifying…','កំពុងបញ្ជាក់…'):tr('Verify email','បញ្ជាក់អ៊ីមែល')}</button><button type="button" className="textBtn" disabled={resendBusy} onClick={resend}>{resendBusy?tr('Sending…','កំពុងផ្ញើ…'):tr('Resend code','ផ្ញើលេខកូដម្តងទៀត')}</button><button type="button" className="textBtn" onClick={()=>{setVerify(false);setCode('')}}>{tr('Back to sign in','ត្រឡប់ទៅចូលគណនី')}</button></form></main>;
+ if(verify)return <main className="auth"><div className="authBrand"><div className="logo"><img src="/yn-logo.png" alt="YN Studio" /></div><h1>{tr('One more step.','នៅសល់មួយជំហានទៀត។')}<br/>{tr('Verify your email.','បញ្ជាក់អ៊ីមែលរបស់អ្នក។')}</h1><p>{tr(`We sent a 6-digit code to ${email}.`,`យើងបានផ្ញើលេខកូដ 6 ខ្ទង់ទៅ ${email}។`)}</p></div><form className="glass login verifyCard" onSubmit={verifyCode}><span className="eyebrow">EMAIL VERIFICATION</span><h2>{tr('Enter your code','បញ្ចូលលេខកូដ')}</h2><p className="authHint">{tr('The code expires in 10 minutes. Check your Gmail inbox and spam folder.','លេខកូដផុតកំណត់ក្នុងរយៈពេល 10 នាទី។ សូមពិនិត្យ Gmail និង Spam។')}</p><input className="otpInput" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" placeholder="000000" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))}/><button disabled={busy||code.length!==6}>{busy?tr('Verifying…','កំពុងបញ្ជាក់…'):tr('Verify email','បញ្ជាក់អ៊ីមែល')}</button><button type="button" className="textBtn" disabled={resendBusy} onClick={resend}>{resendBusy?tr('Sending…','កំពុងផ្ញើ…'):tr('Resend code','ផ្ញើលេខកូដម្តងទៀត')}</button><button type="button" className="textBtn" onClick={()=>{setVerify(false);setCode('')}}>{tr('Back to sign in','ត្រឡប់ទៅចូលគណនី')}</button></form></main>;
  return <main className="auth"><div className="authBrand"><div className="logo"><img src="/yn-logo.png" alt="YN Studio" /></div><h1>{tr('Shop smarter.','ទិញទំនិញកាន់តែងាយ។')}<br/>{tr('Keep it simple.','សាមញ្ញ និងងាយប្រើ។')}</h1><p>{tr('Marketplace, orders and wallet — all in one beautiful place.','ទីផ្សារ ការបញ្ជាទិញ និងកាបូប — រួមបញ្ចូលក្នុងកន្លែងតែមួយ។')}</p></div><form className="glass login" onSubmit={signup?e=>{e.preventDefault();sendCode()}:signIn}><span className="eyebrow">YN STUDIO</span><h2>{signup?tr('Create account','បង្កើតគណនី'):tr('Welcome back','សូមស្វាគមន៍មកវិញ')}</h2>{signup&&<input required placeholder={tr('Your name','ឈ្មោះរបស់អ្នក')} value={name} onChange={e=>setN(e.target.value)}/>}<input required type="email" placeholder={tr('Email','អ៊ីមែល')} value={email} onChange={e=>setE(e.target.value)}/><input required minLength={6} type="password" placeholder={tr('Password','ពាក្យសម្ងាត់')} value={p} onChange={e=>setP(e.target.value)}/><button disabled={busy}>{busy?tr('Please wait…','សូមរង់ចាំ…'):signup?tr('Create account','បង្កើតគណនី'):tr('Sign in','ចូលគណនី')}</button><div className="authDivider"><span>{tr('or','ឬ')}</span></div><button type="button" className="googleBtn" disabled={busy} onClick={google}><span className="googleMark">G</span>{tr('Continue with Google','បន្តជាមួយ Google')}</button><button type="button" className="textBtn" onClick={()=>setSignup(!signup)}>{signup?tr('Already have an account? Sign in','មានគណនីរួចហើយ? ចូលគណនី'):tr('New here? Create an account','មិនទាន់មានគណនី? បង្កើតគណនី')}</button></form></main>}
+
 
 const Nav=()=>{
  const[debtVisible,setDebtVisible]=useState(false);
