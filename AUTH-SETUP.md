@@ -89,3 +89,12 @@ The current app no longer calls `supabase.auth.signUp()` for customer registrati
 - The frontend then signs in normally with `signInWithPassword()`.
 
 Keep Supabase Email confirmation **OFF** while using this flow.
+
+## SMTP troubleshooting
+
+Open `/api/health` on the deployed site. It should return `"ok": true` and show
+the configured SMTP host/port without exposing the password. Also check the
+Render service logs for `SMTP connection verified` or `SMTP connection verification failed`.
+When a code is accepted by the SMTP server, the logs will show `OTP email accepted by SMTP`
+and the provider response/message ID. This confirms the server handed the message to Gmail;
+it does not guarantee inbox placement, so check Gmail Spam/Promotions as well.

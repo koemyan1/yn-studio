@@ -14,7 +14,7 @@ app.use(express.json({ limit: '20kb' }));
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const OTP_SECRET = process.env.OTP_SECRET;
@@ -34,6 +34,10 @@ const transporter = nodemailer.createTransport({
   secure: SMTP_PORT === 465,
   auth: { user: SMTP_USER, pass: SMTP_PASS }
 });
+
+transporter.verify()
+  .then(() => console.log(`SMTP connection verified: ${SMTP_HOST}:${SMTP_PORT} as ${SMTP_USER}`))
+  .catch((error) => console.error('SMTP connection verification failed:', error.message));
 
 const otpHash = (userId, email, code) =>
   crypto.createHash('sha256').update(`${OTP_SECRET}:${userId}:${email.toLowerCase()}:${code}`).digest('hex');
@@ -74,13 +78,14 @@ async function sendOtp({ userId, email, name }) {
   });
   if (insertError) throw new Error(`Could not store verification code: ${insertError.message}`);
 
-  await transporter.sendMail({
+  const mailResult = await transporter.sendMail({
     from: `"YN Studio" <${SMTP_USER}>`,
     to: email,
     subject: 'Your YN Studio verification code',
     text: `Hi ${name || 'there'},\n\nYour YN Studio verification code is ${code}.\n\nThis code expires in 10 minutes. If you did not create a YN Studio account, you can ignore this email.`,
     html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h2>YN Studio</h2><p>Hi ${escapeHtml(name || 'there')},</p><p>Your verification code is:</p><div style="font-size:34px;font-weight:700;letter-spacing:8px;padding:18px 0">${code}</div><p>This code expires in 10 minutes.</p><p>If you did not create a YN Studio account, you can ignore this email.</p></div>`
   });
+  console.log(`OTP email accepted by SMTP for ${email}; messageId=${mailResult.messageId}; response=${mailResult.response}`);
 }
 
 function escapeHtml(value) {
@@ -193,7 +198,10 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({
+  ok: true,
+  smtp: { host: SMTP_HOST, port: SMTP_PORT, userConfigured: !!SMTP_USER, passwordConfigured: !!SMTP_PASS }
+}));
 
 const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
