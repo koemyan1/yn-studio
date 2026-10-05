@@ -115,6 +115,18 @@ app.post('/api/auth/signup', async (req, res) => {
 
     try {
       await sendOtp({ userId: data.user.id, email, name });
+      // Reuse the existing YN Studio Telegram notification pipeline.
+      // The bot remains a notification layer; the OTP itself is generated
+      // server-side and delivered privately to the customer's email.
+      const { error: notificationError } = await admin.from('notifications').insert({
+        user_id: data.user.id,
+        target_role: 'admin',
+        title: 'New customer account',
+        message: `${name || email.split('@')[0]} · ${email}`,
+        type: 'account',
+        link: '/admin/customers'
+      });
+      if (notificationError) console.warn('Telegram signup notification could not be queued:', notificationError.message);
     } catch (mailError) {
       // Roll back the newly created account if the first OTP could not be sent,
       // so the customer can retry signup cleanly.

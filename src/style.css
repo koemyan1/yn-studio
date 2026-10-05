@@ -207,3 +207,24 @@ html[lang="km"] body,html[lang="km"] button,html[lang="km"] input,html[lang="km"
 
 /* Debt enhancements */
 .debtMethodTabs{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}.debtMethodTabs button{display:flex;align-items:center;gap:8px}.debtMethodTabs button.active{box-shadow:0 0 0 2px currentColor inset}.debtQrPayment{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:22px;align-items:start;margin-top:18px}.debtQrPayment .qrFrame{margin:0}.debtQrForm{display:grid;gap:12px}.debtQrForm .upload{display:flex;align-items:center;gap:12px;cursor:pointer}.debtQrForm .upload span{display:grid;gap:3px}.debtQrForm .upload small{opacity:.7}.debtRequests{margin-top:16px}.debtRequestRow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line,#ddd)}.debtRequestRow>span{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:rgba(127,127,127,.12)}.debtAdminHistoryRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.debtAdminHistoryRow button{white-space:nowrap}@media(max-width:700px){.debtQrPayment{grid-template-columns:1fr}.debtQrPayment .qrFrame{max-width:260px}.debtAdminHistoryRow{align-items:flex-start}.debtAdminHistoryRow .grow{min-width:160px}.debtMethodTabs button{flex:1;justify-content:center}}
+
+/* Product gallery + choice images */
+.galleryViewport{position:relative;touch-action:pan-y;background:#fff;overflow:hidden}
+.galleryViewport>img{display:block;width:100%;height:min(650px,70vh);min-height:330px;object-fit:contain;background:#fff}
+.galleryArrow{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border:0;border-radius:999px;background:rgba(255,255,255,.92);color:#4b2a70;display:grid;place-items:center;box-shadow:0 5px 20px rgba(0,0,0,.12);z-index:2}
+.galleryArrow svg{width:19px;height:19px}
+.galleryPrev{left:14px}.galleryNext{right:14px}
+.galleryThumbs{display:flex;gap:8px;padding:10px;overflow-x:auto;border-top:1px solid var(--line);scrollbar-width:thin}
+.galleryThumbs button{flex:0 0 66px;width:66px;height:66px;padding:0;border:2px solid transparent;border-radius:12px;overflow:hidden;background:#f7f5fa}
+.galleryThumbs button.active{border-color:var(--purple)}
+.galleryThumbs img{width:100%;height:100%;object-fit:cover}
+.chips button{display:inline-flex;align-items:center;gap:7px}
+.choiceThumb{width:28px;height:28px;border-radius:8px;object-fit:cover}
+.optionValueWithImage{grid-template-columns:92px 1fr 140px 44px!important;align-items:center}
+.choiceImageBox{display:flex;align-items:center;gap:7px}
+.choiceImageBox>img,.choiceImageBox>svg{width:58px;height:58px;border-radius:10px;object-fit:cover;background:#f5f2f8;color:var(--muted);padding:8px}
+.choiceUpload{display:inline-flex!important;align-items:center;gap:4px!important;font-size:11px!important;color:var(--purple);cursor:pointer}
+.choiceUpload svg{width:15px;height:15px}
+.pwaInstall{position:fixed;left:14px;right:14px;bottom:88px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.pwaInstall .grow{font-size:13px}.pwaInstall button{padding:9px 12px}
+@media(max-width:700px){.galleryViewport>img{height:62svh;min-height:300px}.galleryArrow{width:36px;height:36px}.galleryThumbs button{width:58px;height:58px;flex-basis:58px}.optionValueWithImage{grid-template-columns:1fr!important}.choiceImageBox{justify-content:flex-start}}

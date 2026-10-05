@@ -30,3 +30,10 @@ npm run build
 Commit and push the project to the GitHub repository connected to Render. Render should run the existing build command (`npm install && npm run build`).
 
 The new database tables must be created in Supabase before the new customer/admin screens can load their data.
+
+
+## Product choice images + PWA
+
+Run `supabase-product-choice-images.sql` once in Supabase SQL Editor. Admins can then attach an image to each product choice. Customer product pages show the selected choice image and support multiple product images with swipe/arrows/thumbnails.
+
+The build is also PWA-enabled via `public/manifest.webmanifest` and `public/sw.js`. On supported browsers, an Install button appears automatically; on iPhone Safari use Share → Add to Home Screen.
