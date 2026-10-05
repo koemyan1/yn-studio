@@ -138,12 +138,39 @@ function Product(){const{id}=useParams();const nav=useNavigate();const[p,setP]=u
  if(!p)return <Loader/>;
  return <main className="detail"><Top title={tr('Product','ផលិតផល')} back/>
  <div className="gallery">
-   {galleryUrls.length?<><div className="galleryViewport" onTouchStart={e=>setTouchStart(e.changedTouches[0].clientX)} onTouchEnd={e=>{if(touchStart===null)return;const dx=e.changedTouches[0].clientX-touchStart;if(Math.abs(dx)>45)moveImage(dx<0?1:-1);setTouchStart(null)}}>
-     <img src={galleryUrls[activeImage]} alt={p.name}/>
-     {galleryUrls.length>1&&<><button className="galleryArrow galleryPrev" type="button" onClick={()=>moveImage(-1)} aria-label="Previous image"><ArrowLeft/></button><button className="galleryArrow galleryNext" type="button" onClick={()=>moveImage(1)} aria-label="Next image"><ArrowRight/></button></>}
-   </div>
-   {galleryUrls.length>1&&<div className="galleryThumbs">{galleryUrls.map((url,i)=><button type="button" key={url} className={i===activeImage?'active':''} onClick={()=>setActiveImage(i)}><img src={url} alt={`${p.name} ${i+1}`}/></button>)}</div></>:<div className="ph big"><img src="/yn-logo.png" alt="YN Studio" /></div>}
- </div>
+   {galleryUrls.length > 0 ? (
+     <>
+       <div className="galleryViewport"
+         onTouchStart={e => setTouchStart(e.changedTouches[0].clientX)}
+         onTouchEnd={e => {
+           if (touchStart === null) return;
+           const dx = e.changedTouches[0].clientX - touchStart;
+           if (Math.abs(dx) > 45) moveImage(dx < 0 ? 1 : -1);
+           setTouchStart(null);
+         }}
+       >
+         <img src={galleryUrls[activeImage]} alt={p.name} />
+         {galleryUrls.length > 1 && (
+           <>
+             <button className="galleryArrow galleryPrev" type="button" onClick={() => moveImage(-1)} aria-label="Previous image"><ArrowLeft /></button>
+             <button className="galleryArrow galleryNext" type="button" onClick={() => moveImage(1)} aria-label="Next image"><ArrowRight /></button>
+           </>
+         )}
+       </div>
+       {galleryUrls.length > 1 && (
+         <div className="galleryThumbs">
+           {galleryUrls.map((url, i) => (
+             <button type="button" key={url} className={i === activeImage ? "active" : ""} onClick={() => setActiveImage(i)}>
+               <img src={url} alt={`${p.name} ${i + 1}`} />
+             </button>
+           ))}
+         </div>
+       )}
+     </>
+   ) : (
+     <div className="ph big"><img src="/yn-logo.png" alt="YN Studio" /></div>
+   )}
+  </div>
  <section className="detailCard"><span className="eyebrow">{tr('YN MARKETPLACE','ទីផ្សារ YN')}</span><h1>{p.name}</h1><div className="price">{money((()=>{const prices=opts.map(o=>Number(o.values.find((v:any)=>v.value===pick[o.name])?.price_adjustment||0)).filter((n:number)=>n>0);return prices.length?prices[prices.length-1]:Number(p.price||0)})())} {p.original_price&&<del>{money(p.original_price)}</del>}</div><p className="desc">{p.description||tr('No description provided.','មិនមានការពិពណ៌នា។')}</p>
  {opts.map(o=><div className="variant" key={o.id}><b>{o.name}</b><div className="chips">{o.values.map((v:any)=><button key={v.id} type="button" className={pick[o.name]===v.value?'on':''} onClick={()=>chooseOption(o.name,v)}>{v.image_url&&<img className="choiceThumb" src={v.image_url} alt=""/>}{v.value}</button>)}</div></div>)}
  <div className="qty"><b>{tr('Quantity','ចំនួន')}</b><div><button type="button" onClick={()=>setQty(Math.max(1,qty-1))}><Minus/></button><span>{qty}</span><button type="button" onClick={()=>setQty(qty+1)}><Plus/></button></div></div>{msg&&<p className="notice">{msg}</p>}<div className="stickyActions"><button className="secondary" disabled={adding} onClick={()=>add(false)}>{adding?tr('Adding…','កំពុងបន្ថែម…'):tr('Add to cart','បន្ថែមទៅកន្ត្រក')}</button><button disabled={adding} onClick={()=>add(true)}>{adding?tr('Preparing…','កំពុងរៀបចំ…'):tr('Buy now','ទិញឥឡូវ')}</button></div></section></main>}
