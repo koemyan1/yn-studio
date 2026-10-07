@@ -9,6 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 
+// Allow camera access for the admin package scanner, including standalone PWAs.
+app.use((_req, res, next) => { res.setHeader('Permissions-Policy', 'camera=(self)'); next(); });
 app.use(express.json({ limit: '20kb' }));
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;

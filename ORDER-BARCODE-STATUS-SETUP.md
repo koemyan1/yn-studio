@@ -41,3 +41,13 @@ npm run build
 - The customer home page no longer shows `No products yet` while products are still loading.
 - It now shows a branded animated YN Studio marketplace loading state.
 - The global app loader was also upgraded with a branded animated screen.
+
+
+### Package label / PWA scanner update
+- The customer's existing order number is unchanged.
+- Package labels no longer print price or order status and no longer contain scanner instructions.
+- Labels now use a compact YN Studio fulfillment identity, item count, “PACKED WITH CARE” line, barcode, and thank-you footer.
+- The scanner uses native BarcodeDetector when available and falls back to `@zxing/browser` for browsers/PWAs without native barcode detection.
+- The scanner has an explicit **Open camera** button so installed iOS/iPadOS PWAs can request camera permission from a user gesture.
+- Deploy over HTTPS and allow camera permission for YN Studio.
+- Run `npm install` after pulling this version so the new `@zxing/browser` dependency is installed.
