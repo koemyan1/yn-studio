@@ -260,3 +260,13 @@ html[lang="km"] body,html[lang="km"] button,html[lang="km"] input,html[lang="km"
 @media print{body *{visibility:hidden!important}.printSheet,.printSheet *{visibility:visible!important}.printSheet{position:absolute;left:0;top:0;width:100mm;max-width:100mm;margin:0!important;border:0!important;box-shadow:none!important;padding:5mm!important}.admin,.admin main{background:#fff!important}.packagePreview{position:static!important}.labelBrand b{font-size:18px}.labelOrderNo{font-size:23px}.labelBarcode .orderBarcode{max-width:90mm}.labelFooter{font-size:7px}}
 
 .scannerStart{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;padding:28px;background:rgba(10,8,15,.72);color:#fff;gap:8px}.scannerStart svg{width:38px;height:38px}.scannerStart small{max-width:310px;line-height:1.5;color:#ddd}.scannerStart button,.scannerFallback button{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:12px;padding:11px 15px;background:#7c3aed;color:#fff;font-weight:800;cursor:pointer}.scannerStart button:disabled,.scannerFallback button:disabled{opacity:.6}.scannerFallback{display:grid;place-content:center;justify-items:center;text-align:center;gap:9px;padding:28px}.scannerFallback small{max-width:320px;line-height:1.5}.scannerFallback svg{width:40px;height:40px;color:var(--purple)}
+
+/* Admin-only role switcher and full-page dark background */
+html.yn-admin-page,body.yn-admin-page{background:#faf8ff!important}
+html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;color:#f7f2ff!important}
+.admin{min-height:100svh;background:var(--admin-bg,#f8f6fb)}
+.admin.admin-dark{--admin-bg:#0b0810;background:#0b0810!important;min-height:100svh}
+.admin.admin-dark main{background:#0b0810;min-height:100svh}
+.adminCustomerSwitch{white-space:nowrap}
+.profileAdminActions{display:grid;gap:9px;margin-top:auto}.profileAdminActions .button,.profileAdminActions .secondary{width:100%}
+@media(max-width:650px){.adminCustomerSwitch{width:42px;padding:0}.adminCustomerSwitch span{display:none}.profileAdminActions{margin-top:0}}
