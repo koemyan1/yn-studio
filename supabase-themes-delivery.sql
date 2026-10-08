@@ -3,9 +3,14 @@ alter table public.categories add column if not exists delivery_tracking_enabled
 alter table public.profiles add column if not exists delivery_lat numeric;
 alter table public.profiles add column if not exists delivery_lng numeric;
 alter table public.profiles add column if not exists delivery_address text;
+alter table public.profiles add column if not exists delivery_notes text;
+alter table public.profiles add column if not exists phone text;
 alter table public.orders add column if not exists delivery_lat numeric;
 alter table public.orders add column if not exists delivery_lng numeric;
 alter table public.orders add column if not exists delivery_address text;
+alter table public.orders add column if not exists delivery_name text;
+alter table public.orders add column if not exists delivery_phone text;
+alter table public.orders add column if not exists delivery_notes text;
 alter table public.orders add column if not exists tracking_enabled boolean not null default false;
 alter table public.orders add column if not exists rider_lat numeric;
 alter table public.orders add column if not exists rider_lng numeric;

@@ -276,3 +276,13 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;col
 .locationActions{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:8px}.locationActions input{min-width:0}.deliveryMap{position:relative}.deliveryMap iframe{width:100%;height:100%;border:0;display:block}.riderOverlay{position:absolute;transform:translate(-50%,-50%);font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));z-index:3}.mapLegend{position:absolute;left:10px;bottom:10px;display:flex;gap:8px;background:rgba(255,255,255,.92);padding:7px 9px;border-radius:10px;font-size:10px;font-weight:800;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 @media(max-width:650px){.locationActions{grid-template-columns:1fr}.themeBuilderHead button{width:100%}.themeUploadGrid{grid-template-columns:1fr}}
 :root{--theme-primary:var(--purple);--theme-secondary:#fff;--theme-bg:#fafafa;--theme-text:inherit}.shop{background:var(--theme-bg)}.shop .button:not(.secondary),.shop button.wide,.shop .miniCheckout button{background:var(--theme-primary)}.shop .eyebrow{color:var(--theme-primary)}.shop .themeCodeCard{border-color:color-mix(in srgb,var(--theme-primary) 22%,var(--line))}
+
+/* v11 delivery form */
+.locationActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}.manualDeliveryForm{display:grid;gap:10px;width:100%;margin-top:14px}.manualDeliveryForm label{display:grid;gap:6px}.manualDeliveryForm textarea{resize:vertical}.savedDelivery{display:grid;gap:4px;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px}.checkoutDelivery{display:grid;gap:10px;margin-top:14px}.checkoutDelivery .line{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.checkoutDelivery .line h2{margin:4px 0}.locationPanel{display:grid;gap:10px}.locationPanel>div:first-child{display:grid;gap:4px}.locationPanel h2{margin:4px 0}.locationPanel .notice{display:block}.themeBuilderHead button,.themeBuilder .wide{cursor:pointer;pointer-events:auto}.themeBuilderHead button:disabled,.themeBuilder .wide:disabled{opacity:.6;cursor:not-allowed}@media(max-width:700px){.themeBuilder{grid-template-columns:1fr}.themePreviewPanel{position:static}.themeColorGrid{grid-template-columns:repeat(2,1fr)}}
+.locationPicker{margin-top:12px;border:1px solid var(--line,#e5e7eb);border-radius:16px;overflow:hidden;background:var(--card,#fff)}
+.locationSearch{display:flex;gap:8px;padding:10px;background:var(--soft,#f7f7f8)}
+.locationSearch input{flex:1;min-width:0}
+.locationMap{height:300px;width:100%;z-index:1}
+.mapHint{margin:0;padding:9px 12px;font-size:12px;color:#6b7280}
+.locationPicker .notice{display:block;padding:0 12px 10px}
+@media(max-width:600px){.locationMap{height:260px}.locationSearch{padding:8px}.locationSearch button{white-space:nowrap}}
