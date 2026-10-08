@@ -7,7 +7,6 @@ The app now supports:
 - Resend verification code
 - Automatic resend when an existing account is not yet verified
 - Google Sign-In
-- Facebook Sign-In / Sign-Up
 - Existing Supabase database/RLS/session compatibility
 - Customer/admin role routing
 
@@ -67,35 +66,11 @@ Authentication → Providers → Google
 
 Create a Google OAuth client in Google Cloud and copy the Client ID and Client Secret into the Supabase Google provider settings.
 
-The YN Studio login page uses the supplied cropped Google logo at `public/google-logo.png`.
+Add your production site URL to the Supabase URL configuration and Google OAuth redirect configuration.
 
-The app sends OAuth users back to:
+For local development, use your local Vite URL as an allowed redirect where required.
 
-- Production: `https://YOUR-DOMAIN/login`
-- Local: `http://localhost:5173/login`
-
-Add those callback URLs to Supabase Authentication → URL Configuration → Redirect URLs, and configure the matching OAuth redirect URI in Google Cloud.
-
-## 5. Facebook Sign-In / Sign-Up
-
-The login page now includes **Continue with Facebook**. Supabase handles the OAuth flow, and a first-time Facebook user is automatically given a normal YN Studio customer profile. Existing admin profiles keep their admin role.
-
-In Supabase:
-
-Authentication → Providers → Facebook
-
-Enable Facebook and enter the Facebook App ID and App Secret. In Meta for Developers, create/configure a Facebook Login product for the app and add the Supabase callback URL shown by Supabase to the Facebook OAuth redirect settings.
-
-Use the same YN Studio callback URL pattern for the frontend redirect:
-
-- Production: `https://YOUR-DOMAIN/login`
-- Local: `http://localhost:5173/login`
-
-Also add the URLs to Supabase Authentication → URL Configuration → Redirect URLs.
-
-Important: the Facebook App Secret belongs only in Supabase/Meta configuration. Do not put it in the React/Vite frontend, `.env` files committed to Git, or GitHub.
-
-## 6. Important
+## 5. Important
 
 Do not disable email confirmation if you want customers to be blocked until they enter the 6-digit code.
 
