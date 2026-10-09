@@ -7,10 +7,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const normalizeSupabaseUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
+const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+const VITE_SUPABASE_URL = normalizeSupabaseUrl(process.env.VITE_SUPABASE_URL);
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Missing server environment variables. Required: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
+// Signup creates users with the service-role client, while browser login uses the VITE_* project.
+// Both URLs must point to the same Supabase project or every newly created account will fail login.
+if (VITE_SUPABASE_URL && SUPABASE_URL !== VITE_SUPABASE_URL) {
+  console.error('SUPABASE CONFIGURATION ERROR: SUPABASE_URL and VITE_SUPABASE_URL point to different projects. Set both to the same Supabase Project URL in Render, then redeploy.');
   process.exit(1);
 }
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

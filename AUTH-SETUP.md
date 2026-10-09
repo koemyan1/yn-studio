@@ -10,3 +10,7 @@ Set these on the Render Web Service:
 - `SUPABASE_SERVICE_ROLE_KEY` — the Supabase service-role key; keep it server-only and never prefix it with `VITE_`.
 
 Google sign-in remains available if its OAuth provider is configured in Supabase. Existing customer records, orders, wallets, transactions, wishlists, and support records are not deleted by this change.
+
+
+## Important: keep the same Supabase project for signup and login
+In Render, `SUPABASE_URL` and `VITE_SUPABASE_URL` must be the exact same Supabase Project URL. `VITE_SUPABASE_ANON_KEY` must come from that same project, and `SUPABASE_SERVICE_ROLE_KEY` must be the service-role key for that project. After changing these variables, redeploy the service so the frontend is rebuilt. Never expose the service-role key in any `VITE_` variable.
