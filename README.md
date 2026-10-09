@@ -41,25 +41,15 @@ VITE_SUPABASE_ANON_KEY
 - Run `supabase-rewards-coupons.sql` in Supabase SQL Editor after the existing marketplace/order-payment SQL.
 
 
-## Custom email OTP server
+## Customer account signup
 
-This version uses the YN Studio server to send the 6-digit signup verification code instead of Supabase Auth's confirmation-email SMTP.
+Customers create accounts using only their name, email address, and password. The Node server creates the Supabase Auth user with the email already confirmed, saves the customer profile, and signs the customer in. No email code or OTP table is used.
 
-1. Run `supabase-email-otp.sql` in Supabase SQL Editor.
-2. Keep Supabase **Confirm email OFF**.
-3. Add these **server-only** Render environment variables:
-   - `SUPABASE_URL` = `https://YOUR_PROJECT.supabase.co`
-   - `SUPABASE_SERVICE_ROLE_KEY` = your Supabase service-role key
-   - `SMTP_HOST` = `smtp.gmail.com`
-   - `SMTP_PORT` = `465`
-   - `SMTP_USER` = `ynstudio04@gmail.com`
-   - `SMTP_PASS` = your Google App Password
-   - `OTP_SECRET` = a long random secret string
-4. Build command: `npm install && npm run build`
-5. Start command: `npm start`
-6. Make sure the Render service is a **Web Service**, not a Static Site, so it can run the Node server.
+Required server environment variables on Render:
+- `SUPABASE_URL` = your Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` = your Supabase service-role key (server-only; never use a `VITE_` prefix)
 
-Never expose `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_PASS`, or `OTP_SECRET` as `VITE_*` variables or commit them to GitHub.
+The service must run as a Render Web Service with `npm install && npm run build` as the build command and `npm start` as the start command.
 
 ## Purple Map, distance delivery pricing, rider avatar
 
