@@ -1,6 +1,6 @@
 # YN Studio Authentication Setup
 
-Customer registration uses three fields: name, email, and password. The Node server creates the Supabase Auth account with email confirmation already completed, stores the `profiles` row, and the frontend signs the new customer in. No email verification code, SMTP configuration, or `email_otps` table is required.
+Customer registration uses three fields: name, email, and password. The Node server creates the Supabase Auth account with email confirmation already completed, stores the `profiles` row, and the frontend signs the new customer in using the normalized lowercase email. No email verification code, SMTP configuration, or `email_otps` table is required. If the server is not running/deployed with the frontend, registration will fail. Admins can create orders for existing customers from Admin → Orders → Create order for customer.
 
 ## Required server variables
 
