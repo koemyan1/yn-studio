@@ -1,16 +1,22 @@
-# YN Studio Authentication Setup
+# YN Studio authentication setup
 
-Customer registration uses three fields: name, email, and password. The Node server creates the Supabase Auth account with email confirmation already completed, stores the `profiles` row, and the frontend signs the new customer in using the normalized lowercase email. No email verification code, SMTP configuration, or `email_otps` table is required. If the server is not running/deployed with the frontend, registration will fail. Admins can create orders for existing customers from Admin → Orders → Create order for customer.
+This version uses Supabase Auth directly from the frontend, as the original Vite setup did. Signup and sign-in both use the same `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; the web server no longer creates users with a service-role key or needs `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`.
 
-## Required server variables
+## Render environment
 
-Set these on the Render Web Service:
+Set these two variables for the Vite build:
 
-- `SUPABASE_URL` — the Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY` — the Supabase service-role key; keep it server-only and never prefix it with `VITE_`.
+- `VITE_SUPABASE_URL` = `https://fdqrmzlnahrrqfervlde.supabase.co` (or your intended project URL)
+- `VITE_SUPABASE_ANON_KEY` = the public/anon key from that exact Supabase project
 
-Google sign-in remains available if its OAuth provider is configured in Supabase. Existing customer records, orders, wallets, transactions, wishlists, and support records are not deleted by this change.
+Save and redeploy so Vite rebuilds the frontend. Remove old `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` variables if they were only added for the previous signup endpoint; they are not used by this version.
 
+## Supabase Auth settings
 
-## Important: keep the same Supabase project for signup and login
-In Render, `SUPABASE_URL` and `VITE_SUPABASE_URL` must be the exact same Supabase Project URL. `VITE_SUPABASE_ANON_KEY` must come from that same project, and `SUPABASE_SERVICE_ROLE_KEY` must be the service-role key for that project. After changing these variables, redeploy the service so the frontend is rebuilt. Never expose the service-role key in any `VITE_` variable.
+If you want signup to immediately sign the customer in without an email verification step, open Supabase Authentication settings and turn off email confirmation. With confirmation enabled, Supabase returns no active session until the user confirms their email, and the app explains that instead of reporting a false sign-in failure.
+
+## Profiles
+
+After signup, the app attempts to upsert a customer row in `profiles` using `user_id`, `name`, `email`, and `role: customer`. A profile-write error is logged without pretending the Auth account failed to be created. Admin roles are read from `profiles` during sign-in.
+
+Never put a service-role key in a `VITE_` variable or expose it in the browser.
