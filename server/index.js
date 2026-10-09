@@ -94,6 +94,39 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// Admin-only customer account creation. Passwords are handled server-side and never exposed to the browser's service-role client.
+app.post('/api/admin/customers', async (req, res) => {
+  let createdUserId = null;
+  try {
+    const authHeader = String(req.headers.authorization || '');
+    const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!accessToken) return res.status(401).json({ error: 'Sign in as an admin first.' });
+    const { data: authData, error: authError } = await admin.auth.getUser(accessToken);
+    if (authError || !authData?.user) return res.status(401).json({ error: 'Your session expired. Please sign in again.' });
+    const { data: actor } = await admin.from('profiles').select('role').eq('user_id', authData.user.id).maybeSingle();
+    if (actor?.role !== 'admin') return res.status(403).json({ error: 'Admin permission is required.' });
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    if (!name) return res.status(400).json({ error: 'Enter the customer name.' });
+    if (!validEmail(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+    if (!validPassword(password)) return res.status(400).json({ error: 'Password must contain at least 6 characters.' });
+    const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { name, created_by_admin: true } });
+    if (createError) return res.status(400).json({ error: createError.message });
+    createdUserId = created.user.id;
+    const { error: profileError } = await admin.from('profiles').upsert({ user_id: createdUserId, name, email, role: 'customer' }, { onConflict: 'user_id' });
+    if (profileError) {
+      await admin.auth.admin.deleteUser(createdUserId);
+      return res.status(500).json({ error: `Account was not saved: ${profileError.message}` });
+    }
+    return res.status(201).json({ id: createdUserId, name, email, message: 'Customer account created.' });
+  } catch (error) {
+    if (createdUserId) await admin.auth.admin.deleteUser(createdUserId).catch(() => {});
+    console.error('Admin customer creation failed:', error);
+    return res.status(500).json({ error: 'Unable to create customer account. Check server logs.' });
+  }
+});
+
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
