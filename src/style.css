@@ -318,3 +318,52 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;col
 .secretAdminIntro{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:18px}.secretAdminIntro h2{margin:5px 0}.secretAdminIntro p{color:var(--muted,#888);margin:5px 0}.secretAdminGrid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:18px;align-items:start}.secretThemeSettings,.secretCanvasPanel{display:flex;flex-direction:column;gap:14px;min-width:0}.secretThemeSettings h3,.secretElementProperties h3{margin:4px 0}.secretThemeSettings label,.secretElementProperties label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.secretToggle{flex-direction:row!important;align-items:center}.secretColorGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.secretColorGrid input[type=color]{height:42px;width:100%;padding:3px}.secretEditorActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secretEditorActions .button{display:flex;align-items:center;justify-content:center;gap:6px;position:relative;overflow:hidden}.secretEditorActions input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}.secretCanvasHeader{display:flex;justify-content:space-between;gap:10px;align-items:center}.secretCanvasHeader h3{margin:3px 0}.secretCanvasHeader>span{font-size:12px;opacity:.7}.secretCanvas{position:relative;isolation:isolate;overflow:hidden;min-height:620px;padding:18px;background-size:cover;background-position:center;border:1px solid #aaa4}.secretPreviewNav{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px;position:relative;z-index:1}.secretPreviewHero{padding:34px 18px 90px;position:relative;z-index:1}.secretPreviewHero h2{max-width:400px;font-size:clamp(25px,4vw,44px);line-height:1.05;margin:12px 0}.secretPreviewHero p{opacity:.8}.secretCanvasElement{position:absolute;z-index:2;padding:10px;cursor:move;touch-action:none;overflow:hidden;box-sizing:border-box;border:1px dashed #ffffff55;display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-wrap;word-break:break-word}.secretCanvasElement.selected{outline:2px solid #a855f7;outline-offset:2px}.secretCanvasElement img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}.secretCanvasElement img+*{position:relative}.secretElementProperties{border-top:1px solid var(--border,#ddd);padding-top:16px;display:flex;flex-direction:column;gap:12px}.categoryThemeRow{display:grid;grid-template-columns:minmax(100px,180px) 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--border,#ddd);align-items:start}.categoryThemeChecks{display:flex;gap:12px;flex-wrap:wrap}.categoryThemeChecks label{display:flex;align-items:center;gap:6px;font-size:13px}.secretThemeOverlay{position:fixed;inset:0;pointer-events:none;z-index:0}.secretThemeElement{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;white-space:pre-wrap;padding:10px;box-sizing:border-box}.secretThemeElement img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.secretThemeElement img+*{position:relative}html[data-secret-theme=on] body{font-family:var(--secret-font)!important}html[data-secret-theme=on] .top,html[data-secret-theme=on] .panel,html[data-secret-theme=on] .productCard,html[data-secret-theme=on] .bottomNav{border-radius:var(--secret-radius)!important}html[data-secret-theme=on] .shop{background-color:var(--secret-bg)!important;background-image:var(--secret-wallpaper);background-size:cover;background-attachment:fixed;color:var(--secret-text)!important}html[data-secret-theme=on] .shop .panel,html[data-secret-theme=on] .shop .productCard,html[data-secret-theme=on] .shop .top,html[data-secret-theme=on] .shop .bottomNav{background-color:var(--secret-surface)!important;color:var(--secret-text)!important;border-color:color-mix(in srgb,var(--secret-accent),transparent 70%)!important}html[data-secret-theme=on] .shop button:not(.secondary){background-color:var(--secret-accent)!important;color:#190d25!important}html[data-secret-theme=on] .shop a{color:var(--secret-accent)}html[data-secret-theme=on] .secretThemeOverlay{z-index:100;pointer-events:none}
 @media(max-width:900px){.secretAdminGrid{grid-template-columns:1fr}.secretCanvas{min-height:520px}.secretAdminIntro{align-items:flex-start;flex-direction:column}.categoryThemeRow{grid-template-columns:1fr}}
 @media(max-width:560px){.secretCanvas{min-height:480px;padding:10px}.secretPreviewHero{padding:28px 10px 70px}.secretCanvasHeader{align-items:flex-start;flex-direction:column}.secretEditorActions{grid-template-columns:1fr}.secretCodeEntry{align-items:stretch;flex-direction:column}.secretCodeEntry>*{width:100%}}
+
+/* Secret Theme Studio: customer preview first, every control below it. */
+.secretAdminGrid{grid-template-columns:1fr!important}
+.secretFullPreviewPanel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.secretLiveStore{position:relative;isolation:isolate;overflow:hidden;min-height:620px;padding:0;background-size:cover;background-position:center;border:1px solid #a99ab8;box-shadow:0 12px 32px #10051a22}
+.secretLiveItem{position:relative;min-width:0;cursor:pointer;outline:1px dashed transparent;outline-offset:-2px;transition:outline-color .15s,box-shadow .15s}
+.secretLiveItem:hover{outline:1px dashed #b879f8}
+.secretLiveItem.isSelected{outline:2px solid #a855f7;outline-offset:-2px;box-shadow:0 0 0 3px #a855f733;z-index:4}
+.secretLiveSelectedTag{position:absolute;top:3px;right:4px;z-index:10;background:#7e22ce;color:white;border-radius:5px;padding:3px 6px;font-size:10px;font-weight:700;line-height:1.2}
+.secretLiveFullWidth{width:100%}
+.secretLiveAnnouncement{padding:8px 14px;text-align:center;background:var(--secret-live-accent);color:#160d27;font-size:12px;font-weight:700}
+.secretLiveHeader{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--secret-live-surface);border-bottom:1px solid color-mix(in srgb,var(--secret-live-accent),transparent 75%);flex-wrap:wrap}
+.secretLiveBrand{font-size:18px;letter-spacing:.12em;white-space:nowrap}
+.secretLiveSearch{display:flex;align-items:center;gap:8px;min-width:140px;flex:1;background:color-mix(in srgb,var(--secret-live-surface),white 8%);border:1px solid color-mix(in srgb,var(--secret-live-accent),transparent 65%);border-radius:999px;padding:8px 12px}
+.secretLiveSearch input{border:0!important;background:transparent!important;box-shadow:none!important;min-width:0;color:inherit!important;width:100%;padding:3px!important}
+.secretLiveHeaderActions{display:flex;align-items:center;gap:12px;margin-left:auto}
+.secretLiveHeaderActions>.secretLiveItem,.secretLiveHeaderActions .secretLiveItem{display:flex;align-items:center;padding:5px;border-radius:9px}
+.secretLiveIconLabel{display:flex;align-items:center;gap:6px;font-size:12px}
+.secretLiveHero{padding:42px 26px 48px;background:linear-gradient(120deg,color-mix(in srgb,var(--secret-live-surface),transparent 8%),transparent);min-height:230px}
+.secretLiveHero>span,.secretLiveSectionTitle small{font-size:10px;letter-spacing:.16em;font-weight:800;color:var(--secret-live-accent)}
+.secretLiveHero h2{font-size:clamp(28px,4vw,46px);max-width:620px;line-height:1.05;margin:12px 0}
+.secretLiveHero p{opacity:.8}
+.secretLiveStore button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:var(--secret-live-radius);padding:10px 14px;background:var(--secret-live-accent);color:#1b1025;font-weight:700;cursor:pointer}
+.secretLiveSection{padding:22px 18px}
+.secretLiveSectionTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.secretLiveSectionTitle h3{margin:4px 0;font-size:22px}
+.secretLiveSectionTitle>span{font-size:12px;opacity:.75}
+.secretLiveCategoryRow{display:flex;gap:9px;overflow-x:auto;padding:3px 2px 9px}
+.secretLiveCategoryRow .secretLiveItem{flex:none}
+.secretLiveCategoryRow button{white-space:nowrap;background:var(--secret-live-surface);color:inherit;border:1px solid color-mix(in srgb,var(--secret-live-accent),transparent 60%)}
+.secretLiveCategoryRow button.active{background:var(--secret-live-accent);color:#1b1025}
+.secretLiveProducts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.secretLiveProduct{display:flex;flex-direction:column;gap:8px;padding:9px;background:var(--secret-live-surface);border-radius:var(--secret-live-radius);min-width:0}
+.secretLiveProduct b{font-size:13px;line-height:1.3}
+.secretLiveProduct small{opacity:.85}
+.secretLiveProduct button{font-size:11px;padding:7px 8px;margin-top:auto}
+.secretLiveProductImage{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--secret-live-surface),white 7%);border-radius:calc(var(--secret-live-radius) * .7);overflow:hidden}
+.secretLiveProductImage img{width:100%;height:100%;object-fit:cover}
+.secretLiveBannerStrip{display:flex;gap:10px;padding:12px;overflow-x:auto}
+.secretLiveBannerStrip img{width:calc(50% - 5px);min-width:240px;aspect-ratio:4/1;object-fit:cover;border-radius:var(--secret-live-radius)}
+.secretLiveBottomNav{position:sticky;bottom:0;display:flex;justify-content:space-around;gap:6px;padding:10px;background:var(--secret-live-surface);border-top:1px solid color-mix(in srgb,var(--secret-live-accent),transparent 75%);z-index:3}
+.secretLiveBottomNav .secretLiveItem{flex:1;display:flex;justify-content:center}
+.secretLiveBottomNav button{background:transparent;color:inherit;flex-direction:column;font-size:10px;padding:6px}
+.secretControlsBelow{margin-top:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.secretControlsBelow h3{margin:5px 0}
+.secretThemeSaveActions{display:flex;gap:10px;flex-wrap:wrap}
+.secretSelectedEditor{padding:14px;border:1px solid var(--border,#ddd);border-radius:12px;display:flex;flex-direction:column;gap:10px}
+.secretPreviewNotice{margin:0}
+@media(max-width:760px){.secretLiveProducts{grid-template-columns:repeat(2,minmax(0,1fr))}.secretLiveHeader{padding:10px;gap:8px}.secretLiveHero{padding:28px 14px}.secretLiveSection{padding:16px 10px}.secretLiveBrand{font-size:15px}.secretLiveHeaderActions{gap:5px}.secretLiveBannerStrip img{min-width:210px}.secretLiveStore{min-height:500px}.secretThemeSaveActions>*{flex:1}}
