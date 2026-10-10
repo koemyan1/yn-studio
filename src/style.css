@@ -367,3 +367,15 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;col
 .secretSelectedEditor{padding:14px;border:1px solid var(--border,#ddd);border-radius:12px;display:flex;flex-direction:column;gap:10px}
 .secretPreviewNotice{margin:0}
 @media(max-width:760px){.secretLiveProducts{grid-template-columns:repeat(2,minmax(0,1fr))}.secretLiveHeader{padding:10px;gap:8px}.secretLiveHero{padding:28px 14px}.secretLiveSection{padding:16px 10px}.secretLiveBrand{font-size:15px}.secretLiveHeaderActions{gap:5px}.secretLiveBannerStrip img{min-width:210px}.secretLiveStore{min-height:500px}.secretThemeSaveActions>*{flex:1}}
+
+/* Secret theme editor: keep customer controls visible and usable while editing. */
+.secretLiveStore{overflow:visible;min-height:0;isolation:isolate}
+.secretLiveSelectedTag{pointer-events:none;max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.secretLiveItem{position:relative;z-index:auto}
+.secretLiveItem.isSelected{position:relative;z-index:5}
+.secretLiveHeaderActions .secretLiveItem,.secretLiveCategoryRow .secretLiveItem,.secretLiveProducts .secretLiveItem,.secretLiveBottomNav .secretLiveItem{flex-shrink:0}
+.secretLiveStore button{position:relative;z-index:1;min-height:36px;white-space:normal}
+.secretLiveProducts .secretLiveProduct{min-height:220px}
+.secretLiveBottomNav{position:relative;bottom:auto;z-index:2}
+.secretLiveSearch input{pointer-events:auto}
+@media(max-width:560px){.secretLiveHeader{align-items:stretch}.secretLiveHeaderActions{width:100%;justify-content:flex-end}.secretLiveProducts{grid-template-columns:repeat(2,minmax(0,1fr))}.secretLiveProduct button{width:100%;font-size:11px;padding:8px 5px}.secretLiveBottomNav{flex-wrap:wrap}.secretLiveBottomNav .secretLiveItem{min-width:22%}.secretLiveSelectedTag{font-size:9px;max-width:75%}}
