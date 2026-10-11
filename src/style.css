@@ -539,3 +539,61 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"] .secretCustomBanner 
     box-shadow: 0 14px 32px rgba(205, 132, 170, .18) !important;
   }
 }
+
+
+/* YN Studio kawaii theme editor + transparent product image controls */
+.secretPageStyleEditor{display:grid;gap:14px;padding:16px;border:1px solid #f0dbe8;border-radius:20px;background:linear-gradient(145deg,#fff9fc,#f8f3ff);margin:12px 0 22px}
+.secretPageStyleHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.secretPageStyleHeading b{color:#7650a9}
+.productBgRemoveToggle{display:flex!important;grid-template-columns:22px 1fr;align-items:start;gap:12px!important;padding:14px;border:1px solid #e8d8f2;border-radius:16px;background:#fff8fc;margin-top:12px}
+.productBgRemoveToggle input{width:20px;height:20px;margin-top:2px;accent-color:#a06be3}
+.productBgRemoveToggle span{display:grid;gap:5px}
+.productBgRemoveToggle small{font-weight:500;line-height:1.45}
+.secretLiveProductImage{background:var(--secret-product-bg,#fff4f7)!important}
+.secretLiveProductImage img{object-fit:contain!important}
+[data-secret-theme="on"] .shop,
+[data-secret-theme="on"] .detail,
+[data-secret-theme="on"] .cartPage,
+[data-secret-theme="on"] .ordersPage,
+[data-secret-theme="on"] .walletPage,
+[data-secret-theme="on"] .profilePage,
+[data-secret-theme="on"] .wishlistPage{
+  background-color:var(--secret-page-bg,var(--secret-bg,#fff8fb));
+  background-image:var(--secret-page-wallpaper,var(--secret-wallpaper,none));
+  background-size:cover;
+  background-position:center;
+}
+[data-secret-theme="on"] .product,
+[data-secret-theme="on"] .detailCard,
+[data-secret-theme="on"] .cartrow,
+[data-secret-theme="on"] .ordercard,
+[data-secret-theme="on"] .transaction,
+[data-secret-theme="on"] .walletHero{
+  background-color:var(--secret-page-surface,var(--secret-surface,#fff));
+  border-radius:var(--secret-radius,24px);
+  color:var(--secret-text,#49384f);
+}
+[data-secret-theme="on"] .product>img,
+[data-secret-theme="on"] .product .ph,
+[data-secret-theme="on"] .gallery{
+  background-color:var(--secret-product-bg,#fff4f7);
+}
+.pwaInstall{position:fixed;z-index:1000;left:50%;bottom:92px;transform:translateX(-50%);width:min(620px,calc(100% - 24px));display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #f0cfe0;border-radius:22px;background:rgba(255,250,253,.97);box-shadow:0 18px 55px rgba(104,62,132,.2);backdrop-filter:blur(18px);color:#49384f}
+.pwaInstallIcon{width:46px;height:46px;flex:0 0 46px;border-radius:14px;overflow:hidden;background:#fff0f6}
+.pwaInstallIcon img{width:100%;height:100%;object-fit:cover}
+.pwaInstall .grow{font-size:13px;line-height:1.45}
+.pwaInstall .grow b{font-size:14px;color:#8050bb}
+.pwaInstall .grow span{color:#81758c}
+.pwaInstall>button:not(.icon){padding:10px 15px;border-radius:13px;white-space:nowrap;background:linear-gradient(135deg,#bd8cf7,#e7a6cb)}
+.pwaInstall .icon{width:38px;height:38px;flex:0 0 38px;padding:0}
+.pwaInstallHelp{margin:8px 0 0;padding:10px;border-radius:12px;background:#f7efff;color:#655178}
+@media(max-width:520px){.pwaInstall{bottom:86px;gap:8px;padding:10px}.pwaInstallIcon{width:38px;height:38px;flex-basis:38px}.pwaInstall .grow b{font-size:12px}.pwaInstall .grow span{font-size:11px}.pwaInstall>button:not(.icon){padding:9px 11px;font-size:12px}}
+
+/* Theme editor: assignments and action controls */
+.secretAssignmentList{display:grid;gap:8px;padding:14px;margin:12px 0;border:1px solid var(--line,#eadff1);border-radius:16px;background:rgba(255,255,255,.58)}
+.secretAssignmentList>b{font-size:.9rem;margin-bottom:4px}
+.secretAssignmentList .secretToggle{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(120,90,130,.10)}
+.secretAssignmentList .secretToggle:last-child{border-bottom:0}
+.secretSelectedEditor select,.secretSelectedEditor input,.secretSelectedEditor textarea{width:100%;min-width:0}
+.secretSelectedEditor .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:600px){.secretSelectedEditor .two{grid-template-columns:1fr}}
