@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Assistant, type AssistantPhase } from './assistant';
 import { registerBuiltins } from './builtins';
 import { registerYNCommands } from './commands';
@@ -44,6 +44,10 @@ const CSS = `
   background:rgba(60,45,90,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   opacity:.55;transition:opacity .2s,background .2s,box-shadow .2s}
 .ynMic:hover,.ynMic:focus-visible{opacity:1}
+.ynVoice{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 138px);z-index:2147483001;
+  width:34px;height:34px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;color:#fff;
+  background:rgba(60,45,90,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:.55;transition:opacity .2s}
+.ynVoice:hover,.ynVoice:focus-visible,.ynVoice.on{opacity:.9}
 .ynMic.live{opacity:.9;background:rgba(124,58,237,.85);box-shadow:0 0 0 4px rgba(124,58,237,.2)}
 @media(prefers-reduced-motion:reduce){.ynGlow i,.ynGlow .soft{animation:none!important}}
 `;
@@ -52,10 +56,12 @@ export default function YNAssistant({
   name = 'Alfie',
   aliases,
   voice = 'male',
+  greeting,
 }: {
   name?: string;
   aliases?: string[];
   voice?: 'male' | 'female';
+  greeting?: string;
 }) {
   const navigate = useNavigate();
   const navRef = useRef(navigate);
@@ -66,6 +72,7 @@ export default function YNAssistant({
   const [listening, setListening] = useState(false);
   const [line, setLine] = useState('');
   const [supported, setSupported] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(true);
 
   useEffect(() => {
     const a = new Assistant({
@@ -77,7 +84,9 @@ export default function YNAssistant({
       onListening: setListening,
       onTranscript: (t) => setLine(t),
       onReply: (t) => setLine(t),
+      onVoiceChange: setVoiceOn,
     });
+    setVoiceOn(a.voiceOn);
     registerBuiltins(a);
     registerYNCommands(a);
     ref.current = a;
@@ -90,7 +99,19 @@ export default function YNAssistant({
     const boot = () => { if (wanted() && !a.enabled) a.start(); };
     boot();
     // Some browsers only allow the mic after a tap, so also start on the first touch.
+    const hello = () => {
+      const h = new Date().getHours();
+      const part = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+      return greeting || `Good ${part}. ${name} here, ready when you are. Say ${name}, give me a summary.`;
+    };
     const first = () => {
+      a.unlock(); // speech is only allowed after a tap
+      try {
+        if (a.voiceOn && !sessionStorage.getItem('yn-assistant-greeted')) {
+          sessionStorage.setItem('yn-assistant-greeted', '1');
+          void a.speak(hello());
+        }
+      } catch { /* ignore */ }
       boot();
       if (a.enabled) {
         window.removeEventListener('pointerdown', first);
@@ -121,6 +142,14 @@ export default function YNAssistant({
     }
   };
 
+  const toggleVoice = () => {
+    const a = ref.current;
+    if (!a) return;
+    a.unlock();
+    a.setVoice(!a.voiceOn);
+    if (a.voiceOn) void a.speak('Voice on.');
+  };
+
   const on = phase !== 'sleep';
   return (
     <div data-yn-ignore>
@@ -132,6 +161,14 @@ export default function YNAssistant({
       <div className={`ynCaption${on && line ? ' on' : ''}`} role="status" aria-live="polite">
         {line}
       </div>
+      <button
+        className={`ynVoice${voiceOn ? ' on' : ''}`}
+        onClick={toggleVoice}
+        aria-label={voiceOn ? `Mute ${name}'s voice` : `Unmute ${name}'s voice`}
+        title={voiceOn ? `${name} speaks — tap to mute` : `${name} is muted — tap to hear`}
+      >
+        {voiceOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
+      </button>
       {supported && (
         <button
           className={`ynMic${listening ? ' live' : ''}`}

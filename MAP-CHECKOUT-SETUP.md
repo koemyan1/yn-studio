@@ -22,3 +22,9 @@ OpenStreetMap/CARTO tiles, Nominatim search, OSRM demo routing. All three have f
 ## Notes
 - Distance price uses straight-line distance from your store, not road distance.
 - The rider position is hidden from the customer as soon as tracking stops or the order is completed/delivered/cancelled.
+
+## Alfie (admin assistant)
+- Only appears for a signed-in admin, on /admin pages. Customers never see or hear it.
+- Speaks with a British voice. Speech needs one tap on the page first (browser rule); Alfie then greets you once per session. The speaker button above the mic mutes/unmutes the voice.
+- Say "Alfie, help" for the command list. Examples: give me a summary, today's sales, unpaid orders, latest order, open order 1234, approve payment for order 1234, set order 1234 to shipped, start live tracking for order 1234, turn on map checkout for toys.
+- Approvals, status changes and sign out always ask you to say "confirm" first.

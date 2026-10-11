@@ -22,6 +22,7 @@ export interface AssistantOptions {
   navigate?: (path: string) => void;
   onPhase?: (p: AssistantPhase) => void;
   onListening?: (on: boolean) => void;
+  onVoiceChange?: (on: boolean) => void;
   onTranscript?: (t: string) => void;
   onReply?: (t: string) => void;
   onUnknown?: (text: string, a: Assistant) => Promise<string | void> | string | void;
@@ -74,6 +75,7 @@ export class Assistant {
     this.rate = opts.rate ?? 1;
     this.pitch = opts.pitch ?? 1;
     this.navigate = opts.navigate || ((p) => window.location.assign(p));
+    try { this.voiceOn = localStorage.getItem('yn-assistant-voice') !== '0'; } catch { /* ignore */ }
     this.loadVoices();
   }
 
@@ -124,34 +126,65 @@ export class Assistant {
   }
 
   // ---------- speaking ----------
+  voiceOn = true;
+  private speakToken = 0;
+
+  setVoice(on: boolean) {
+    this.voiceOn = on;
+    try { localStorage.setItem('yn-assistant-voice', on ? '1' : '0'); } catch { /* ignore */ }
+    if (!on) this.shutUp();
+    this.opts.onVoiceChange?.(on);
+  }
+
+  /** Browsers only allow speech after a tap/click: call this from a user gesture. */
+  unlock() {
+    try {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.resume();
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    } catch { /* ignore */ }
+  }
+
   speak(text: string): Promise<void> {
     this.opts.onReply?.(text);
-    if (typeof window === 'undefined' || !window.speechSynthesis) return Promise.resolve();
-    window.speechSynthesis.cancel();
+    if (typeof window === 'undefined' || !window.speechSynthesis || !this.voiceOn) return Promise.resolve();
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    synth.resume();
+    // Short chunks: Chrome silently stops long utterances after ~15 seconds.
+    const parts = (text.match(/[^.!?;:\n]+[.!?;:]*/g) || [text]).map((x) => x.trim()).filter(Boolean);
+    const token = ++this.speakToken;
+    this.speaking = true;
+    this.setPhase('speaking');
     return new Promise((resolve) => {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = this.lang;
-      if (this.voice) u.voice = this.voice;
-      u.rate = this.rate;
-      u.pitch = this.pitch;
-      this.speaking = true;
-      this.setPhase('speaking');
-      let finished = false;
-      const done = () => {
-        if (finished) return;
-        finished = true;
-        this.speaking = false;
+      let i = 0;
+      const finish = () => {
+        if (token === this.speakToken) this.speaking = false;
         resolve();
       };
-      u.onend = done;
-      u.onerror = done;
-      // Some browsers never fire onend; never get stuck.
-      window.setTimeout(done, Math.min(20000, 1500 + text.length * 90));
-      window.speechSynthesis.speak(u);
+      const next = () => {
+        if (token !== this.speakToken) return resolve();
+        if (i >= parts.length) return finish();
+        const u = new SpeechSynthesisUtterance(parts[i++]);
+        u.lang = this.lang;
+        if (this.voice) u.voice = this.voice;
+        u.rate = this.rate;
+        u.pitch = this.pitch;
+        let called = false;
+        const adv = () => { if (called) return; called = true; next(); };
+        u.onend = adv;
+        u.onerror = adv;
+        window.setTimeout(adv, Math.min(12000, 1500 + u.text.length * 90)); // never get stuck
+        synth.speak(u);
+      };
+      window.setTimeout(next, 60); // Chrome needs a beat after cancel()
     });
   }
 
   shutUp() {
+    this.speakToken++;
     window.speechSynthesis?.cancel();
     this.speaking = false;
   }
