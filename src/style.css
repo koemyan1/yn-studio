@@ -597,3 +597,50 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"] .secretCustomBanner 
 .secretSelectedEditor select,.secretSelectedEditor input,.secretSelectedEditor textarea{width:100%;min-width:0}
 .secretSelectedEditor .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media(max-width:600px){.secretSelectedEditor .two{grid-template-columns:1fr}}
+
+/* ===== Secret Code theme studio (live preview of the real storefront) ===== */
+.secretThemeOverlay{position:fixed;inset:0;pointer-events:none;z-index:20;overflow:hidden}
+.secretThemeElement{position:absolute;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.secretThemeElement img{max-width:100%;max-height:100%;object-fit:contain}
+.ynStudio{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,430px);gap:18px;align-items:start}
+.ynPreviewCol{position:sticky;top:12px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ynBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ynBar select{flex:1;min-width:130px}
+.ynSeg{display:inline-flex;border:1px solid var(--line,#e9e2f4);border-radius:12px;overflow:hidden;background:var(--card,#fff)}
+.ynSeg button{background:transparent!important;color:var(--ink,#241b35)!important;border-radius:0!important;padding:8px 11px!important;font-size:12px;font-weight:700;gap:6px;box-shadow:none!important}
+.ynSeg button.on{background:var(--purple,#7c3aed)!important;color:#fff!important}
+.ynHint{margin:0;font-size:12px;color:var(--muted,#776f86);line-height:1.5}
+.ynHint code,.ynPane code{background:var(--soft,#f4efff);padding:1px 6px;border-radius:6px;font-size:11px}
+.ynFrameWrap{display:flex;justify-content:center;padding:14px;border-radius:22px;background:repeating-conic-gradient(#0000000a 0 25%,transparent 0 50%) 0 0/20px 20px,var(--soft,#f4efff);border:1px solid var(--line,#e9e2f4);overflow:auto}
+.ynFrameWrap iframe{height:min(78vh,760px);max-width:100%;border:1px solid #0002;border-radius:18px;background:#fff;box-shadow:0 14px 40px #0002;transition:width .2s}
+.ynControls{min-width:0;background:var(--card,#fff);border:1px solid var(--line,#e9e2f4);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.ynTabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.ynTabs button{white-space:nowrap;background:var(--soft,#f4efff)!important;color:var(--ink,#241b35)!important;padding:8px 12px!important;border-radius:999px!important;font-size:12px;box-shadow:none!important}
+.ynTabs button.on{background:var(--purple,#7c3aed)!important;color:#fff!important}
+.ynPane{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ynPane h4{margin:8px 0 0;display:flex;align-items:center;gap:6px;font-size:14px}
+.ynField{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;min-width:0}
+.ynField>span{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ynField input:not([type=color]):not([type=range]):not([type=file]),.ynField select,.ynField textarea,.ynCss{width:100%;min-width:0;box-sizing:border-box}
+.ynField input[type=range]{width:100%}
+.ynColor>div{display:flex;align-items:center;gap:8px}
+.ynColor input[type=color]{width:42px;height:34px;padding:0;border:1px solid var(--line,#e9e2f4);border-radius:10px;background:none;cursor:pointer}
+.ynGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ynRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ynRow input{flex:1;min-width:120px}
+.ynCheck{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.ynChecks{display:grid;gap:6px;max-height:190px;overflow:auto;padding:4px 2px}
+.ynLink{background:none!important;color:var(--purple,#7c3aed)!important;padding:0!important;font-size:11px;font-weight:700;text-decoration:underline;box-shadow:none!important;display:inline-flex;gap:4px;align-items:center}
+.ynDrop,.ynDropBtn{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px dashed var(--line,#cfc3e6);border-radius:12px;cursor:pointer;font-size:12px;font-weight:700;width:fit-content}
+.ynDrop input,.ynDropBtn input{display:none}
+.ynPresets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ynPresets button{justify-content:flex-start;flex-direction:column;align-items:flex-start;gap:6px;font-size:12px}
+.ynSwatch{display:flex}.ynSwatch i{width:22px;height:22px;border-radius:50%;border:2px solid #fff;margin-right:-6px;box-shadow:0 0 0 1px #0002}
+.ynPageRow{display:grid;grid-template-columns:90px 1fr auto auto;gap:10px;align-items:end;padding:8px 0;border-bottom:1px solid var(--line,#eee)}
+.ynElement{display:flex;flex-direction:column;gap:12px;padding:12px;border:1px solid var(--line,#e9e2f4);border-radius:14px}
+.ynBannerSample{width:100%;max-height:150px;object-fit:cover;border-radius:12px}
+.ynCss{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.ynSave{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--card,#fff);padding:10px 0 2px;border-top:1px solid var(--line,#e9e2f4)}
+.ynDirty{font-size:12px;color:var(--muted,#776f86)}.ynDirty.on{color:#d9480f;font-weight:800}
+@media(max-width:1100px){.ynStudio{grid-template-columns:1fr}.ynPreviewCol{position:static}.ynFrameWrap iframe{height:70vh}}
+@media(max-width:560px){.ynGrid,.ynPresets{grid-template-columns:1fr}.ynPageRow{grid-template-columns:1fr 1fr}.ynPageRow b{grid-column:1/-1}}
