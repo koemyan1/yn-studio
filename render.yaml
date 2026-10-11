@@ -4,3 +4,19 @@ services:
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: npm start
+    # Optional ABA PayWay (see ABA-PAYWAY-SETUP.md). Add the secret values in the Render dashboard.
+    envVars:
+      - key: ABA_PAYWAY_ENV
+        value: sandbox
+      - key: ABA_PAYWAY_MERCHANT_ID
+        sync: false
+      - key: ABA_PAYWAY_API_KEY
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

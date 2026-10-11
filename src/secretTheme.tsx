@@ -1,6 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from './supabase';
+import { ThemeOverlay, normalizeElement, type OverlayMode, type ThemeEl } from './themeElements';
+import { colorForProduct, gradientForProduct, processedImageUrl } from './imageTools';
+import { LIVE_EVT, getDarkPref, getLiveBg, getSeedOffset, isPreviewFrame, setDarkPref } from './themeLive';
+
+export { isPreviewFrame };
 
 /* ------------------------------------------------------------------ *
  *  Secret theme engine
@@ -88,7 +93,7 @@ export const DEFAULT_TOKENS = {
 };
 
 export const blankTheme = () => ({
-  version: 2,
+  version: 3,
   preset: 'custom',
   background: '', surface: '', text: '', muted: '', border: '', accent: '', accent2: '',
   radius: null as number | null,
@@ -101,7 +106,12 @@ export const blankTheme = () => ({
   elements: [] as any[],
   customCss: '',
   allowedCategories: [] as string[],
+  hideUncategorized: false,
   bannerIds: [] as string[],
+  delivery: { locationMode: 'manual' as 'manual' | 'map' },
+  dark: { mode: 'off' as 'off' | 'auto' | 'on', background: '', surface: '', text: '', muted: '', border: '' },
+  bg: { type: 'none' as 'none' | 'gradient', from: '#ffd1e8', to: '#c7b8ff', angle: 160, animated: false, glass: false },
+  productImage: { mode: 'original' as 'original' | 'remove' | 'color' | 'random' | 'gradient', color: '#ffe0ec', palette: 'pastel' as string, customColors: [] as string[], tolerance: 35, fillHoles: false, seed: 1, fit: 'contain' as 'contain' | 'cover', padding: 10 },
 });
 
 /** Merge saved JSON onto the blank config so old themes keep working. */
@@ -118,9 +128,14 @@ export function normalizeTheme(raw: any) {
     texts: { ...(c.texts || {}) },
     components: { ...(c.components || {}) },
     pageStyles: { ...(c.pageStyles || {}) },
-    elements: Array.isArray(c.elements) ? c.elements : [],
+    elements: (Array.isArray(c.elements) ? c.elements : []).map((e: any, i: number) => normalizeElement(e, i)) as ThemeEl[],
+    dark: { ...b.dark, ...(c.dark || {}) },
+    bg: { ...b.bg, ...(c.bg || {}) },
+    productImage: { ...b.productImage, ...(c.productImage || {}) },
+    hideUncategorized: !!c.hideUncategorized,
     allowedCategories: Array.isArray(c.allowedCategories) ? c.allowedCategories : [],
     bannerIds: Array.isArray(c.bannerIds) ? c.bannerIds : [],
+    delivery: { locationMode: c.delivery?.locationMode === 'map' ? 'map' : 'manual' },
     customCss: typeof c.customCss === 'string' ? c.customCss : '',
   };
 }
@@ -194,29 +209,67 @@ export function scopeCustomCss(css: string): string {
 export function pageKeyFor(path: string): string {
   return path.includes('/cart') ? 'cart' : path.includes('/wishlist') ? 'wishlist' : path.includes('/orders') ? 'orders'
     : path.includes('/wallet') ? 'wallet' : path.includes('/profile') ? 'profile' : path.includes('/checkout') ? 'checkout'
-    : path.includes('/product') ? 'products' : 'home';
+    : path.includes('/product') ? 'products' : path.includes('/support') ? 'support' : 'home';
 }
 
 const PAGE_SELECTORS = '.shop, .detail, .cartPage, .checkoutPage, .ordersPage, .walletPage, .profilePage, .wishlistPage';
 
-export function buildThemeCss(input: any, path = '/'): string {
+/* ------------------------------ dark mode ------------------------------ */
+
+const HEX = /^#[0-9a-f]{6}$/i;
+function mix(a: string, b: string, t: number): string {
+  if (!HEX.test(a) || !HEX.test(b)) return b;
+  const v = (h: string, k: number) => parseInt(h.slice(1 + k * 2, 3 + k * 2), 16);
+  return '#' + [0, 1, 2].map(k => Math.round(v(a, k) * t + v(b, k) * (1 - t)).toString(16).padStart(2, '0')).join('');
+}
+/** Light colours chosen for the light theme are deepened automatically when the theme is shown in dark mode. */
+const deepen = (c: string, dark: boolean) => (dark ? mix(c, '#0d0a14', 0.22) : c);
+export function darkTokens(c: any) {
+  const acc = c.accent && HEX.test(c.accent) ? c.accent : DEFAULT_TOKENS.accent, d = c.dark || {}, base = '#0d0a14';
+  return {
+    background: d.background || mix(acc, base, 0.09), surface: d.surface || mix(acc, base, 0.17),
+    text: d.text || '#f5f0ff', muted: d.muted || '#b9b0cc', border: d.border || mix(acc, base, 0.3),
+  };
+}
+/** Customer choice (button / saved) beats the theme setting; "auto" follows the phone. */
+export function isDarkActive(c: any): boolean {
+  const pref = getDarkPref();
+  if (pref) return pref === '1';
+  const m = c?.dark?.mode;
+  if (m === 'on') return true;
+  if (m === 'auto') return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return false;
+}
+
+const SURFACES = '.product, .panel, .detailCard, .cartrow, .ordercard, .transaction, .profilePanel, .profileHero, .search, .bottom';
+const DARK_SURFACES = '.bottom,.cartItem,.categoryRail button:not(.on),.chatBubble.theirs,.chatComposer,.chatPanel,.checkoutbar,.chips button:not(.on),.couponCard,.customerMetrics,.detailCard,.gallery,.galleryArrow,.galleryViewport,.glass,.googleBtn,.icon,.miniCheckout,.notificationCard,.ordercard,.panel,.payModalCard,.profilePanel,.profileQuickGrid a,.profileStats a,.pwaInstall,.qtyControl,.rewardStandalone,.rewardTabs button:not(.on),.search,.secondary,.supportThread,.transaction,.walletDirectPay,.product,.heart,.cartrow,.profileHero,input,select,textarea';
+
+export function buildThemeCss(input: any, path = '/', opts: { dark?: boolean; liveBg?: string } = {}): string {
   const c = normalizeTheme(input);
+  const dark = !!opts.dark;
+  const t = dark ? { ...c, ...darkTokens(c) } : c;   // effective colours
   let css = '';
   const vars: string[] = [];
-  if (c.accent) vars.push(`--purple:${safe(c.accent)}`, `--purple2:${safe(c.accent2 || c.accent)}`);
-  else if (c.accent2) vars.push(`--purple2:${safe(c.accent2)}`);
-  if (c.text) vars.push(`--ink:${safe(c.text)}`);
-  if (c.muted) vars.push(`--muted:${safe(c.muted)}`);
-  if (c.border) vars.push(`--line:${safe(c.border)}`);
-  if (c.surface) vars.push(`--card:${safe(c.surface)}`);
-  if (c.surface || c.accent) vars.push(`--soft:color-mix(in srgb,${safe(c.accent || DEFAULT_TOKENS.accent)} 12%,${safe(c.surface || DEFAULT_TOKENS.surface)})`);
+  if (t.accent) vars.push(`--purple:${safe(t.accent)}`, `--purple2:${safe(t.accent2 || t.accent)}`);
+  else if (t.accent2) vars.push(`--purple2:${safe(t.accent2)}`);
+  if (t.text) vars.push(`--ink:${safe(t.text)}`);
+  if (t.muted) vars.push(`--muted:${safe(t.muted)}`);
+  if (t.border) vars.push(`--line:${safe(t.border)}`);
+  if (t.surface) vars.push(`--card:${safe(t.surface)}`);
+  if (t.surface || t.accent) vars.push(`--soft:color-mix(in srgb,${safe(t.accent || DEFAULT_TOKENS.accent)} 14%,${safe(t.surface || DEFAULT_TOKENS.surface)})`);
+  if (dark) vars.push('color-scheme:dark');
   if (vars.length) css += `${PREFIX}{${vars.join(';')};}`;
 
-  if (c.background) css += `${PREFIX}, ${PREFIX} body{background-color:${safe(c.background)}!important;}`;
-  if (c.text) css += `${PREFIX} body{color:${safe(c.text)};}`;
+  if (t.background) css += `${PREFIX}, ${PREFIX} body{background-color:${safe(t.background)}!important;}`;
+  if (t.text) css += `${PREFIX} body{color:${safe(t.text)};}`;
   if (c.backgroundImage) css += `${PREFIX} body{background-image:${cssUrl(c.backgroundImage)}!important;background-size:cover;background-position:center;background-attachment:fixed;}`;
-  if (c.surface) css += scoped('.product, .panel, .detailCard, .cartrow, .ordercard, .transaction, .profilePanel, .profileHero, .search, .bottom') + `{background-color:${safe(c.surface)}!important;}`;
-  if (c.text) css += scoped('.product, .panel, .detailCard, .cartrow, .ordercard, .transaction, .profilePanel, .profileHero, .shop h1, .shop h2, .shop h3, .detail h1, .profilePage h1') + `{color:${safe(c.text)};}`;
+  if (t.surface) css += scoped(SURFACES) + `{background-color:${safe(t.surface)}!important;}`;
+  if (dark) css += scoped(DARK_SURFACES) + `{background-color:${safe(t.surface)}!important;color:${safe(t.text)};border-color:${safe(t.border)};}`
+    + scoped('.secondary, .icon, .categoryRail button:not(.on)') + `{color:${safe(t.text)}!important;}`
+    + scoped('.heart') + `{background-color:${safe(t.surface)}cc!important;}`
+    + scoped('input::placeholder, textarea::placeholder') + `{color:${safe(t.muted)};}`
+    + scoped('.pcopy span, .price') + `{color:${safe(t.accent || DEFAULT_TOKENS.accent2)};}`;
+  if (t.text) css += scoped(`${SURFACES}, .shop h1, .shop h2, .shop h3, .detail h1, .profilePage h1`) + `{color:${safe(t.text)};}`;
   if (c.font) css += `${PREFIX}, ${PREFIX} body, ${PREFIX} button, ${PREFIX} input, ${PREFIX} select, ${PREFIX} textarea{font-family:${safe(c.font)}!important;}`;
   if (c.headingFont) css += scoped('h1, h2, h3, .brandrow h1') + `{font-family:${safe(c.headingFont)}!important;}`;
   if (c.radius != null) {
@@ -231,6 +284,19 @@ export function buildThemeCss(input: any, path = '/'): string {
   if (L.maxWidth) css += scoped('.shop') + `{width:min(${Number(L.maxWidth)}px,100%)!important;}`;
   if (L.navStyle === 'flat') css += scoped('nav.bottom') + '{bottom:0!important;width:100%!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-bottom:0!important;}';
   if (L.navStyle === 'hidden') css += scoped('nav.bottom') + '{display:none!important;}';
+
+  // Background of everything: gradient, animated gradient, glass cards, and the customer's "random colour" button.
+  const gradient = c.bg.type === 'gradient' ? `linear-gradient(${Number(c.bg.angle)}deg,${safe(deepen(c.bg.from, dark))},${safe(deepen(c.bg.to, dark))})` : '';
+  const live = opts.liveBg ? safe(deepen(opts.liveBg, dark)) : '';
+  if (gradient && !live) {
+    css += `${PREFIX} body{background-image:${gradient}!important;background-attachment:fixed;${c.bg.animated ? 'background-size:300% 300%!important;animation:ynGradShift 16s ease infinite;' : 'background-size:cover;'}}`;
+    css += scoped(PAGE_SELECTORS) + '{background:transparent!important;}';
+  }
+  if (live) {
+    css += `${PREFIX}, ${PREFIX} body{background-color:${live}!important;background-image:none!important;animation:none!important;}`;
+    css += scoped(PAGE_SELECTORS) + '{background:transparent!important;}';
+  }
+  if (c.bg.glass) css += scoped(DARK_SURFACES.split(',').filter(x => !/input|select|textarea|\.icon|\.heart|\.secondary/.test(x)).join(',')) + `{background-color:color-mix(in srgb,${safe(t.surface || DEFAULT_TOKENS.surface)} 58%,transparent)!important;backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);}`;
 
   const ps = c.pageStyles[pageKeyFor(path)] || {};
   if (ps.background) css += scoped(PAGE_SELECTORS) + `{background-color:${safe(ps.background)}!important;}`;
@@ -250,7 +316,6 @@ export function buildThemeCss(input: any, path = '/'): string {
 
 let current: any | null = null;
 const EVENT = 'yn-secret-theme-applied';
-export const isPreviewFrame = () => typeof window !== 'undefined' && window.name === 'yn-theme-preview';
 
 export function useThemeConfig(): any | null {
   const [cfg, setCfg] = useState<any | null>(current);
@@ -263,6 +328,17 @@ export function useThemeConfig(): any | null {
   return cfg;
 }
 
+/** Re-renders when a theme button changes something live (dark mode, random colour, shuffle). */
+export function useLiveTick(): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const h = () => setN(x => x + 1);
+    window.addEventListener(LIVE_EVT, h);
+    return () => window.removeEventListener(LIVE_EVT, h);
+  }, []);
+  return n;
+}
+
 /** Text override helper: t('brandTitle','YN Studio') */
 export function useThemeText() {
   const cfg = useThemeConfig();
@@ -273,6 +349,33 @@ export function useThemeText() {
 }
 export const Lines = ({ text }: { text: string }) => <>{String(text).split('\n').map((l, i, a) => <React.Fragment key={i}>{l}{i < a.length - 1 && <br />}</React.Fragment>)}</>;
 
+const TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+/**
+ * Product picture that follows the active theme: optionally cuts out the background and
+ * paints a colour / random colour / gradient behind it. Without a theme it is a plain <img>.
+ */
+export function ThemedImg({ src, alt = '', productId = '', className, style, loading }: { src: string; alt?: string; productId?: string; className?: string; style?: React.CSSProperties; loading?: 'lazy' | 'eager' }) {
+  const cfg = useThemeConfig();
+  useLiveTick();
+  const pi = cfg?.productImage;
+  const mode: string = pi?.mode || 'original';
+  const [url, setUrl] = useState<string>(mode === 'original' ? src : '');
+  useEffect(() => {
+    if (mode === 'original') { setUrl(src); return; }
+    let alive = true;
+    setUrl('');
+    processedImageUrl(src, { tolerance: pi?.tolerance, fillHoles: pi?.fillHoles }).then(u => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [src, mode, pi?.tolerance, pi?.fillHoles]);
+  if (mode === 'original') return <img src={src} alt={alt} className={className} style={style} loading={loading} />;
+  const seed = Number(pi.seed || 0) + getSeedOffset();
+  const id = productId || src;
+  const bg = mode === 'color' ? pi.color : mode === 'random' ? colorForProduct(id, seed, pi.palette, pi.customColors) : mode === 'gradient' ? gradientForProduct(id, seed, pi.palette, pi.customColors) : undefined;
+  return <img src={url || TRANSPARENT_GIF} alt={alt} className={className} loading={loading}
+    style={{ ...style, background: bg || style?.background, objectFit: pi.fit === 'contain' ? 'contain' : undefined, padding: pi.fit === 'contain' ? (pi.padding || 0) : undefined, boxSizing: 'border-box', transition: 'background .35s' }} />;
+}
+
 function styleEl(id: string): HTMLStyleElement {
   let el = document.getElementById(id) as HTMLStyleElement | null;
   if (!el) { el = document.createElement('style'); el.id = id; document.head.appendChild(el); }
@@ -281,7 +384,7 @@ function styleEl(id: string): HTMLStyleElement {
 
 function clearTheme() {
   const root = document.documentElement;
-  root.removeAttribute('data-secret-theme'); root.removeAttribute('data-secret-preset'); root.removeAttribute('data-yn-theme');
+  root.removeAttribute('data-secret-theme'); root.removeAttribute('data-secret-preset'); root.removeAttribute('data-yn-theme'); root.removeAttribute('data-yn-dark');
   ['--secret-bg', '--secret-surface', '--secret-text', '--secret-accent', '--secret-radius', '--secret-font', '--secret-wallpaper', '--secret-banner'].forEach(k => root.style.removeProperty(k));
   document.getElementById('yn-theme-style')?.remove();
   document.getElementById('yn-theme-font')?.remove();
@@ -291,20 +394,26 @@ function clearTheme() {
 
 function applyTheme(raw: any, path: string) {
   const c = normalizeTheme(raw);
+  const dark = isDarkActive(c);
+  const t = dark ? { ...c, ...darkTokens(c) } : c;
+  const rawLive = getLiveBg();
+  const live = rawLive ? deepen(rawLive, dark) : '';
   const root = document.documentElement;
   root.setAttribute('data-secret-theme', 'on');
   root.setAttribute('data-secret-preset', c.preset || 'custom');
   root.setAttribute('data-yn-theme', '1');
+  root.setAttribute('data-yn-dark', dark ? '1' : '0');
   // Variables the built-in Chiikawa preset (and older themes) read.
-  root.style.setProperty('--secret-bg', c.background || DEFAULT_TOKENS.background);
-  root.style.setProperty('--secret-surface', c.surface || DEFAULT_TOKENS.surface);
-  root.style.setProperty('--secret-text', c.text || DEFAULT_TOKENS.text);
+  root.style.setProperty('--secret-bg', live || t.background || DEFAULT_TOKENS.background);
+  root.style.setProperty('--secret-surface', t.surface || DEFAULT_TOKENS.surface);
+  root.style.setProperty('--secret-text', t.text || DEFAULT_TOKENS.text);
   root.style.setProperty('--secret-accent', c.accent || DEFAULT_TOKENS.accent);
   root.style.setProperty('--secret-radius', (c.radius ?? 20) + 'px');
   root.style.setProperty('--secret-font', c.font || 'Inter, system-ui, sans-serif');
-  root.style.setProperty('--secret-wallpaper', c.backgroundImage ? cssUrl(c.backgroundImage) : 'none');
+  const gradient = c.bg.type === 'gradient' && !live ? `linear-gradient(${Number(c.bg.angle)}deg,${safe(deepen(c.bg.from, dark))},${safe(deepen(c.bg.to, dark))})` : '';
+  root.style.setProperty('--secret-wallpaper', live ? 'none' : gradient || (c.backgroundImage ? cssUrl(c.backgroundImage) : 'none'));
   root.style.setProperty('--secret-banner', c.bannerImage ? cssUrl(c.bannerImage) : 'none');
-  styleEl('yn-theme-style').textContent = buildThemeCss(c, path);
+  styleEl('yn-theme-style').textContent = buildThemeCss(c, path, { dark, liveBg: rawLive });
   const fontLink = document.getElementById('yn-theme-font') as HTMLLinkElement | null;
   if (c.fontUrl && /^https:\/\/fonts\.googleapis\.com\//.test(c.fontUrl)) {
     if (fontLink) { if (fontLink.href !== c.fontUrl) fontLink.href = c.fontUrl; }
@@ -335,6 +444,11 @@ export function SecretThemeRuntime() {
   const path = location.pathname;
   const [draft, setDraft] = useState<any | null>(null);
   const [customer, setCustomer] = useState<any | null>(null);
+  const [mode, setMode] = useState<OverlayMode>('parts');
+  const [selEl, setSelEl] = useState('');
+  const tick = useLiveTick();
+  const [osTick, setOsTick] = useState(0);
+  const modeRef = useRef<OverlayMode>('parts');
 
   // Customer mode: load the activated theme from the account.
   useEffect(() => {
@@ -358,29 +472,46 @@ export function SecretThemeRuntime() {
     return () => { alive = false; window.removeEventListener('yn-secret-theme-change', reload); document.removeEventListener('visibilitychange', onVisible); };
   }, [path, preview]);
 
+  // "Follow my phone" dark mode.
+  useEffect(() => {
+    const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    if (!mq) return;
+    const h = () => setOsTick(x => x + 1);
+    mq.addEventListener?.('change', h);
+    return () => mq.removeEventListener?.('change', h);
+  }, []);
+
   // Preview mode: receive the unsaved draft from the admin editor.
   useEffect(() => {
     if (!preview) return;
-    let selectMode = true, selectedKey = '';
+    let selectedKey = '', lastDark = '__';
     const hl = styleEl('yn-theme-preview-style');
     const paint = () => {
+      const m = modeRef.current;
       const def = COMPONENTS.find(x => x.key === selectedKey);
-      hl.textContent = (selectMode ? `html *{cursor:crosshair!important}` : '') +
-        (def ? `${def.selector}{outline:3px solid #ff3d8b!important;outline-offset:2px!important}` : '') +
-        (selectMode ? `.secretThemeOverlay{pointer-events:none!important}` : '');
+      hl.textContent = (m === 'parts' ? `html *{cursor:crosshair!important}` : '') +
+        (def && m === 'parts' ? `${def.selector}{outline:3px solid #ff3d8b!important;outline-offset:2px!important}` : '');
     };
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || e.data?.type !== 'yn-theme-draft') return;
-      selectMode = e.data.selectMode !== false; selectedKey = e.data.selectedKey || '';
+      const m: OverlayMode = e.data.mode === 'try' || e.data.mode === 'elements' ? e.data.mode : 'parts';
+      modeRef.current = m; setMode(m);
+      selectedKey = e.data.selectedKey || '';
+      if (typeof e.data.previewDark === 'string' && e.data.previewDark !== lastDark) { lastDark = e.data.previewDark; setDarkPref(lastDark as '' | '1' | '0'); }
+      setSelEl(e.data.selectedElementId || '');
       setDraft(e.data.config); paint();
     };
+    const inOverlay = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.secretThemeOverlay');
     const onClick = (e: MouseEvent) => {
-      if (!selectMode) return;
+      const m = modeRef.current;
+      if (m === 'try') return;
+      if (inOverlay(e.target)) { e.preventDefault(); return; }
       e.preventDefault(); e.stopPropagation();
+      if (m !== 'parts') return;
       const def = componentAt(e.target as Element);
       if (def) { selectedKey = def.key; paint(); window.parent.postMessage({ type: 'yn-theme-select', key: def.key }, window.location.origin); }
     };
-    const block = (e: Event) => { if (selectMode) { e.preventDefault(); e.stopPropagation(); } };
+    const block = (e: Event) => { if (modeRef.current !== 'try') { e.preventDefault(); e.stopPropagation(); } };
     window.addEventListener('message', onMessage);
     document.addEventListener('click', onClick, true);
     document.addEventListener('submit', block, true);
@@ -393,17 +524,12 @@ export function SecretThemeRuntime() {
   const active = preview ? draft : customer?.config;
   useEffect(() => {
     if (active) applyTheme(active, path); else clearTheme();
-    return () => { /* theme stays applied across route changes; cleared when inactive */ };
-  }, [active, path]);
+  }, [active, path, tick, osTick]);
 
-  const els: any[] = active?.elements || [];
+  const els: ThemeEl[] = active ? normalizeTheme(active).elements : [];
   return els.length ? (
-    <div className="secretThemeOverlay" aria-hidden="true">
-      {els.map((el: any) => (
-        <div key={el.id} className="secretThemeElement" style={{ left: el.x + '%', top: el.y + '%', width: el.w + '%', minHeight: el.h + 'px', color: el.color, background: el.background, borderRadius: el.radius + 'px', fontSize: el.fontSize + 'px', zIndex: el.z || 1 }}>
-          {el.image && <img src={el.image} alt="" />}{el.text}
-        </div>
-      ))}
-    </div>
+    <ThemeOverlay elements={els} pageKey={pageKeyFor(path)} mode={preview ? mode : 'live'} selectedId={selEl}
+      onSelect={id => { setSelEl(id); if (preview) window.parent.postMessage({ type: 'yn-theme-element-select', id }, window.location.origin); }}
+      onPatch={(id, patch) => { if (preview) window.parent.postMessage({ type: 'yn-theme-element-patch', id, patch }, window.location.origin); }} />
   ) : null;
 }

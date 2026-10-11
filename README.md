@@ -66,3 +66,12 @@ Admin → Themes includes a phone canvas with Text, Image, Button, and Widget el
 The theme phone preview now mounts the same customer `Shop` component used by the live storefront (with the unsaved editor configuration passed in), so it displays the actual published products and customer home layout rather than a static drawing.
 
 In Theme Studio, use **Customer preview** to see the actual storefront or **Drag & resize** to edit saved canvas elements; both views share the same unsaved theme config.
+
+
+## v3 additions
+See `CHANGELOG-V3-THEME-STUDIO.md` (Theme Studio: categories, product picture backgrounds, buttons/elements with actions & motion, dark mode, Khmer switch) and `ABA-PAYWAY-SETUP.md`.
+
+## Voice assistant (Alfie)
+Say **"Alfie"** and a rainbow glow wraps the screen, then give a command: "Alfie, go to cart", "Alfie, search for shoes",
+"Alfie, dark mode on", "Alfie, switch to Khmer", "Alfie, click save". Code lives in `src/yn-assistant/`.
+Change the name in `src/main.tsx` (`<YNAssistant name="Alfie" />`). Works in Chrome, Edge and Safari over https.

@@ -1,0 +1,156 @@
+/* =====================================================================
+   YN Studio – v3 additions
+   1. Theme Studio dark mode sync      4. Language button
+   2. Theme elements (buttons etc.)    5. ABA PayWay / admin helpers
+   3. Animations, toast, confetti      6. "Cooler" storefront polish
+   ===================================================================== */
+
+/* ---------- 1. Theme Studio follows the admin dark mode ---------- */
+.admin.admin-dark .ynStudio{--card:#1b1530;--line:#3a2f58;--ink:#f3eefc;--muted:#a99fc6;--soft:#2a2146;--purple:#a78bfa;color:var(--ink)}
+.admin.admin-dark .ynControls,.admin.admin-dark .ynSeg{background:#1b1530;border-color:#3a2f58}
+.admin.admin-dark .ynFrameWrap{background:repeating-conic-gradient(#ffffff0d 0 25%,transparent 0 50%) 0 0/20px 20px,#150f27;border-color:#3a2f58}
+.admin.admin-dark .ynFrameWrap iframe{border-color:#ffffff22;box-shadow:0 14px 40px #0008}
+.admin.admin-dark .ynTabs button,.admin.admin-dark .ynPresets button,.admin.admin-dark .ynElRow,.admin.admin-dark .ynCat,.admin.admin-dark .ynPageRow{background:#241b3d!important;color:#f3eefc!important;border-color:#3a2f58}
+.admin.admin-dark .ynTabs button.on,.admin.admin-dark .ynSeg button.on{background:#7c3aed!important;color:#fff!important}
+.admin.admin-dark .ynHint,.admin.admin-dark .ynField>span,.admin.admin-dark .ynCat small{color:#a99fc6}
+.admin.admin-dark .ynField input,.admin.admin-dark .ynField select,.admin.admin-dark .ynField textarea,.admin.admin-dark .ynStudio input[type=text],.admin.admin-dark .ynStudio select,.admin.admin-dark .ynStudio textarea,.admin.admin-dark .ynCss,.admin.admin-dark .ynMini{background:#120d22!important;color:#f3eefc!important;border-color:#3a2f58!important}
+.admin.admin-dark .ynHint code,.admin.admin-dark .ynPane code{background:#2a2146;color:#e9defc}
+.admin.admin-dark .ynDrop,.admin.admin-dark .ynDropBtn{background:#241b3d;color:#f3eefc;border-color:#4a3d70}
+.admin.admin-dark .ynSave{background:#1b1530;border-color:#3a2f58}
+.admin.admin-dark .ynElRow.on,.admin.admin-dark .ynCat.on{border-color:#a78bfa!important;background:#33265a!important}
+
+/* ---------- Studio – new controls ---------- */
+.ynMini{flex:0 1 auto!important;min-width:0!important;width:auto;font-size:12px;font-weight:700;padding:8px 10px!important}
+.ynSurprise{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#ff5d8f,#8338ec,#3a86ff)!important;background-size:200% 200%;animation:ynGradShift 6s ease infinite;color:#fff!important;font-weight:800;border:0;border-radius:14px;padding:12px 14px;cursor:pointer;box-shadow:0 8px 22px #8338ec44}
+.ynSw{width:38px;height:38px;padding:0;border:2px solid var(--line,#e9e2f4);border-radius:10px;background:none;cursor:pointer}
+.ynCatList{display:grid;gap:6px;max-height:340px;overflow:auto;padding:2px}
+.ynCat{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1.5px solid var(--line,#e9e2f4);border-radius:14px;background:var(--card,#fff);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.ynCat:hover{transform:translateY(-1px)}
+.ynCat.on{border-color:var(--purple,#7c3aed);background:var(--soft,#f4efff)}
+.ynCat input{width:18px;height:18px;accent-color:var(--purple,#7c3aed)}
+.ynCat span{font-weight:700;font-size:13px}.ynCat small{color:var(--muted,#776f86);font-size:11px}
+.ynElList{display:grid;gap:6px}
+.ynElRow{display:flex;align-items:center;gap:4px;padding:4px;border:1.5px solid var(--line,#e9e2f4);border-radius:14px;background:var(--card,#fff)}
+.ynElRow.on{border-color:var(--purple,#7c3aed);background:var(--soft,#f4efff)}
+.ynElPick{flex:1;min-width:0;text-align:left;background:transparent!important;color:inherit!important;box-shadow:none!important;font-size:13px;font-weight:700;padding:8px 10px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ynElRow .icon{width:30px;height:30px;border-radius:9px}
+.ynElRow .icon.danger{color:#d92d5a}
+
+/* ---------- 2. Theme elements on the storefront ---------- */
+.ynOverlay{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:60}
+.ynEl{box-sizing:border-box}
+.ynEl .ynAnim{width:100%;height:100%;will-change:transform}
+.ynBtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;line-height:1.15;text-align:center;padding:0 16px;font-family:inherit;box-sizing:border-box;transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;-webkit-tap-highlight-color:transparent;user-select:none}
+.ynBtn:active{transform:scale(.95)}
+.ynBtn.ynHover-lift:hover{transform:translateY(-3px)}
+.ynBtn.ynHover-grow:hover{transform:scale(1.07)}
+.ynBtn.ynHover-glow:hover{filter:brightness(1.12) drop-shadow(0 0 10px currentColor)}
+.ynTextEl{display:flex;align-items:center;gap:8px;box-sizing:border-box;word-break:break-word;white-space:pre-wrap;line-height:1.25;transition:transform .18s}
+.ynTextEl.ynHover-lift:hover,.ynPic.ynHover-lift:hover{transform:translateY(-3px)}
+.ynTextEl.ynHover-grow:hover,.ynPic.ynHover-grow:hover{transform:scale(1.06)}
+.ynPic{display:block;max-width:none;box-sizing:border-box;transition:transform .18s}
+.ynElIcon{object-fit:contain;flex:none;border-radius:6px}
+.ynElEmoji{font-size:1.15em;line-height:1}
+.ynElText{min-width:0}
+.ynElEdit .ynBtn,.ynElEdit .ynTextEl,.ynElEdit .ynPic{user-select:none;-webkit-user-drag:none}
+.ynElSel{outline:2px dashed #ff3d8b;outline-offset:4px;border-radius:8px}
+.ynElEdit:not(.ynElSel):hover{outline:1.5px dashed #ff3d8b99;outline-offset:4px}
+.ynHandle{position:absolute;right:-12px;bottom:-12px;width:20px;height:20px;border-radius:7px;background:#ff3d8b;border:2px solid #fff;box-shadow:0 2px 8px #0005;cursor:nwse-resize;touch-action:none;pointer-events:auto}
+
+/* ---------- 3. Animations, toast, confetti ---------- */
+@keyframes ynGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes ynFloatK{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes ynPulseK{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+@keyframes ynSpinK{to{transform:rotate(360deg)}}
+@keyframes ynWiggleK{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+@keyframes ynJumpK{0%,100%{transform:translateY(0) scaleY(1)}40%{transform:translateY(-22px) scaleY(1.05)}60%{transform:translateY(0) scaleY(.92)}}
+.ynA-float{animation:ynFloatK 3.2s ease-in-out infinite}
+.ynA-pulse{animation:ynPulseK 1.6s ease-in-out infinite}
+.ynA-spin{animation:ynSpinK 6s linear infinite}
+.ynA-wiggle{animation:ynWiggleK .8s ease-in-out infinite}
+.ynA-jump{animation:ynJumpK 1.1s ease-in-out infinite}
+
+.ynToast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,0);z-index:9999;max-width:min(88vw,420px);padding:12px 18px;border-radius:16px;background:rgba(30,20,50,.92);color:#fff;font-weight:700;font-size:14px;text-align:center;box-shadow:0 14px 40px #0006;backdrop-filter:blur(10px);animation:ynToastIn .28s cubic-bezier(.2,1.2,.4,1)}
+.ynToast.out{opacity:0;transform:translate(-50%,10px);transition:.4s}
+@keyframes ynToastIn{from{opacity:0;transform:translate(-50%,16px) scale(.94)}}
+.ynConfetti{position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden}
+.ynConfetti span{position:absolute;font-size:22px;animation:ynConfettiK 1.5s cubic-bezier(.15,.7,.3,1) forwards;will-change:transform,opacity}
+.ynConfetti span.bit{width:9px;height:14px;border-radius:2px}
+@keyframes ynConfettiK{0%{transform:translate(0,0) rotate(0);opacity:1}70%{opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + 260px)) rotate(var(--rot));opacity:0}}
+
+/* ---------- 4. Language button ---------- */
+.langButton{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 13px;border-radius:999px;border:1px solid var(--line,#e9e2f4);background:var(--card,#fff);color:var(--ink,#241b35);font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;transition:transform .15s,box-shadow .15s}
+.langButton:hover{box-shadow:0 6px 18px #7c3aed22;transform:translateY(-1px)}
+.langButton:active{transform:scale(.95)}
+.langButton svg{width:17px;height:17px}
+.authLang{position:fixed;top:14px;right:14px;z-index:5}
+html[data-secret-theme="on"] .langButton{background-color:var(--secret-surface)!important;color:var(--secret-text)!important}
+
+/* ---------- 5. ABA PayWay + admin helpers ---------- */
+.paywayButton{margin-top:-4px;border-color:#0b5fff55;background:linear-gradient(135deg,#f2f7ff,var(--card,#fff))}
+.paywayButton b{display:block}.paywayButton small{color:var(--muted,#776f86)}
+.paywayButton:disabled{opacity:.6;cursor:wait}
+.bgRemoveOptions{display:grid;gap:10px;margin:10px 0;padding:12px;border-radius:14px;background:var(--soft,#f4efff)}
+.bgRemoveOptions label{display:grid;gap:5px;font-size:12px;font-weight:700}
+.imageCutButton{position:absolute;right:42px;top:6px;width:31px;height:31px;padding:0;border-radius:10px;display:grid;place-items:center;background:rgba(20,12,30,.78);border:1px solid rgba(255,255,255,.2);color:#fff;z-index:2;cursor:pointer;font-size:14px}
+.imageCutButton:hover{background:#7c3aed}
+
+/* ---------- 6. Cooler storefront ---------- */
+html{scroll-behavior:smooth}
+::selection{background:#c4a8ff66}
+:focus-visible{outline:3px solid #a78bfa88;outline-offset:2px;border-radius:10px}
+button,.button,a.product{-webkit-tap-highlight-color:transparent}
+button:not(:disabled):active,.button:active{transform:scale(.97)}
+@media (hover:hover){
+  .product{transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease}
+  .product:hover{transform:translateY(-5px);box-shadow:0 22px 46px #48237826}
+  .product>img{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .product:hover>img{transform:scale(1.045)}
+}
+.heart{transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.heart:active{transform:scale(1.35)}
+.bottom{transition:box-shadow .2s}
+.bottom a{transition:transform .2s cubic-bezier(.3,1.5,.5,1),color .2s}
+.bottom a.on,.bottom a.active{transform:translateY(-2px)}
+.bottom a:active{transform:scale(.9)}
+.categoryRail button,.chips button{transition:transform .15s,background .2s,box-shadow .2s}
+.categoryRail button.on,.chips button.on{box-shadow:0 8px 20px #7c3aed33}
+@keyframes ynRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+main.shop>*,.detail>*,.cartPage>*,.ordersPage>*,.walletPage>*,.profilePage>*{animation:ynRise .45s cubic-bezier(.2,.8,.2,1) both}
+main.shop>*:nth-child(2),.detail>*:nth-child(2){animation-delay:.04s}
+main.shop>*:nth-child(3),.detail>*:nth-child(3){animation-delay:.08s}
+main.shop>*:nth-child(4),.detail>*:nth-child(4){animation-delay:.12s}
+.homeProductGrid>.product,.grid>.product{animation:ynRise .5s cubic-bezier(.2,.8,.2,1) both}
+.homeProductGrid>.product:nth-child(2n),.grid>.product:nth-child(2n){animation-delay:.05s}
+.homeProductGrid>.product:nth-child(3n),.grid>.product:nth-child(3n){animation-delay:.1s}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#b9a5e866;border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#9b7ee0aa;background-clip:padding-box;border:2px solid transparent}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  main.shop>*,.detail>*,.cartPage>*,.ordersPage>*,.walletPage>*,.profilePage>*,.homeProductGrid>.product,.grid>.product{animation:none!important}
+  .product,.product>img{transition:none!important}
+  .ynSurprise{animation:none}
+}
+@media (max-width:520px){.langButton span{display:none}.langButton{padding:0;width:42px;justify-content:center}.langButton svg{width:19px;height:19px}}
+
+/* ===== Map checkout (Grab-style) ===== */
+.ynPickWrap{position:relative;isolation:isolate}
+.ynPickPin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:600;pointer-events:none;display:grid;justify-items:center;transition:transform .18s ease}
+.ynPickPin span{font-size:40px;line-height:1;filter:drop-shadow(0 4px 4px #4c1d9566)}
+.ynPickPin i{position:absolute;bottom:-3px;width:12px;height:5px;border-radius:50%;background:#4c1d9555;transition:transform .18s ease,opacity .18s}
+.ynPickPin.moving{transform:translate(-50%,calc(-100% - 12px))}
+.ynPickPin.moving i{transform:scale(.6);opacity:.5}
+.ynSearchResults{display:grid;border-top:1px solid #eee7ff;background:#fff;max-height:210px;overflow:auto}
+.ynSearchResults button{text-align:left;background:#fff;border:0;border-bottom:1px solid #f3eefc;border-radius:0;padding:11px 14px;color:inherit;font-size:.86rem}
+.ynSearchResults button:hover{background:#faf8ff}
+.ynPickInfo{display:grid;gap:3px;padding:12px 4px 4px}
+.ynPickInfo small,.ynMapMeta{color:#6d28d9;font-weight:700}
+.ynStoreDot{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid #7c3aed;box-shadow:0 3px 12px #4c1d9560;font-size:17px}
+.ynMapConfirmed .ynMapNote{margin:0;font-size:.85rem}
+.ynMapLive.on{background:#16a34a;color:#fff}
+.ynTrackMap{height:300px}
+.ynLiveTrack .ynMapTitle b{font-size:15px}
+.ynMapPanel .locationSearch{flex-wrap:nowrap}
+@media(max-width:600px){.ynTrackMap{height:340px}}
