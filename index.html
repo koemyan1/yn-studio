@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#7c3aed" />
     <title>YN Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800&display=swap" />
+    <style>
+      /* first-paint splash: shown until React mounts, then replaced automatically */
+      .ynSplash{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,#fdfbff,#f5eeff 60%,#fdf1f8)}
+      .ynSplash i{display:block;width:92px;height:92px;border-radius:30px;background:#fff url(/yn-logo.png) center/72% no-repeat;box-shadow:0 26px 60px rgba(124,58,237,.34);animation:ynSplash 1.6s ease-in-out infinite}
+      @keyframes ynSplash{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.06)}}
+    </style>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -15,7 +24,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="ynSplash" aria-hidden="true"><i></i></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
