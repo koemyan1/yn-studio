@@ -320,6 +320,17 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root 
    With nothing set, every fallback below is the built-in artwork, so the theme looks exactly as before.
    ========================================================================== */
 
+/* The page containers used to paint an opaque cream background over the sky and the clouds (they live on <body> behind the content),
+   so neither was ever visible. Let them show through. A page colour chosen per page in the Studio still wins (its selector is more specific). */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .shop,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .detail,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartPage,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .checkoutPage,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .ordersPage,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletPage,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .profilePage,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .wishlistPage { background-color: transparent !important; }
+
 /* ------------------------------ clouds drifting across the top of the page ------------------------------ */
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] body { isolation: isolate; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] body::before {

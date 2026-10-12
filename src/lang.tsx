@@ -237,20 +237,42 @@ function stopObserver() { observer?.disconnect(); observer = null; }
 
 /* ------------------------------ font + html lang ------------------------------ */
 
+/** Khmer fonts the admin can choose from (Look tab → Khmer font). All load from Google Fonts only when a customer uses Khmer. */
+export const KHMER_FONTS: { key: string; label: string; gf: string }[] = [
+  { key: 'Noto Sans Khmer', label: 'Noto Sans Khmer – clean & modern (default)', gf: 'Noto+Sans+Khmer:wght@400;500;600;700' },
+  { key: 'Kantumruy Pro', label: 'Kantumruy Pro – friendly & rounded', gf: 'Kantumruy+Pro:wght@400;500;600;700' },
+  { key: 'Battambang', label: 'Battambang – classic book style', gf: 'Battambang:wght@400;700' },
+  { key: 'Siemreap', label: 'Siemreap – light & airy', gf: 'Siemreap' },
+  { key: 'Hanuman', label: 'Hanuman – serif, elegant', gf: 'Hanuman:wght@400;700' },
+  { key: 'Content', label: 'Content – soft & simple', gf: 'Content:wght@400;700' },
+];
+export const DEFAULT_KHMER_FONT = KHMER_FONTS[0].key;
+let khFont = DEFAULT_KHMER_FONT;
+
+/** Pick the Khmer font (from the theme). Unknown / empty = default. Updates live if Khmer is showing. */
+export function setKhmerFont(key?: string | null) {
+  const k = KHMER_FONTS.some(f => f.key === key) ? (key as string) : DEFAULT_KHMER_FONT;
+  if (k === khFont) return;
+  khFont = k;
+  if (typeof document !== 'undefined' && document.getElementById('yn-km-style')) ensureKhmerStyle();
+}
+
 function ensureKhmerStyle() {
-  if (document.getElementById('yn-km-style')) return;
-  const st = document.createElement('style'); st.id = 'yn-km-style';
-  st.textContent = `html[lang="km"] body,html[lang="km"] button,html[lang="km"] input,html[lang="km"] textarea,html[lang="km"] select{font-family:"Kantumruy Pro","Noto Sans Khmer","Khmer UI","Leelawadee UI","Khmer OS Battambang",Inter,system-ui,sans-serif}
+  const f = KHMER_FONTS.find(x => x.key === khFont) || KHMER_FONTS[0];
+  // Repeating the attribute makes this rule more specific than the themes' own `!important` font rules (Chiikawa's handwriting has no Khmer letters).
+  const H = 'html[lang="km"][lang="km"][lang="km"][lang="km"][lang="km"][lang="km"]';
+  const css = `${H} body,${H} body *{font-family:"${f.key}","Noto Sans Khmer","Kantumruy Pro","Khmer UI","Leelawadee UI","Khmer OS Battambang",Inter,system-ui,sans-serif!important}
 html[lang="km"] .eyebrow,html[lang="km"] .bottom a,html[lang="km"] small{letter-spacing:0!important;text-transform:none!important}
 html[lang="km"] h1,html[lang="km"] h2,html[lang="km"] h3{line-height:1.35!important}
 html[lang="km"] p,html[lang="km"] .muted,html[lang="km"] small{line-height:1.6}
 html[lang="km"] button,html[lang="km"] .button{line-height:1.4}`;
-  document.head.appendChild(st);
-  if (!document.getElementById('yn-km-font')) {
-    const l = document.createElement('link'); l.id = 'yn-km-font'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap';
-    document.head.appendChild(l);
-  }
+  let st = document.getElementById('yn-km-style') as HTMLStyleElement | null;
+  if (!st) { st = document.createElement('style'); st.id = 'yn-km-style'; document.head.appendChild(st); }
+  if (st.textContent !== css) st.textContent = css;
+  const href = `https://fonts.googleapis.com/css2?family=${f.gf}&display=swap`;
+  let l = document.getElementById('yn-km-font') as HTMLLinkElement | null;
+  if (!l) { l = document.createElement('link'); l.id = 'yn-km-font'; l.rel = 'stylesheet'; document.head.appendChild(l); }
+  if (l.getAttribute('href') !== href) l.setAttribute('href', href);
 }
 
 let wrapped = false;

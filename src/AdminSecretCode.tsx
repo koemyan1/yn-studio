@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown, ArrowUp, Copy, Dices, Eye, Hand, ImagePlus, Monitor, Move, MousePointerClick, Plus, Save, Shuffle,
+  ArrowDown, ArrowUp, Copy, Dices, Eye, EyeOff, Hand, ImagePlus, Monitor, MousePointerClick, Plus, Save, Shuffle,
   Smartphone, Sparkles, Tablet, Trash2, Undo2, Wand2,
 } from 'lucide-react';
+import { FloatingBar, QBtn, QColor, QPic, QRange, QSelect, QSep, type Anchor } from './QuickBar';
 import { supabase } from './supabase';
 import {
   COMPONENTS, DEFAULT_TOKENS, PAGES, TEXT_KEYS, THEME_PRESETS,
@@ -10,12 +11,14 @@ import {
 } from './secretTheme';
 import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, STORE_PAGES, blankElement, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
+import { KHMER_FONTS } from './lang';
 import { DEFAULT_CLOUD_SECONDS, MASCOT_GROUPS, MASCOT_SLOTS } from './chiikawaMascots';
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
 const TABS = ['Theme & code', 'Look', 'Mascots', 'Categories', 'Delivery', 'Products', 'Elements', 'Parts', 'Text', 'Layout & pages', 'Advanced'] as const;
 type Tab = typeof TABS[number];
-type Mode = 'parts' | 'elements' | 'try' | 'mascots';
+type Mode = 'edit' | 'try';
+type SelKind = '' | 'part' | 'element' | 'mascot' | 'page';
 
 const FONTS: [string, string][] = [
   ['', 'Default (Inter)'],
@@ -112,7 +115,11 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const [frameSrc, setFrameSrc] = useState('/');
   const [curPath, setCurPath] = useState('/');
   const [device, setDevice] = useState<'phone' | 'tablet' | 'desktop'>('phone');
-  const [mode, setMode] = useState<Mode>('parts');
+  const [mode, setMode] = useState<Mode>('edit');
+  const [selKind, setSelKind] = useState<SelKind>('');
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const [qOpen, setQOpen] = useState('');
+  const stage = useRef<HTMLDivElement | null>(null);
   const [mascotGroup, setMascotGroup] = useState<string>('headLeft');
   const [previewDark, setPreviewDark] = useState<'' | '0' | '1'>('');
   const [ready, setReady] = useState(false);
@@ -150,17 +157,23 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (id && themes.some(t => t.id === id)) choose(id);
   }, [themes]);
 
-  // Tabs decide what a tap in the preview does.
-  useEffect(() => { if (tab === 'Elements') setMode('elements'); else if (tab === 'Parts') setMode('parts'); else if (tab === 'Mascots') setMode('mascots'); else if (mode === 'mascots') setMode('parts'); }, [tab]);
+  // One editing mode: tap anything in the preview to select it, drag mascots / your own elements, and use the
+  // floating toolbar that appears right above the selection (no scrolling down to the tabs needed).
+  useEffect(() => { setQOpen(''); }, [selKind, compKey, elementId, mascotGroup]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !(e.target as HTMLElement | null)?.closest?.('input[type=text],textarea')) setSelKind(''); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Push the unsaved draft into the live storefront preview.
   useEffect(() => {
     if (!ready) return;
     frame.current?.contentWindow?.postMessage({
-      type: 'yn-theme-draft', config: { ...cfg, _themeId: selected }, mode,
-      selectedKey: tab === 'Parts' ? compKey : '', selectedElementId: tab === 'Elements' ? elementId : '', selectedMascot: tab === 'Mascots' ? mascotGroup : '', previewDark,
+      type: 'yn-theme-draft', config: { ...cfg, _themeId: selected }, mode, selKind,
+      selectedKey: selKind === 'part' ? compKey : '', selectedElementId: selKind === 'element' ? elementId : '', selectedMascot: selKind === 'mascot' ? mascotGroup : '', previewDark,
     }, window.location.origin);
-  }, [cfg, ready, mode, compKey, tab, elementId, mascotGroup, previewDark, selected]);
+  }, [cfg, ready, mode, compKey, selKind, elementId, mascotGroup, previewDark, selected]);
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
@@ -169,11 +182,12 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
       if (d.type === 'yn-theme-ready') setReady(true);
       if (d.type === 'yn-theme-path') setCurPath(d.path);
       if (d.type === 'yn-theme-select') {
-        setCompKey(d.key); setTab('Parts');
-        window.setTimeout(() => controls.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+        if (d.key === '__page') setSelKind('page'); else { setCompKey(d.key); setSelKind('part'); }
       }
-      if (d.type === 'yn-theme-element-select') { setElementId(d.id); setTab('Elements'); }
-      if (d.type === 'yn-theme-mascot-select') { setMascotGroup(d.group); setTab('Mascots'); }
+      if (d.type === 'yn-theme-deselect') setSelKind('');
+      if (d.type === 'yn-theme-anchor') setAnchor(d.rect && d.hasRect !== false ? d.rect : null);
+      if (d.type === 'yn-theme-element-select') { setElementId(d.id); setSelKind('element'); }
+      if (d.type === 'yn-theme-mascot-select') { setMascotGroup(d.group); setSelKind('mascot'); }
       if (d.type === 'yn-theme-mascot-patch') setCfg((c: any) => ({ ...c, mascotPos: { ...(c.mascotPos || {}), [d.group]: { ...((c.mascotPos || {})[d.group] || {}), ...d.patch } } }));
       if (d.type === 'yn-theme-element-patch') setCfg((c: any) => ({ ...c, elements: (c.elements || []).map((x: ThemeEl) => (x.id === d.id ? { ...x, ...d.patch } : x)) }));
     };
@@ -203,7 +217,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   }
 
   function choose(id: string) {
-    setSelected(id); setElementId(''); setMsg('');
+    setSelected(id); setElementId(''); setSelKind(''); setMsg('');
     const t = themes.find(x => x.id === id);
     const n = t ? t.name : 'New secret theme', c = t ? t.secret_code || '' : '', a = t ? !!t.active : true, conf = normalizeTheme(t?.config);
     setName(n); setCode(c); setActive(a); setCfg(conf);
@@ -274,10 +288,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     const e = blankElement(type, o, elements.length + 1);
     if (type === 'text') e.color = cfg.text || DEFAULT_TOKENS.text;
     setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
-    setElementId(e.id); setMode('elements');
+    setElementId(e.id); setSelKind('element'); setMode('edit');
   };
-  const dupEl = (x: ThemeEl) => { const c = { ...x, id: crypto.randomUUID(), x: Math.min(90, x.x + 4), y: Math.min(90, x.y + 4), z: elements.length + 1, name: x.name ? x.name + ' copy' : '' }; setCfg((s: any) => ({ ...s, elements: [...s.elements, c] })); setElementId(c.id); };
-  const delEl = (id: string) => { setCfg((c: any) => ({ ...c, elements: c.elements.filter((x: ThemeEl) => x.id !== id) })); setElementId(''); };
+  const dupEl = (x: ThemeEl) => { const c = { ...x, id: crypto.randomUUID(), x: Math.min(90, x.x + 4), y: Math.min(90, x.y + 4), z: elements.length + 1, name: x.name ? x.name + ' copy' : '' }; setCfg((s: any) => ({ ...s, elements: [...s.elements, c] })); setElementId(c.id); setSelKind('element'); };
+  const delEl = (id: string) => { setCfg((c: any) => ({ ...c, elements: c.elements.filter((x: ThemeEl) => x.id !== id) })); setElementId(''); setSelKind(k => (k === 'element' ? '' : k)); };
   const moveEl = (id: string, dir: -1 | 1) => setCfg((c: any) => {
     const a = [...c.elements], i = a.findIndex((x: ThemeEl) => x.id === id), j = i + dir;
     if (i < 0 || j < 0 || j >= a.length) return c;
@@ -344,6 +358,103 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     return { ...c, mascotImages: m };
   });
 
+  /* ---------------- floating on-screen toolbar ---------------- */
+  const openMore = (t: Tab) => { setTab(t); window.setTimeout(() => controls.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 40); };
+  const qr = (key: string) => ({ open: qOpen === key, onOpen: () => setQOpen(o => (o === key ? '' : key)) });
+  const glyph = (t: string) => <b className="ynQGlyph">{t}</b>;
+  const shortSlot = (sl: { label: string }) => { const m = sl.label.split(' – ')[1]; return (m ? m.split(',')[0] : sl.label.replace(/ categories$/, '').split(' / ')[0]).replace(/\s*\(.*$/, '').trim() || 'Picture'; };
+
+  let quickBar: React.ReactNode = null;
+  const closeBar = () => setSelKind('');
+  const barDeps = [device, frameSrc, curPath];
+
+  if (selKind === 'part') {
+    const k = def.key;
+    const tools = def.props.filter(pn => pn !== 'hidden').map(pn => {
+      switch (pn) {
+        case 'background': return <QColor key={pn} label="Fill" value={cp.background} fallback="#ffffff" onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'color': return <QColor key={pn} label="Text" value={cp.color} fallback="#241b35" onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'borderColor': return <QColor key={pn} label="Border" value={cp.borderColor} fallback="#e9e2f4" onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'backgroundImage': return <QPic key={pn} label="Picture" has={!!cp.backgroundImage} onPick={f => pick(f, u => setProp(k, pn, u))} onClear={() => setProp(k, pn, '')} />;
+        case 'radius': return <QRange key={pn} label="Round" icon={glyph('◜')} value={cp.radius} min={0} max={60} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'fontSize': return <QRange key={pn} label="Text size" icon={glyph('Aa')} value={cp.fontSize} min={10} max={48} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'borderWidth': return <QRange key={pn} label="Line" icon={glyph('▭')} value={cp.borderWidth} min={0} max={8} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'padding': return <QRange key={pn} label="Space" icon={glyph('⇔')} value={cp.padding} min={0} max={48} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'opacity': return <QRange key={pn} label="Fade" icon={glyph('◐')} value={cp.opacity} min={10} max={100} unit="%" {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'fontWeight': return <QSelect key={pn} label="Bold" value={cp.fontWeight || ''} onChange={v => setProp(k, pn, v ? Number(v) : '')}><option value="">Auto</option>{[400, 500, 600, 700, 800, 900].map(w => <option key={w} value={w}>{w}</option>)}</QSelect>;
+        case 'shadow': return <QSelect key={pn} label="Shadow" value={cp.shadow || ''} onChange={v => setProp(k, pn, v)}><option value="">Auto</option><option value="none">None</option><option value="soft">Soft</option><option value="medium">Medium</option><option value="strong">Strong</option></QSelect>;
+        case 'fit': return <QSelect key={pn} label="Fit" value={cp.fit || ''} onChange={v => setProp(k, pn, v)}><option value="">Auto</option><option value="cover">Fill</option><option value="contain">Whole</option></QSelect>;
+        default: return null;
+      }
+    });
+    quickBar = (
+      <FloatingBar title={def.label} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Parts')}>
+        {tools}
+        {k === 'banner' ? <QPic label="Banner picture" has={!!cfg.bannerImage} onPick={f => pick(f, u => patch('bannerImage', u), 1600)} onClear={() => patch('bannerImage', '')} /> : null}
+        <QSep />
+        {def.props.includes('hidden') ? <QBtn label={cp.hidden ? 'Show' : 'Hide'} icon={cp.hidden ? <Eye size={16} /> : <EyeOff size={16} />} on={!!cp.hidden} onClick={() => setProp(k, 'hidden', !cp.hidden)} /> : null}
+        <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => setCfg((c: any) => { const components = { ...(c.components || {}) }; delete components[k]; return { ...c, components }; })} />
+      </FloatingBar>
+    );
+  } else if (selKind === 'page') {
+    const grad = cfg.bg?.type === 'gradient';
+    quickBar = (
+      <FloatingBar title="Page background" anchor={null} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Look')}>
+        <QColor label="Page colour" value={cfg.background} fallback={DEFAULT_TOKENS.background} onChange={v => patch('background', v)} onClear={() => patch('background', '')} />
+        <QColor label="Gradient 1" value={grad ? cfg.bg.from : ''} fallback="#ffd1e8" onChange={v => setCfg((c: any) => ({ ...c, bg: { ...c.bg, type: 'gradient', from: v } }))} />
+        <QColor label="Gradient 2" value={grad ? cfg.bg.to : ''} fallback="#c7b8ff" onChange={v => setCfg((c: any) => ({ ...c, bg: { ...c.bg, type: 'gradient', to: v } }))} />
+        <QPic label="Wallpaper" has={!!cfg.backgroundImage} onPick={f => pick(f, u => patch('backgroundImage', u))} onClear={() => patch('backgroundImage', '')} />
+        <QBtn label="Glass cards" icon={glyph('▢')} on={!!cfg.bg?.glass} onClick={() => patchIn('bg', 'glass', !cfg.bg?.glass)} />
+        {cfg.preset === 'chiikawa' ? <><QSep /><QBtn label="Clouds" icon={glyph('☁')} onClick={() => { setMascotGroup('clouds'); setSelKind('mascot'); }} /></> : null}
+      </FloatingBar>
+    );
+  } else if (selKind === 'element' && el) {
+    const isImg = el.type === 'image';
+    const title = (el.type === 'button' ? 'Button' : isImg ? 'Picture' : 'Text') + (el.name ? ': ' + el.name : '');
+    quickBar = (
+      <FloatingBar title={title} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Elements')} moreLabel="Action & more">
+        {!isImg ? <input className="ynQText" value={el.text} placeholder="Text" onChange={e => patchEl(el.id, { text: e.target.value })} onPointerDown={e => e.stopPropagation()} /> : null}
+        <QPic label="Picture" has={!!el.image} onPick={f => pick(f, u => patchEl(el.id, { image: u, variant: el.type === 'button' && el.variant !== 'image' ? 'image' : el.variant }))} onClear={() => patchEl(el.id, { image: '', variant: el.variant === 'image' ? 'gradient' : el.variant })} />
+        {!isImg && (el.variant === 'solid' || el.variant === 'gradient') ? <QColor label={el.variant === 'gradient' ? 'Colour 1' : 'Fill'} value={el.background} fallback="#7c3aed" onChange={v => patchEl(el.id, { background: v })} /> : null}
+        {!isImg && el.variant === 'gradient' ? <QColor label="Colour 2" value={el.gradientTo} fallback="#ec4899" onChange={v => patchEl(el.id, { gradientTo: v })} /> : null}
+        {!isImg ? <QColor label="Text" value={el.color} fallback="#ffffff" onChange={v => patchEl(el.id, { color: v })} /> : null}
+        {!isImg && (el.variant === 'outline' || el.borderWidth > 0) ? <QColor label="Border" value={el.borderColor} fallback="#ffffff" onChange={v => patchEl(el.id, { borderColor: v })} /> : null}
+        <QRange label="Size" icon={glyph('⤢')} value={el.w} min={24} max={700} {...qr('w')} onChange={v => patchEl(el.id, { w: v })} />
+        {!isImg ? <QRange label="Text size" icon={glyph('Aa')} value={el.fontSize} min={10} max={72} {...qr('fs')} onChange={v => patchEl(el.id, { fontSize: v })} /> : null}
+        <QRange label="Round" icon={glyph('◜')} value={Math.min(el.radius, 120)} min={0} max={120} {...qr('r')} onChange={v => patchEl(el.id, { radius: v })} />
+        <QRange label="Fade" icon={glyph('◐')} value={el.opacity} min={10} max={100} unit="%" {...qr('o')} onChange={v => patchEl(el.id, { opacity: v })} />
+        <QRange label="Turn" icon={glyph('↻')} value={el.rotate} min={-180} max={180} unit="°" {...qr('t')} onChange={v => patchEl(el.id, { rotate: v })} />
+        <QSelect label="Move" value={el.anim.type} onChange={v => patchEl(el.id, { anim: { ...el.anim, type: v as any } })}>{ANIM_TYPES.map(a => <option key={a.type} value={a.type}>{a.label}</option>)}</QSelect>
+        <QSep />
+        <QBtn label="Front" icon={<ArrowUp size={16} />} onClick={() => moveEl(el.id, 1)} />
+        <QBtn label="Back" icon={<ArrowDown size={16} />} onClick={() => moveEl(el.id, -1)} />
+        <QBtn label="Copy" icon={<Copy size={16} />} onClick={() => dupEl(el)} />
+        <QBtn label="Delete" icon={<Trash2 size={16} />} danger onClick={() => delEl(el.id)} />
+      </FloatingBar>
+    );
+  } else if (selKind === 'mascot') {
+    const slots = MASCOT_SLOTS.filter(sl => sl.group === mg.key);
+    const isCloud = mg.key === 'clouds';
+    quickBar = (
+      <FloatingBar title={mg.label.replace(/\s*\(.*\)$/, '')} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Mascots')}>
+        {slots.map(sl => <QPic key={sl.key} label={slots.length === 1 ? 'Picture' : shortSlot(sl)} has={!!mImgs[sl.key]} onPick={f => pick(f, u => setMImg(sl.key, u), isCloud ? 2400 : 900)} onClear={() => setMImg(sl.key, '')} />)}
+        {mg.placeable ? <>
+          <QRange label="Size" icon={glyph('⤢')} value={mp.s ?? 100} min={30} max={250} unit="%" {...qr('s')} onChange={v => setMPos({ s: v })} onClear={() => setMPos({ s: 100 })} />
+          {isCloud
+            ? <QRange label="Height" icon={glyph('↕')} value={mp.dy ?? 0} min={-80} max={220} {...qr('dy')} onChange={v => setMPos({ dy: v })} onClear={() => setMPos({ dy: 0 })} />
+            : <>
+              <QRange label="Left-right" icon={glyph('↔')} value={mp.dx ?? 0} min={-240} max={240} {...qr('dx')} onChange={v => setMPos({ dx: v })} onClear={() => setMPos({ dx: 0 })} />
+              <QRange label="Up-down" icon={glyph('↕')} value={mp.dy ?? 0} min={-240} max={240} {...qr('dy')} onChange={v => setMPos({ dy: v })} onClear={() => setMPos({ dy: 0 })} />
+            </>}
+          {isCloud ? <QRange label="Speed (s)" icon={glyph('⏱')} value={cfg.cloudSeconds ?? DEFAULT_CLOUD_SECONDS} min={15} max={240} unit="s" {...qr('cs')} onChange={v => patch('cloudSeconds', v)} onClear={() => patch('cloudSeconds', null)} /> : null}
+          <QSep />
+          <QBtn label={mp.hide ? 'Show' : 'Hide'} icon={mp.hide ? <Eye size={16} /> : <EyeOff size={16} />} on={!!mp.hide} onClick={() => setMPos({ hide: !mp.hide })} />
+          <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => setMPos({ dx: 0, dy: 0, s: 100, hide: false })} />
+        </> : null}
+      </FloatingBar>
+    );
+  }
+
   return (
     <Shell title="Secret Code">
       <div className="ynStudio">
@@ -359,19 +470,19 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               <option value="">Theme default</option><option value="0">☀️ Light</option><option value="1">🌙 Dark</option>
             </select>
             <div className="ynSeg">
-              <button type="button" className={mode === 'parts' ? 'on' : ''} onClick={() => setMode('parts')}><MousePointerClick size={15} /> Select parts</button>
-              <button type="button" className={mode === 'elements' ? 'on' : ''} onClick={() => setMode('elements')}><Move size={15} /> Move elements</button>
+              <button type="button" className={mode === 'edit' ? 'on' : ''} onClick={() => setMode('edit')}><MousePointerClick size={15} /> Edit on screen</button>
               <button type="button" className={mode === 'try' ? 'on' : ''} onClick={() => setMode('try')}><Hand size={15} /> Try it</button>
             </div>
           </div>
           <p className="ynHint">
-            {mode === 'parts' ? 'Tap anything in the store to restyle it. Links are paused while selecting.'
-              : mode === 'elements' ? 'Drag your buttons, texts and pictures to move them. Use the pink corner to resize. Animations are paused while editing.'
-                : mode === 'mascots' ? 'Grab any pink-dashed mascot box and drag it anywhere. Use the Mascots tab to change its picture or size.'
-                : 'Try it: browse the real store, tap your buttons and watch the animations.'} <code>{curPath}</code>
+            {mode === 'edit' ? 'Tap anything in the store to edit it right here — a toolbar pops up above it. Drag mascots and your own buttons / pictures to move them (pink corner = resize). Press Esc to close the toolbar.'
+              : 'Try it: browse the real store, tap your buttons and watch the animations.'} <code>{curPath}</code>
           </p>
-          <div className="ynFrameWrap">
-            <iframe ref={frame} key={frameSrc} name="yn-theme-preview" src={frameSrc} title="Live storefront preview" style={{ width: widths[device] ? widths[device] : '100%' }} />
+          <div className="ynStage" ref={stage}>
+            <div className="ynFrameWrap">
+              <iframe ref={frame} key={frameSrc} name="yn-theme-preview" src={frameSrc} title="Live storefront preview" style={{ width: widths[device] ? widths[device] : '100%' }} />
+            </div>
+            {mode === 'edit' ? quickBar : null}
           </div>
         </section>
 
@@ -436,6 +547,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             <label className="ynField"><span>Body font</span><select value={FONTS.some(f => f[0] === cfg.font) ? cfg.font : '__custom'} onChange={e => patch('font', e.target.value === '__custom' ? 'Inter' : e.target.value)}>{FONTS.map(([v, l]) => <option key={l} value={v}>{l}</option>)}<option value="__custom">Custom…</option></select></label>
             {!FONTS.some(f => f[0] === cfg.font) && <label className="ynField"><span>Custom font-family</span><input value={cfg.font} onChange={e => patch('font', e.target.value)} placeholder='"Quicksand", sans-serif' /></label>}
             <label className="ynField"><span>Heading font (optional)</span><select value={cfg.headingFont} onChange={e => patch('headingFont', e.target.value)}>{FONTS.map(([v, l]) => <option key={l} value={v}>{l}</option>)}</select></label>
+            <label className="ynField"><span>Khmer font (used when a customer switches to ខ្មែរ)</span><select value={cfg.khmerFont || ''} onChange={e => patch('khmerFont', e.target.value)}><option value="">Default – Noto Sans Khmer</option>{KHMER_FONTS.slice(1).map(f => <option key={f.key} value={f.key}>{f.label}</option>)}</select><span className="ynKm" style={{ fontFamily: `"${cfg.khmerFont || 'Noto Sans Khmer'}", sans-serif`, fontSize: 18, fontWeight: 500 }}>សួស្តី! ស្វាគមន៍មកកាន់ YN Studio</span></label>
             <label className="ynField"><span>Google Fonts link (for fonts marked “needs font URL”)</span><input value={cfg.fontUrl} onChange={e => patch('fontUrl', e.target.value.trim())} placeholder="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" /></label>
           </div>}
 
@@ -443,7 +555,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             {cfg.preset !== 'chiikawa' ? <p className="ynHint">The mascots and moving clouds belong to the Chiikawa look. Open <b>Theme &amp; code</b> and choose <b>Chiikawa storybook</b> first.</p> : <>
               <p className="ynHint"><b>Drag any mascot in the preview</b> (the pink dashed boxes) to put it anywhere you like. Pick a place below to change its picture, make it bigger or smaller, or hide it.</p>
               <div className="ynMascotPicker">
-                {MASCOT_GROUPS.map(g => <button type="button" key={g.key} className={'ynMascotChip' + (g.key === mg.key ? ' on' : '')} onClick={() => setMascotGroup(g.key)}>{g.label.replace(/\s*\(.*\)$/, '')}</button>)}
+                {MASCOT_GROUPS.map(g => <button type="button" key={g.key} className={'ynMascotChip' + (g.key === mg.key ? ' on' : '')} onClick={() => { setMascotGroup(g.key); setSelKind('mascot'); }}>{g.label.replace(/\s*\(.*\)$/, '')}</button>)}
               </div>
               <div className="ynMascotPanel">
                 <h4>{mg.label}</h4>
@@ -577,7 +689,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             {elements.length > 0 && <div className="ynElList">
               {elements.map((x, i) => (
                 <div key={x.id} className={'ynElRow' + (x.id === elementId ? ' on' : '')}>
-                  <button type="button" className="ynElPick" onClick={() => setElementId(x.id === elementId ? '' : x.id)}>{elLabel(x, i)}</button>
+                  <button type="button" className="ynElPick" onClick={() => { const off = x.id === elementId && selKind === 'element'; setElementId(off ? '' : x.id); setSelKind(off ? '' : 'element'); }}>{elLabel(x, i)}</button>
                   <button type="button" className="icon" title="Move forward" onClick={() => moveEl(x.id, 1)}><ArrowUp size={14} /></button>
                   <button type="button" className="icon" title="Move backward" onClick={() => moveEl(x.id, -1)}><ArrowDown size={14} /></button>
                   <button type="button" className="icon" title="Duplicate" onClick={() => dupEl(x)}><Copy size={14} /></button>
@@ -667,7 +779,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
 
           {tab === 'Parts' && <div className="ynPane">
             <label className="ynField"><span>Part to restyle (or tap it in the preview)</span>
-              <select value={compKey} onChange={e => setCompKey(e.target.value)}>{groups.map(g => <optgroup key={g} label={g}>{COMPONENTS.filter(x => x.group === g).map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</optgroup>)}</select></label>
+              <select value={compKey} onChange={e => { setCompKey(e.target.value); setSelKind('part'); }}>{groups.map(g => <optgroup key={g} label={g}>{COMPONENTS.filter(x => x.group === g).map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</optgroup>)}</select></label>
             <div className="ynGrid">{def.props.filter(p => p !== 'hidden').map(field)}</div>
             {def.props.includes('hidden') && field('hidden')}
             <button type="button" className="secondary" onClick={() => setCfg((c: any) => { const components = { ...(c.components || {}) }; delete components[def.key]; return { ...c, components }; })}><Undo2 size={15} /> Reset “{def.label}”</button>

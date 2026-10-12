@@ -5,6 +5,7 @@ import { ThemeOverlay, normalizeElement, type OverlayMode, type ThemeEl } from '
 import { colorForProduct, gradientForProduct, processedImageUrl } from './imageTools';
 import { LIVE_EVT, getDarkPref, getLiveBg, getSeedOffset, isPreviewFrame, setDarkPref } from './themeLive';
 import { MascotHandles } from './MascotHandles';
+import { setKhmerFont } from './lang';
 import { mascotVars, normalizeMascotImages, normalizeMascotPos, type MascotPos } from './chiikawaMascots';
 
 export { isPreviewFrame };
@@ -99,7 +100,7 @@ export const blankTheme = () => ({
   preset: 'custom',
   background: '', surface: '', text: '', muted: '', border: '', accent: '', accent2: '',
   radius: null as number | null,
-  font: '', headingFont: '', fontUrl: '',
+  font: '', headingFont: '', fontUrl: '', khmerFont: '',
   backgroundImage: '', bannerImage: '',
   layout: { columns: 0, maxWidth: 0, navStyle: 'floating' as 'floating' | 'flat' | 'hidden' },
   texts: {} as Record<string, string>,
@@ -145,6 +146,7 @@ export function normalizeTheme(raw: any) {
     bannerIds: Array.isArray(c.bannerIds) ? c.bannerIds : [],
     delivery: { locationMode: c.delivery?.locationMode === 'map' ? 'map' : 'manual' },
     customCss: typeof c.customCss === 'string' ? c.customCss : '',
+    khmerFont: typeof c.khmerFont === 'string' ? c.khmerFont : '',
   };
 }
 
@@ -403,6 +405,7 @@ function styleEl(id: string): HTMLStyleElement {
 }
 
 function clearTheme() {
+  setKhmerFont('');
   const root = document.documentElement;
   root.removeAttribute('data-secret-theme'); root.removeAttribute('data-secret-preset'); root.removeAttribute('data-yn-theme'); root.removeAttribute('data-yn-dark');
   ['--secret-bg', '--secret-surface', '--secret-text', '--secret-accent', '--secret-radius', '--secret-font', '--secret-wallpaper', '--secret-banner'].forEach(k => root.style.removeProperty(k));
@@ -439,6 +442,7 @@ function applyTheme(raw: any, path: string) {
     if (fontLink) { if (fontLink.href !== c.fontUrl) fontLink.href = c.fontUrl; }
     else { const l = document.createElement('link'); l.id = 'yn-theme-font'; l.rel = 'stylesheet'; l.href = c.fontUrl; document.head.appendChild(l); }
   } else fontLink?.remove();
+  setKhmerFont(c.khmerFont);
   current = c;
   window.dispatchEvent(new Event(EVENT));
 }
@@ -464,12 +468,12 @@ export function SecretThemeRuntime() {
   const path = location.pathname;
   const [draft, setDraft] = useState<any | null>(null);
   const [customer, setCustomer] = useState<any | null>(null);
-  const [mode, setMode] = useState<OverlayMode>('parts');
+  const [mode, setMode] = useState<OverlayMode>('edit');
   const [selEl, setSelEl] = useState('');
   const [selMascot, setSelMascot] = useState('');
   const tick = useLiveTick();
   const [osTick, setOsTick] = useState(0);
-  const modeRef = useRef<OverlayMode>('parts');
+  const modeRef = useRef<OverlayMode>('edit');
 
   // Customer mode: load the activated theme from the account.
   useEffect(() => {
@@ -505,40 +509,82 @@ export function SecretThemeRuntime() {
   // Preview mode: receive the unsaved draft from the admin editor.
   useEffect(() => {
     if (!preview) return;
-    let selectedKey = '', lastDark = '__';
+    let selectedKey = '', selKind = '', selElId = '', lastDark = '__', lastAnchor = '', clicked: Element | null = null;
     const hl = styleEl('yn-theme-preview-style');
+    const editing = () => modeRef.current !== 'try';
     const paint = () => {
       const m = modeRef.current;
-      const def = COMPONENTS.find(x => x.key === selectedKey);
-      hl.textContent = (m === 'parts' ? `html *{cursor:crosshair!important}` : '') +
-        (def && m === 'parts' ? `${def.selector}{outline:3px solid #ff3d8b!important;outline-offset:2px!important}` : '');
+      const def = selKind === 'part' ? COMPONENTS.find(x => x.key === selectedKey) : undefined;
+      // crosshair everywhere except on things that can be dragged (mascots, your own elements)
+      hl.textContent = (m !== 'try' ? 'html *:not(.ynMascotBox):not(.ynMascotBox *):not(.ynEl):not(.ynEl *){cursor:crosshair!important}' : '') +
+        (def && m !== 'try' ? `${def.selector}{outline:3px solid #ff3d8b!important;outline-offset:2px!important}` : '');
+    };
+    const visible = (el: Element) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+    /** Where the selected thing is inside this frame (so the editor can float its toolbar above it). */
+    const rectOf = (): { left: number; top: number; width: number; height: number } | null | undefined => {
+      let el: Element | null = null;
+      if (selKind === 'part') {
+        const def = COMPONENTS.find(x => x.key === selectedKey);
+        if (!def) return undefined;
+        try {
+          if (clicked && clicked.isConnected && clicked.matches(def.selector) && visible(clicked)) el = clicked;
+          else el = Array.from(document.querySelectorAll(def.selector)).find(visible) || null;
+        } catch { el = null; }
+      } else if (selKind === 'element') el = document.querySelector(`[data-el="${selElId.replace(/"/g, '')}"]`);
+      else if (selKind === 'mascot') el = document.querySelector('.ynMascotBox.on');
+      else if (selKind === 'page') return null;
+      else return undefined;
+      if (!el) return undefined;
+      const r = el.getBoundingClientRect();
+      return { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
+    };
+    const report = () => {
+      const r = rectOf();
+      const sig = JSON.stringify([r, window.innerWidth, window.innerHeight]);
+      if (sig === lastAnchor) return;
+      lastAnchor = sig;
+      window.parent.postMessage({ type: 'yn-theme-anchor', rect: r === undefined ? undefined : r, hasRect: r !== null }, window.location.origin);
     };
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || e.data?.type !== 'yn-theme-draft') return;
-      const m: OverlayMode = e.data.mode === 'try' || e.data.mode === 'elements' || e.data.mode === 'mascots' ? e.data.mode : 'parts';
+      const m: OverlayMode = e.data.mode === 'try' || e.data.mode === 'elements' || e.data.mode === 'mascots' || e.data.mode === 'parts' ? e.data.mode : 'edit';
       modeRef.current = m; setMode(m);
       selectedKey = e.data.selectedKey || '';
+      selElId = e.data.selectedElementId || '';
+      const nextKind = typeof e.data.selKind === 'string' ? e.data.selKind : (selectedKey ? 'part' : selElId ? 'element' : e.data.selectedMascot ? 'mascot' : '');
+      if (nextKind !== 'part') clicked = null;
+      selKind = nextKind;
       if (typeof e.data.previewDark === 'string' && e.data.previewDark !== lastDark) { lastDark = e.data.previewDark; setDarkPref(lastDark as '' | '1' | '0'); }
-      setSelEl(e.data.selectedElementId || '');
+      setSelEl(selElId);
       setSelMascot(e.data.selectedMascot || '');
       setDraft(e.data.config); paint();
+      window.setTimeout(report, 60);
     };
-    const inOverlay = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.secretThemeOverlay');
+    const inOverlay = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.secretThemeOverlay, .ynMascotLayer');
     const onClick = (e: MouseEvent) => {
-      const m = modeRef.current;
-      if (m === 'try') return;
+      if (!editing()) return;
       if (inOverlay(e.target)) { e.preventDefault(); return; }
       e.preventDefault(); e.stopPropagation();
-      if (m !== 'parts') return;
       const def = componentAt(e.target as Element);
-      if (def) { selectedKey = def.key; paint(); window.parent.postMessage({ type: 'yn-theme-select', key: def.key }, window.location.origin); }
+      // a part → its own tools; blank space → the page background tools
+      selectedKey = def ? def.key : ''; selKind = def ? 'part' : 'page'; clicked = def ? (e.target as Element).closest(def.selector) : null;
+      paint(); report();
+      window.parent.postMessage({ type: 'yn-theme-select', key: def ? def.key : '__page' }, window.location.origin);
     };
-    const block = (e: Event) => { if (modeRef.current !== 'try') { e.preventDefault(); e.stopPropagation(); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') window.parent.postMessage({ type: 'yn-theme-deselect' }, window.location.origin); };
+    const block = (e: Event) => { if (editing()) { e.preventDefault(); e.stopPropagation(); } };
+    const timer = window.setInterval(report, 120);
+    window.addEventListener('scroll', report, { passive: true, capture: true });
+    window.addEventListener('resize', report);
     window.addEventListener('message', onMessage);
     document.addEventListener('click', onClick, true);
     document.addEventListener('submit', block, true);
+    document.addEventListener('keydown', onKey);
     window.parent.postMessage({ type: 'yn-theme-ready' }, window.location.origin);
-    return () => { window.removeEventListener('message', onMessage); document.removeEventListener('click', onClick, true); document.removeEventListener('submit', block, true); hl.remove(); };
+    return () => {
+      window.clearInterval(timer); window.removeEventListener('scroll', report, true); window.removeEventListener('resize', report);
+      window.removeEventListener('message', onMessage); document.removeEventListener('click', onClick, true); document.removeEventListener('submit', block, true); document.removeEventListener('keydown', onKey); hl.remove();
+    };
   }, [preview]);
 
   useEffect(() => { if (preview) window.parent.postMessage({ type: 'yn-theme-path', path }, window.location.origin); }, [path, preview]);
@@ -550,7 +596,7 @@ export function SecretThemeRuntime() {
 
   const norm = active ? normalizeTheme(active) : null;
   const els: ThemeEl[] = norm ? norm.elements : [];
-  const showHandles = preview && mode === 'mascots' && !!norm && norm.preset === 'chiikawa';
+  const showHandles = preview && (mode === 'edit' || mode === 'mascots') && !!norm && norm.preset === 'chiikawa';
   return (
     <>
       {els.length ? (

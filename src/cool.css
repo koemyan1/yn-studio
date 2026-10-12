@@ -157,8 +157,38 @@ main.shop>*:nth-child(4),.detail>*:nth-child(4){animation-delay:.12s}
 
 /* Chiikawa mascot drag handles (admin preview only) */
 .ynMascotLayer{position:fixed;inset:0;pointer-events:none;z-index:70}
-.ynMascotBox{position:fixed;box-sizing:border-box;border:2px dashed #ff5d9a;border-radius:14px;background:rgba(255,93,154,.08);pointer-events:auto;cursor:grab;touch-action:none}
+.ynMascotBox{position:fixed;box-sizing:border-box;border:1.5px dashed rgba(255,93,154,.6);border-radius:14px;background:transparent;pointer-events:auto;cursor:grab;touch-action:none}
 .ynMascotBox:active{cursor:grabbing}
 .ynMascotBox.on{border-style:solid;background:rgba(255,93,154,.18);box-shadow:0 0 0 4px rgba(255,93,154,.25)}
 .ynMascotTag{position:absolute;left:50%;top:100%;transform:translate(-50%,3px);white-space:nowrap;font:700 10px/1.2 system-ui,sans-serif;background:#ff5d9a;color:#fff;border-radius:999px;padding:2px 7px;opacity:0;pointer-events:none}
 .ynMascotBox.on .ynMascotTag,.ynMascotBox:hover .ynMascotTag{opacity:1}
+
+/* ===== Floating on-screen toolbar (theme editor) ===== */
+.ynMascotBox:hover{background:rgba(255,93,154,.1)}
+.ynStage{position:relative;min-width:0}
+.ynQBar{position:absolute;z-index:40;max-width:calc(100% - 8px);box-sizing:border-box;background:var(--card,#fff);color:var(--ink,#241b35);border:1px solid var(--line,#e2d9f3);border-radius:16px;box-shadow:0 12px 34px #1b0f3a38,0 2px 6px #1b0f3a1f;padding:8px 10px 10px;display:flex;flex-direction:column;gap:8px;transition:left .12s ease,top .12s ease}
+.ynQHead{display:flex;align-items:center;gap:8px;min-width:0}
+.ynQHead b{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ynQLink{background:none!important;box-shadow:none!important;color:var(--purple,#7c3aed)!important;font-size:11px;font-weight:800;padding:2px 4px!important;text-decoration:underline;white-space:nowrap}
+.ynQX{width:24px;height:24px;padding:0!important;border-radius:50%!important;background:var(--soft,#f4efff)!important;color:inherit!important;box-shadow:none!important;display:grid;place-items:center}
+.ynQTools{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-start}
+.ynQTool{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:40px}
+.ynQTool small{font-size:9.5px;font-weight:700;color:var(--muted,#776f86);line-height:1.1;text-align:center;max-width:58px}
+.ynQBtn,.ynQColor{width:34px;height:34px;box-sizing:border-box;border-radius:11px;border:1px solid var(--line,#e2d9f3);background:var(--soft,#f4efff);color:inherit;display:grid;place-items:center;cursor:pointer;padding:0;position:relative;box-shadow:none}
+.ynQBtn input,.ynQColor input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.ynQBtn.on{background:var(--purple,#7c3aed)!important;color:#fff!important;border-color:transparent}
+.ynQBtn.set{border-color:var(--purple,#7c3aed)}
+.ynQBtn.danger{color:#c92a2a}
+.ynQColor i{width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #0003}
+.ynQColor.set{border-color:var(--purple,#7c3aed)}
+.ynQGlyph{font-size:13px;line-height:1}
+.ynQReset{position:absolute;top:-5px;right:-1px;width:16px;height:16px;border-radius:50%;padding:0!important;font-size:11px;line-height:1;background:#ff5d9a!important;color:#fff!important;box-shadow:none!important;display:grid;place-items:center}
+.ynQSep{width:1px;align-self:stretch;background:var(--line,#e2d9f3);margin:2px 0}
+.ynQSelect{height:34px;max-width:92px;border-radius:11px;font-size:11px;padding:0 6px}
+.ynQText{height:34px;width:130px;min-width:90px;box-sizing:border-box;border-radius:11px;font-size:12px;padding:0 9px}
+.ynQSlider{flex-basis:100%;display:flex;align-items:center;gap:10px;background:var(--soft,#f4efff);border-radius:12px;padding:7px 10px;font-size:11px;order:99}
+.ynQSlider span{white-space:nowrap}
+.ynQSlider input{flex:1;min-width:90px}
+.admin.admin-dark .ynQBar{background:#1b1530;border-color:#3a2f58;color:#f3eefc}
+.admin.admin-dark .ynQBtn,.admin.admin-dark .ynQColor,.admin.admin-dark .ynQSlider,.admin.admin-dark .ynQX{background:#2a2146!important;border-color:#3a2f58;color:#f3eefc!important}
+@media(max-width:600px){.ynQBar{padding:7px 8px 9px}.ynQTools{gap:6px 8px}}

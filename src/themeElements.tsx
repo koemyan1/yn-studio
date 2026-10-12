@@ -342,7 +342,7 @@ function ElementView({ el, edit, animate, selected, offPage, onMoveStart, onResi
 
 /* ------------------------------ overlay ------------------------------ */
 
-export type OverlayMode = 'live' | 'parts' | 'elements' | 'try' | 'mascots';
+export type OverlayMode = 'live' | 'edit' | 'parts' | 'elements' | 'try' | 'mascots';
 type OverlayProps = {
   elements: ThemeEl[]; pageKey: string; mode: OverlayMode; selectedId: string;
   onSelect?: (id: string) => void; onPatch?: (id: string, patch: Partial<ThemeEl>) => void;
@@ -350,7 +350,7 @@ type OverlayProps = {
 
 export function ThemeOverlay({ elements, pageKey, mode, selectedId, onSelect, onPatch }: OverlayProps) {
   const navigate = useNavigate();
-  const edit = mode === 'elements';
+  const edit = mode === 'elements' || mode === 'edit';
   const animate = mode === 'live' || mode === 'try';
   const [drag, setDrag] = useState<Record<string, Partial<ThemeEl>>>({});
   const pending = useRef<Record<string, Partial<ThemeEl>>>({});

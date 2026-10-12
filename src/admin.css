@@ -330,3 +330,4 @@
 .ynMascotSlot img.wide{object-fit:cover;background:#b8dcf6}
 .ynMascotSlot b{display:block;font-size:12px;margin-bottom:4px}
 .ynDanger{color:#c0392b}
+.cutPreview img{background:repeating-conic-gradient(#0000000f 0 25%,#fff 0 50%) 0 0/14px 14px}
