@@ -154,3 +154,11 @@ main.shop>*:nth-child(4),.detail>*:nth-child(4){animation-delay:.12s}
 .ynLiveTrack .ynMapTitle b{font-size:15px}
 .ynMapPanel .locationSearch{flex-wrap:nowrap}
 @media(max-width:600px){.ynTrackMap{height:340px}}
+
+/* Chiikawa mascot drag handles (admin preview only) */
+.ynMascotLayer{position:fixed;inset:0;pointer-events:none;z-index:70}
+.ynMascotBox{position:fixed;box-sizing:border-box;border:2px dashed #ff5d9a;border-radius:14px;background:rgba(255,93,154,.08);pointer-events:auto;cursor:grab;touch-action:none}
+.ynMascotBox:active{cursor:grabbing}
+.ynMascotBox.on{border-style:solid;background:rgba(255,93,154,.18);box-shadow:0 0 0 4px rgba(255,93,154,.25)}
+.ynMascotTag{position:absolute;left:50%;top:100%;transform:translate(-50%,3px);white-space:nowrap;font:700 10px/1.2 system-ui,sans-serif;background:#ff5d9a;color:#fff;border-radius:999px;padding:2px 7px;opacity:0;pointer-events:none}
+.ynMascotBox.on .ynMascotTag,.ynMascotBox:hover .ynMascotTag{opacity:1}

@@ -1,0 +1,367 @@
+/* ==========================================================================
+   CHIIKAWA secret theme  (preset id: "chiikawa")
+   Pastel storybook look for EVERY customer page. Only active while a signed-in
+   customer has unlocked the secret code. Admin screens and normal mode are never
+   touched (the runtime removes data-secret-theme on /admin and when the theme is off).
+   All artwork lives in /public/chiikawa and was drawn for this project.
+   The prefix below is intentionally one attribute longer than the theme engine's own
+   generated rules so these styles win without editing the engine.
+   ========================================================================== */
+
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] {
+  --ck-cream: #fffaf0;
+  --ck-paper: #fffdf7;
+  --ck-ink: #3d3656;
+  --ck-ink2: #6f6890;
+  --ck-line: #cfe0f2;
+  --ck-pink: #ff9fbe;
+  --ck-pink-d: #e8789f;
+  --ck-butter: #ffe9a8;
+  --ck-sky: #cfe6fa;
+  --ck-lav: #e7dcff;
+  --ck-mint: #d5f0dd;
+  --ck-hand: 'Gaegu', 'Patrick Hand', 'Nunito', 'Comic Sans MS', 'Chalkboard SE', ui-rounded, system-ui, sans-serif;
+  --ck-blob: 28px 32px 26px 34px / 32px 26px 34px 28px;
+  --ck-sticker: 0 4px 0 rgba(125, 150, 190, .28);
+}
+
+/* shorthand for the long prefix is not possible in plain CSS, so it is spelled out each time */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] body { background-color: #fffaf0; min-height: 100vh; }
+
+/* ------------------------------ sky, grass and the mascot trio ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root body {
+  background-image: url('/chiikawa/sky.svg') !important;
+  background-repeat: repeat-x !important; background-position: center top !important; background-size: auto 520px !important; background-attachment: scroll !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] body::after {
+  content: '';
+  position: fixed; left: 0; right: 0; bottom: 0; height: 84px;
+  background: url('/chiikawa/grass.svg') left bottom / auto 100% repeat-x;
+  z-index: 20; pointer-events: none;
+}
+
+/* ------------------------------ general text ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root body,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root button,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root input,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root select,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root textarea {
+  font-family: var(--ck-hand) !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root body { font-size: 17px; letter-spacing: .01em; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root h1,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root h2,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root h3 {
+  font-family: var(--ck-hand) !important; font-weight: 700; letter-spacing: 0; color: var(--ck-ink) !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .eyebrow {
+  color: #6c9bd2 !important; letter-spacing: .22em; font-weight: 700; display: inline-block; transform: rotate(-4deg); transform-origin: left center;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .muted,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] small { color: var(--ck-ink2); }
+
+/* ------------------------------ page frame ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .shop { position: relative; padding-bottom: 170px; }
+@media (max-width: 700px) { html[data-secret-theme="on"][data-secret-preset="chiikawa"] .shop { padding-bottom: 160px; } }
+
+/* ------------------------------ home header ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow { position: relative; padding-top: 38px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::before,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::after {
+  content: ''; position: absolute; top: -20px; width: 92px; height: 72px; background-repeat: no-repeat; background-size: contain; background-position: center top; pointer-events: none;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::before { left: -6px; background-image: url('/chiikawa/mochi-happy.svg'); transform: rotate(-8deg); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::after { right: -2px; background-image: url('/chiikawa/bun-happy.svg'); transform: rotate(7deg); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow h1 {
+  font-size: 46px; line-height: 1; margin: 2px 0 0; color: #3d3656 !important; text-shadow: 3px 3px 0 #fff; transform: rotate(-2deg); transform-origin: left center;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow h1::after {
+  content: ''; display: inline-block; width: 40px; height: 40px; margin-left: 10px; vertical-align: -6px;
+  background: url('/chiikawa/mochi.svg') center / contain no-repeat; transform: rotate(8deg);
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow > div:first-child { z-index: 1; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .homeActions { position: relative; z-index: 1; gap: 12px; margin-top: 26px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .homeActions .icon,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .homeActions .avatar {
+  width: 52px; height: 52px; border-radius: 22px 24px 20px 24px !important; background: #fff4d6 !important; color: #ef8f3d !important; border: 3px solid #ffd98a !important; box-shadow: var(--ck-sticker);
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .homeActions .avatar {
+  background: #ffc9d9 !important; color: #fff !important; border-color: #ffb0c8 !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .homeActions .notificationButton { position: relative; }
+
+/* ------------------------------ search ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .shop .search {
+  position: relative; background: #fffdf7 !important; border: 3px solid #c9dcf0 !important; border-radius: 34px !important; padding: 0 64px 0 20px; min-height: 62px; box-shadow: var(--ck-sticker); margin: 18px 0 20px;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .search svg { color: #3d3656; width: 26px; height: 26px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .search input { background: transparent !important; border: 0 !important; font-size: 21px; color: var(--ck-ink); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .search input::placeholder { color: #9a95b3; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .search::after {
+  content: ''; position: absolute; right: 12px; top: 50%; width: 44px; height: 40px; transform: translateY(-50%) rotate(6deg);
+  background: url('/chiikawa/mochi.svg') center / contain no-repeat;
+}
+
+/* ------------------------------ banner ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .shop .bannerSlider {
+  border: 4px solid #c5dcf3 !important; border-radius: 32px !important; box-shadow: var(--ck-sticker) !important; background-color: #d6ebfb;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .secretCustomBanner { aspect-ratio: 3.2 / 1; min-height: 120px; background-size: cover; background-position: center; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .bannerShade { display: none; }
+
+/* ------------------------------ category chips ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail { gap: 12px; padding: 16px 4px 14px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .categoryRail button {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 58px; padding: 6px 22px 6px 62px;
+  background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #d2dcea !important; border-radius: 34px !important; font-size: 21px; font-weight: 700; box-shadow: var(--ck-sticker); text-shadow: none;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button::before {
+  content: ''; position: absolute; left: 8px; top: 50%; width: 42px; height: 42px; transform: translateY(-50%);
+  background: url('/chiikawa/mochi.svg') center / contain no-repeat;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button:nth-child(3n+2)::before { background-image: url('/chiikawa/bun.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button:nth-child(3n)::before { background-image: url('/chiikawa/kiki.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="food"]::before { background-image: url('/chiikawa/onigiri.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="burger"]::before { background-image: url('/chiikawa/burger.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="sweet"]::before { background-image: url('/chiikawa/cake.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="drink"]::before { background-image: url('/chiikawa/boba.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="coffee"]::before { background-image: url('/chiikawa/latte.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="ice"]::before { background-image: url('/chiikawa/icecream.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .categoryRail button.on {
+  background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; text-shadow: 0 2px 0 rgba(200, 80, 120, .35); box-shadow: 0 4px 0 #e8789f;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button:active { transform: translateY(2px); }
+
+/* ------------------------------ product cards (pastel rotation) ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .grid { gap: 16px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .product {
+  --c-bg: #fff0f4; --c-bd: #f8c3d4; --c-ph: #ffe3ec;
+  background: var(--c-bg) !important; border: 3px solid var(--c-bd) !important; border-radius: var(--ck-blob) !important; box-shadow: var(--ck-sticker) !important; overflow: hidden; padding-bottom: 6px;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .product:nth-child(4n+2) { --c-bg: #fff8e4; --c-bd: #f6dd9f; --c-ph: #fff0c4; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .product:nth-child(4n+3) { --c-bg: #eaf4ff; --c-bd: #bcd7f2; --c-ph: #d9eafb; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .product:nth-child(4n) { --c-bg: #f4edff; --c-bd: #d5c5f4; --c-ph: #e7dcff; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product > img,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product .ph { background-color: var(--c-ph); aspect-ratio: 1 / .92; margin: 0; border-radius: 0 0 26px 26px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product > img { object-fit: contain; padding: 10px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product .ph { background-image: url('/chiikawa/mochi-box.svg'); background-repeat: no-repeat; background-position: center; background-size: 54%; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product .ph img { display: none; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pcopy { padding: 12px 14px 10px 16px; position: relative; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pcopy strong {
+  font-size: 21px; font-weight: 700; color: var(--ck-ink); line-height: 1.1;
+  white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.2em;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pcopy > div { padding-right: 52px; min-height: 40px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pcopy span { color: #ee5f93 !important; font-size: 25px; font-weight: 700; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pcopy del { color: #a59fbe; font-size: 16px; margin-left: 6px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product::after {
+  content: ''; position: absolute; right: 8px; bottom: 6px; width: 54px; height: 54px; pointer-events: none;
+  background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat; transform: rotate(-6deg);
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product:nth-child(3n+2)::after { background-image: url('/chiikawa/bun-happy.svg'); transform: rotate(6deg); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product:nth-child(3n)::after { background-image: url('/chiikawa/kiki-happy.svg'); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .product .heart {
+  width: 44px; height: 44px; background: #fffdf7 !important; color: #ff7aa6 !important; border: 3px solid #ffd0de !important; z-index: 2; border-radius: 50% !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product .heart.liked { background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product { transition: transform .25s cubic-bezier(.3, 1.5, .5, 1); }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product:hover { transform: translateY(-4px) rotate(-.8deg); }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product:active { transform: scale(.98); }
+  @keyframes ckBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::before { animation: ckBob 3.6s ease-in-out infinite; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::after { animation: ckBob 4.2s ease-in-out infinite reverse; }
+}
+
+/* ------------------------------ headers on inner pages ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .top {
+  position: relative; background: #fffdf7 !important; border: 3px solid #cfe0f2 !important; border-radius: 30px !important; padding: 0 16px; height: 68px; box-shadow: var(--ck-sticker);
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .top > b { font-size: 26px; font-weight: 700; flex: 1; color: var(--ck-ink); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .top .miniLogo { width: 44px; height: 44px; border-radius: 50%; background: url('/chiikawa/mochi.svg') center / contain no-repeat; flex: 0 0 auto; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .top .miniLogo img { display: none; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .top .icon,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .icon {
+  background: #fff4d6 !important; color: #ef8f3d !important; border: 3px solid #ffd98a !important; border-radius: 20px 22px 18px 22px !important; box-shadow: 0 3px 0 rgba(235, 180, 90, .35);
+}
+
+/* ------------------------------ buttons ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root button:where(:not(.icon):not(.heart):not(.secondary):not(.on):not(.catSwitch):not(.galleryArrow)),
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .button {
+  background: #ff9fbe !important; color: #fff !important; border: 3px solid #ff8db1 !important; border-bottom-width: 5px !important; border-radius: 999px !important;
+  font-size: 20px; font-weight: 700; text-shadow: 0 2px 0 rgba(200, 80, 120, .3); box-shadow: none; padding: 11px 22px;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root button.secondary,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .secondary {
+  background: #fffdf7 !important; color: #5b78b4 !important; border: 3px solid #c9dcf0 !important; border-bottom-width: 5px !important; border-radius: 999px !important; font-weight: 700; font-size: 19px; text-shadow: none;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] button:active:not(:disabled),
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .button:active { transform: translateY(2px); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] button:disabled { filter: grayscale(.4); }
+
+/* ------------------------------ inputs ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root input:not([type=checkbox]):not([type=radio]):not([type=range]),
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root select,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root textarea {
+  background-color: #fffefb; border: 3px solid #cfe0f2; border-radius: 22px !important; color: var(--ck-ink); font-size: 19px; padding: 11px 16px;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] input:focus,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] select:focus,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] textarea:focus { outline: none; border-color: #ff9fbe !important; box-shadow: 0 0 0 4px #ffe3ec; }
+
+/* ------------------------------ panels, cards and rows (cart, orders, wallet, profile, chat…) ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .panel,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .cartrow,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .cartItem,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .ordercard,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .transaction,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .profilePanel,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .detailCard,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .notificationCard,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .couponCard,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .supportThread,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .walletPayPanel,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .walletDirectPay,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .rewardStandalone,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .customerMetrics,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .trackingCard,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .payModalCard,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .chatPanel {
+  background: #fffdf7 !important; border: 3px solid #d5e3f3 !important; border-radius: var(--ck-blob) !important; box-shadow: var(--ck-sticker) !important; color: var(--ck-ink);
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .panel:nth-of-type(3n+2) { border-color: #f8cbda !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .panel:nth-of-type(3n) { border-color: #f6dfa8 !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .pageIntro h1 { font-size: 38px; transform: rotate(-1.5deg); transform-origin: left; text-shadow: 3px 3px 0 #fff; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pageIntro p { color: var(--ck-ink2); font-size: 19px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .profileHero,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .profileHeroNew {
+  background: linear-gradient(135deg, #ffe3ec, #fff3cf 55%, #dff0ff) !important; border: 3px solid #f8c3d4 !important; border-radius: 34px !important; box-shadow: var(--ck-sticker) !important; color: var(--ck-ink) !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .walletHero {
+  background: radial-gradient(circle at 90% 20%, #fff 0, transparent 30%), linear-gradient(135deg, #bfe0fa, #e7dcff 55%, #ffd9e5) !important; border: 4px solid #c5dcf3 !important; border-radius: 36px !important; color: var(--ck-ink) !important; box-shadow: var(--ck-sticker) !important;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletHero h1 { color: #3d3656 !important; text-shadow: 3px 3px 0 #fff; font-size: 52px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletHero small,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletHero span { color: #5b6fb0; opacity: 1; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletGlow { background: url('/chiikawa/mochi-box.svg') center / contain no-repeat; border: 0; backdrop-filter: none; transform: rotate(6deg); width: 104px; height: 104px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletGlow svg { display: none; }
+
+/* summary lines, quantity, status chips */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .summaryLine.grand { color: #ee5f93; font-weight: 700; font-size: 24px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qtyControl { background: #fff4d6 !important; border: 3px solid #ffd98a !important; border-radius: 999px !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .status { border-radius: 999px; font-weight: 700; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .notice { background: #fff4d6; border: 2px dashed #f1cd78; color: #7a5a1e; border-radius: 20px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .toast { border-radius: 24px; background: #3d3656; color: #fff; }
+
+/* ------------------------------ product detail ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .gallery,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .galleryViewport {
+  background: #eaf4ff !important; border: 3px solid #bcd7f2 !important; border-radius: 34px !important; box-shadow: var(--ck-sticker) !important; overflow: hidden;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .detailCard h1 { font-size: 40px; transform: rotate(-1deg); transform-origin: left; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .detailCard .price,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .detail .price { color: #ee5f93 !important; font-size: 36px; font-weight: 700; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .variant,
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .chips button { border-radius: 999px !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .chips button:not(.on) { background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #d2dcea !important; text-shadow: none; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .chips button.on { background: #ff9fbe !important; color: #fff !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .stickyActions { background: transparent !important; bottom: 120px; }
+
+/* ------------------------------ empty states ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .empty svg { display: none; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .empty::before { content: ''; display: block; width: 130px; height: 120px; margin: 0 auto 8px; background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .empty h3 { font-size: 26px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .marketLoadingOrb { background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat !important; border: 0 !important; box-shadow: none !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .marketLoadingOrb img { display: none; }
+
+/* ------------------------------ bottom navigation ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root nav.bottom {
+  bottom: 28px; background: #fffdf7 !important; border: 4px solid #c5d9ef !important; border-radius: 38px 38px 34px 34px / 40px 40px 34px 34px !important; padding: 8px 10px; box-shadow: 0 5px 0 rgba(125, 150, 190, .3) !important; backdrop-filter: none; z-index: 30; isolation: isolate;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] nav.bottom::after {
+  content: ''; position: absolute; left: 50%; bottom: -40px; width: 168px; height: 60px; transform: translateX(-50%); z-index: -1; pointer-events: none;
+  background: url('/chiikawa/trio.svg') center bottom / contain no-repeat;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root nav.bottom a {
+  color: #4f6fb0; font-size: 15px; font-weight: 700; gap: 2px; border-radius: 26px !important; padding: 7px 4px;
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] nav.bottom a svg { width: 27px; height: 27px; stroke-width: 2.2; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root nav.bottom a.active {
+  background: #ffc4d4 !important; color: #3d3656 !important; box-shadow: 0 3px 0 rgba(235, 120, 160, .35);
+}
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] nav.bottom a.active svg { color: #e8648f; }
+
+/* floating bars that sit above the nav */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .checkoutbar { bottom: 124px; border-radius: 30px !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .miniCheckout { bottom: 128px; border-radius: 30px !important; border: 3px solid #f8c3d4 !important; background: #fffdf7 !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .pwaInstall { bottom: 130px; }
+
+/* ------------------------------ small screens ------------------------------ */
+@media (max-width: 520px) {
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow h1 { font-size: 40px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] nav.bottom a { font-size: 13px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] nav.bottom::after { width: 140px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .pcopy strong { font-size: 19px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .categoryRail button { font-size: 19px; min-height: 54px; padding-left: 58px; }
+}
+
+/* ------------------------------ respect reduced motion ------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] * { animation: none !important; transition: none !important; }
+}
+
+
+/* ==========================================================================
+   Moving clouds (right -> left) + replaceable / movable mascots
+   Everything below reads CSS variables written by the theme engine (see chiikawaMascots.ts):
+     --ck-m-<slot>   picture          --ck-dx-/--ck-dy-<group>   offset
+     --ck-s-<group>  size multiplier  --ck-d-<group>             "none" = hidden
+   With nothing set, every fallback below is the built-in artwork, so the theme looks exactly as before.
+   ========================================================================== */
+
+/* ------------------------------ clouds drifting across the top of the page ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] body { isolation: isolate; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] body::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 340px; z-index: -1; pointer-events: none;
+  --ck-cw1: calc(1600px * var(--ck-s-clouds, 1)); --ck-cw2: calc(1000px * var(--ck-s-clouds, 1));
+  --ck-cy1: calc(4px + var(--ck-dy-clouds, 0px)); --ck-cy2: calc(78px + var(--ck-dy-clouds, 0px));
+  background-image: var(--ck-m-clouds, url('/chiikawa/clouds.svg')), var(--ck-m-clouds, url('/chiikawa/clouds.svg'));
+  background-repeat: repeat-x, repeat-x;
+  background-size: var(--ck-cw1) auto, var(--ck-cw2) auto;
+  background-position: 0 var(--ck-cy1), -380px var(--ck-cy2);
+  display: var(--ck-d-clouds, block);
+  animation: ckCloudsLeft var(--ck-cloud-t, 80s) linear infinite;
+}
+/* the big front clouds travel one full strip while the small back ones travel a shorter strip in the same time: parallax */
+@keyframes ckCloudsLeft {
+  from { background-position: 0 var(--ck-cy1), -380px var(--ck-cy2); }
+  to { background-position: calc(var(--ck-cw1) * -1) var(--ck-cy1), calc(-380px - var(--ck-cw2)) var(--ck-cy2); }
+}
+
+/* ------------------------------ mascots: picture + position + size + hide ------------------------------ */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::before { background-image: var(--ck-m-headLeft, url('/chiikawa/mochi-happy.svg')); translate: var(--ck-dx-headLeft, 0px) var(--ck-dy-headLeft, 0px); scale: var(--ck-s-headLeft, 1); display: var(--ck-d-headLeft, block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow::after { background-image: var(--ck-m-headRight, url('/chiikawa/bun-happy.svg')); translate: var(--ck-dx-headRight, 0px) var(--ck-dy-headRight, 0px); scale: var(--ck-s-headRight, 1); display: var(--ck-d-headRight, block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .brandrow h1::after { background-image: var(--ck-m-title, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-title, 0px) var(--ck-dy-title, 0px); scale: var(--ck-s-title, 1); display: var(--ck-d-title, inline-block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .search::after { background-image: var(--ck-m-search, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-search, 0px) var(--ck-dy-search, 0px); scale: var(--ck-s-search, 1); display: var(--ck-d-search, block); }
+
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button::before { background-image: var(--ck-m-chipA, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-chips, 0px) var(--ck-dy-chips, 0px); scale: var(--ck-s-chips, 1); display: var(--ck-d-chips, block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button:nth-child(3n+2)::before { background-image: var(--ck-m-chipB, url('/chiikawa/bun.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button:nth-child(3n)::before { background-image: var(--ck-m-chipC, url('/chiikawa/kiki.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="food"]::before { background-image: var(--ck-m-chipFood, url('/chiikawa/onigiri.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="burger"]::before { background-image: var(--ck-m-chipBurger, url('/chiikawa/burger.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="sweet"]::before { background-image: var(--ck-m-chipSweet, url('/chiikawa/cake.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="drink"]::before { background-image: var(--ck-m-chipDrink, url('/chiikawa/boba.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="coffee"]::before { background-image: var(--ck-m-chipCoffee, url('/chiikawa/latte.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .categoryRail button[data-kind="ice"]::before { background-image: var(--ck-m-chipIce, url('/chiikawa/icecream.svg')); }
+
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product::after { background-image: var(--ck-m-cardA, url('/chiikawa/mochi-happy.svg')); translate: var(--ck-dx-cards, 0px) var(--ck-dy-cards, 0px); scale: var(--ck-s-cards, 1); display: var(--ck-d-cards, block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product:nth-child(3n+2)::after { background-image: var(--ck-m-cardB, url('/chiikawa/bun-happy.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product:nth-child(3n)::after { background-image: var(--ck-m-cardC, url('/chiikawa/kiki-happy.svg')); }
+
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .top .miniLogo { background-image: var(--ck-m-pageLogo, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-pageLogo, 0px) var(--ck-dy-pageLogo, 0px); scale: var(--ck-s-pageLogo, 1); visibility: var(--ck-v-pageLogo, visible); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] nav.bottom::after { background-image: var(--ck-m-nav, url('/chiikawa/trio.svg')); translate: var(--ck-dx-nav, 0px) var(--ck-dy-nav, 0px); scale: var(--ck-s-nav, 1); display: var(--ck-d-nav, block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .empty::before { background-image: var(--ck-m-empty, url('/chiikawa/mochi-happy.svg')); translate: var(--ck-dx-empty, 0px) var(--ck-dy-empty, 0px); scale: var(--ck-s-empty, 1); display: var(--ck-d-empty, block); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .walletGlow { background-image: var(--ck-m-wallet, url('/chiikawa/mochi-box.svg')); translate: var(--ck-dx-wallet, 0px) var(--ck-dy-wallet, 0px); scale: var(--ck-s-wallet, 1); visibility: var(--ck-v-wallet, visible); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .product .ph { background-image: var(--ck-m-noPhoto, url('/chiikawa/mochi-box.svg')); }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .marketLoadingOrb { background-image: var(--ck-m-loading, url('/chiikawa/mochi-happy.svg')) !important; }

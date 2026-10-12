@@ -4,6 +4,8 @@ import { supabase } from './supabase';
 import { ThemeOverlay, normalizeElement, type OverlayMode, type ThemeEl } from './themeElements';
 import { colorForProduct, gradientForProduct, processedImageUrl } from './imageTools';
 import { LIVE_EVT, getDarkPref, getLiveBg, getSeedOffset, isPreviewFrame, setDarkPref } from './themeLive';
+import { MascotHandles } from './MascotHandles';
+import { mascotVars, normalizeMascotImages, normalizeMascotPos, type MascotPos } from './chiikawaMascots';
 
 export { isPreviewFrame };
 
@@ -104,6 +106,9 @@ export const blankTheme = () => ({
   components: {} as Record<string, StyleProps>,
   pageStyles: {} as Record<string, { background?: string; backgroundImage?: string }>,
   elements: [] as any[],
+  mascotImages: {} as Record<string, string>,
+  mascotPos: {} as Record<string, MascotPos>,
+  cloudSeconds: null as number | null,
   customCss: '',
   allowedCategories: [] as string[],
   hideUncategorized: false,
@@ -129,6 +134,9 @@ export function normalizeTheme(raw: any) {
     components: { ...(c.components || {}) },
     pageStyles: { ...(c.pageStyles || {}) },
     elements: (Array.isArray(c.elements) ? c.elements : []).map((e: any, i: number) => normalizeElement(e, i)) as ThemeEl[],
+    mascotImages: normalizeMascotImages(c.mascotImages),
+    mascotPos: normalizeMascotPos(c.mascotPos),
+    cloudSeconds: typeof c.cloudSeconds === 'number' && c.cloudSeconds > 0 ? c.cloudSeconds : null,
     dark: { ...b.dark, ...(c.dark || {}) },
     bg: { ...b.bg, ...(c.bg || {}) },
     productImage: { ...b.productImage, ...(c.productImage || {}) },
@@ -145,7 +153,18 @@ export const THEME_PRESETS: { id: string; label: string; swatch: string[]; cfg: 
   { id: 'midnight', label: 'Midnight', swatch: ['#120b22', '#a78bfa', '#f0abfc'], cfg: { background: '#120b22', surface: '#1e1433', text: '#f6f0ff', muted: '#b7a8d6', border: '#3a2a5c', accent: '#a78bfa', accent2: '#f0abfc', radius: 22 } },
   { id: 'mint', label: 'Mint', swatch: ['#f2fbf7', '#10b981', '#34d399'], cfg: { background: '#f2fbf7', surface: '#ffffff', text: '#1f3d36', muted: '#6b8a82', border: '#d3ece3', accent: '#10b981', accent2: '#34d399', radius: 20 } },
   { id: 'sunset', label: 'Sunset', swatch: ['#fff6ef', '#f97316', '#ec4899'], cfg: { background: '#fff6ef', surface: '#fffdfb', text: '#4a2c2a', muted: '#946c63', border: '#f5dccb', accent: '#f97316', accent2: '#ec4899', radius: 28 } },
-  { id: 'chiikawa', label: 'Chiikawa pastel', swatch: ['#fff8fb', '#f3a9c2', '#e9caff'], cfg: { preset: 'chiikawa', background: '#fff8fb', surface: '#fffefd', text: '#49384f', accent: '#f3a9c2', radius: 24, font: 'Trebuchet MS, system-ui, sans-serif' } },
+  {
+    id: 'chiikawa', label: 'Chiikawa storybook', swatch: ['#cfe6fa', '#ff9fbe', '#ffe9a8'],
+    // The full look (sky, grass, mascots, sticker cards, handwriting) lives in chiikawa.css and turns on through `preset`.
+    // These tokens keep the engine, the dark-mode maths and the admin previews in agreement with that stylesheet.
+    cfg: {
+      preset: 'chiikawa', background: '#fffaf0', surface: '#fffdf7', text: '#3d3656', muted: '#7a7298', border: '#cfe0f2', accent: '#ff9fbe', accent2: '#ffb8cf',
+      font: "'Gaegu', 'Patrick Hand', 'Nunito', 'Comic Sans MS', system-ui, sans-serif",
+      headingFont: "'Gaegu', 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif",
+      fontUrl: 'https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Patrick+Hand&display=swap',
+      bannerImage: '/chiikawa/banner-delivery.png',
+    },
+  },
 ];
 
 /* ------------------------------ CSS generation ------------------------------ */
@@ -258,6 +277,7 @@ export function buildThemeCss(input: any, path = '/', opts: { dark?: boolean; li
   if (t.surface) vars.push(`--card:${safe(t.surface)}`);
   if (t.surface || t.accent) vars.push(`--soft:color-mix(in srgb,${safe(t.accent || DEFAULT_TOKENS.accent)} 14%,${safe(t.surface || DEFAULT_TOKENS.surface)})`);
   if (dark) vars.push('color-scheme:dark');
+  if (c.preset === 'chiikawa') vars.push(...mascotVars(c.mascotImages, c.mascotPos, c.cloudSeconds));
   if (vars.length) css += `${PREFIX}{${vars.join(';')};}`;
 
   if (t.background) css += `${PREFIX}, ${PREFIX} body{background-color:${safe(t.background)}!important;}`;
@@ -446,6 +466,7 @@ export function SecretThemeRuntime() {
   const [customer, setCustomer] = useState<any | null>(null);
   const [mode, setMode] = useState<OverlayMode>('parts');
   const [selEl, setSelEl] = useState('');
+  const [selMascot, setSelMascot] = useState('');
   const tick = useLiveTick();
   const [osTick, setOsTick] = useState(0);
   const modeRef = useRef<OverlayMode>('parts');
@@ -494,11 +515,12 @@ export function SecretThemeRuntime() {
     };
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || e.data?.type !== 'yn-theme-draft') return;
-      const m: OverlayMode = e.data.mode === 'try' || e.data.mode === 'elements' ? e.data.mode : 'parts';
+      const m: OverlayMode = e.data.mode === 'try' || e.data.mode === 'elements' || e.data.mode === 'mascots' ? e.data.mode : 'parts';
       modeRef.current = m; setMode(m);
       selectedKey = e.data.selectedKey || '';
       if (typeof e.data.previewDark === 'string' && e.data.previewDark !== lastDark) { lastDark = e.data.previewDark; setDarkPref(lastDark as '' | '1' | '0'); }
       setSelEl(e.data.selectedElementId || '');
+      setSelMascot(e.data.selectedMascot || '');
       setDraft(e.data.config); paint();
     };
     const inOverlay = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.secretThemeOverlay');
@@ -526,10 +548,21 @@ export function SecretThemeRuntime() {
     if (active) applyTheme(active, path); else clearTheme();
   }, [active, path, tick, osTick]);
 
-  const els: ThemeEl[] = active ? normalizeTheme(active).elements : [];
-  return els.length ? (
-    <ThemeOverlay elements={els} pageKey={pageKeyFor(path)} mode={preview ? mode : 'live'} selectedId={selEl}
-      onSelect={id => { setSelEl(id); if (preview) window.parent.postMessage({ type: 'yn-theme-element-select', id }, window.location.origin); }}
-      onPatch={(id, patch) => { if (preview) window.parent.postMessage({ type: 'yn-theme-element-patch', id, patch }, window.location.origin); }} />
-  ) : null;
+  const norm = active ? normalizeTheme(active) : null;
+  const els: ThemeEl[] = norm ? norm.elements : [];
+  const showHandles = preview && mode === 'mascots' && !!norm && norm.preset === 'chiikawa';
+  return (
+    <>
+      {els.length ? (
+        <ThemeOverlay elements={els} pageKey={pageKeyFor(path)} mode={preview ? mode : 'live'} selectedId={selEl}
+          onSelect={id => { setSelEl(id); if (preview) window.parent.postMessage({ type: 'yn-theme-element-select', id }, window.location.origin); }}
+          onPatch={(id, patch) => { if (preview) window.parent.postMessage({ type: 'yn-theme-element-patch', id, patch }, window.location.origin); }} />
+      ) : null}
+      {showHandles ? (
+        <MascotHandles pos={norm!.mascotPos} selected={selMascot} path={path}
+          onSelect={g => { setSelMascot(g); window.parent.postMessage({ type: 'yn-theme-mascot-select', group: g }, window.location.origin); }}
+          onPatch={(g, patch) => window.parent.postMessage({ type: 'yn-theme-mascot-patch', group: g, patch }, window.location.origin)} />
+      ) : null}
+    </>
+  );
 }

@@ -10,11 +10,12 @@ import {
 } from './secretTheme';
 import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, STORE_PAGES, blankElement, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
+import { DEFAULT_CLOUD_SECONDS, MASCOT_GROUPS, MASCOT_SLOTS } from './chiikawaMascots';
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
-const TABS = ['Theme & code', 'Look', 'Categories', 'Delivery', 'Products', 'Elements', 'Parts', 'Text', 'Layout & pages', 'Advanced'] as const;
+const TABS = ['Theme & code', 'Look', 'Mascots', 'Categories', 'Delivery', 'Products', 'Elements', 'Parts', 'Text', 'Layout & pages', 'Advanced'] as const;
 type Tab = typeof TABS[number];
-type Mode = 'parts' | 'elements' | 'try';
+type Mode = 'parts' | 'elements' | 'try' | 'mascots';
 
 const FONTS: [string, string][] = [
   ['', 'Default (Inter)'],
@@ -30,8 +31,8 @@ const FONTS: [string, string][] = [
 ];
 
 /** Uploads to the public theme-assets bucket; falls back to a small embedded picture if the bucket is not set up yet. */
-async function uploadThemeImage(file: File): Promise<string> {
-  const data = await shrinkImage(file, 1100);
+async function uploadThemeImage(file: File, maxSide = 1100): Promise<string> {
+  const data = await shrinkImage(file, maxSide);
   try {
     const blob = await (await fetch(data)).blob();
     const path = `themes/${crypto.randomUUID()}.${blob.type.includes('png') ? 'png' : 'jpg'}`;
@@ -65,6 +66,13 @@ const Select = ({ label, value, onChange, children }: { label: string; value: st
 const Check = ({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) => (
   <label className="ynCheck"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} /> {children}</label>
 );
+const READY_BANNERS = [
+  { src: '/chiikawa/banner-delivery.png', label: 'Delivery 9-10 days' },
+  { src: '/chiikawa/banner-food.png', label: 'Yummy food' },
+  { src: '/chiikawa/banner-drink.png', label: 'Sip sip drinks' },
+  { src: '/chiikawa/banner-welcome.png', label: 'Welcome' },
+];
+
 function PicButton({ label, has, onPick, onClear }: { label: string; has: boolean; onPick: (f: File) => void; onClear?: () => void }) {
   return (
     <div className="ynRow">
@@ -105,6 +113,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const [curPath, setCurPath] = useState('/');
   const [device, setDevice] = useState<'phone' | 'tablet' | 'desktop'>('phone');
   const [mode, setMode] = useState<Mode>('parts');
+  const [mascotGroup, setMascotGroup] = useState<string>('headLeft');
   const [previewDark, setPreviewDark] = useState<'' | '0' | '1'>('');
   const [ready, setReady] = useState(false);
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -121,26 +130,37 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   useEffect(() => {
     void loadThemes();
     (async () => {
-      const [c, b, p] = await Promise.all([
-        supabase.from('categories').select('id,name').eq('status', 'active').order('name'),
+      const [c0, b, p] = await Promise.all([
+        supabase.from('categories').select('id,name,theme_only_id').eq('status', 'active').order('name'),
         supabase.from('banners').select('id,title,image_url').eq('active', true).order('sort_order'),
         supabase.from('products').select('id,name,category_id').eq('status', 'published').order('created_at', { ascending: false }).limit(300),
       ]);
+      // If supabase-chiikawa-complete.sql has not been run yet the column does not exist: fall back to the plain list.
+      const c = c0.error ? await supabase.from('categories').select('id,name').eq('status', 'active').order('name') : c0;
       setCats(c.data || []); setBanners(b.data || []); setProds(p.data || []);
     })();
   }, []);
 
+  // Open a specific theme when arriving from the Themes page (?theme=<id>).
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current || !themes.length) return;
+    deepLinked.current = true;
+    const id = new URLSearchParams(window.location.search).get('theme');
+    if (id && themes.some(t => t.id === id)) choose(id);
+  }, [themes]);
+
   // Tabs decide what a tap in the preview does.
-  useEffect(() => { if (tab === 'Elements') setMode('elements'); else if (tab === 'Parts') setMode('parts'); }, [tab]);
+  useEffect(() => { if (tab === 'Elements') setMode('elements'); else if (tab === 'Parts') setMode('parts'); else if (tab === 'Mascots') setMode('mascots'); else if (mode === 'mascots') setMode('parts'); }, [tab]);
 
   // Push the unsaved draft into the live storefront preview.
   useEffect(() => {
     if (!ready) return;
     frame.current?.contentWindow?.postMessage({
-      type: 'yn-theme-draft', config: cfg, mode,
-      selectedKey: tab === 'Parts' ? compKey : '', selectedElementId: tab === 'Elements' ? elementId : '', previewDark,
+      type: 'yn-theme-draft', config: { ...cfg, _themeId: selected }, mode,
+      selectedKey: tab === 'Parts' ? compKey : '', selectedElementId: tab === 'Elements' ? elementId : '', selectedMascot: tab === 'Mascots' ? mascotGroup : '', previewDark,
     }, window.location.origin);
-  }, [cfg, ready, mode, compKey, tab, elementId, previewDark]);
+  }, [cfg, ready, mode, compKey, tab, elementId, mascotGroup, previewDark, selected]);
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
@@ -153,6 +173,8 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         window.setTimeout(() => controls.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
       }
       if (d.type === 'yn-theme-element-select') { setElementId(d.id); setTab('Elements'); }
+      if (d.type === 'yn-theme-mascot-select') { setMascotGroup(d.group); setTab('Mascots'); }
+      if (d.type === 'yn-theme-mascot-patch') setCfg((c: any) => ({ ...c, mascotPos: { ...(c.mascotPos || {}), [d.group]: { ...((c.mascotPos || {})[d.group] || {}), ...d.patch } } }));
       if (d.type === 'yn-theme-element-patch') setCfg((c: any) => ({ ...c, elements: (c.elements || []).map((x: ThemeEl) => (x.id === d.id ? { ...x, ...d.patch } : x)) }));
     };
     window.addEventListener('message', onMsg);
@@ -174,10 +196,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   );
 
   /** Upload helper that shows progress and errors in the message line. */
-  async function pick(file: File, done: (url: string) => void) {
+  async function pick(file: File, done: (url: string) => void, maxSide = 1100) {
     if (file.size > 15 * 1024 * 1024) { setMsg('Please use a picture under 15 MB.'); return; }
     setMsg('Uploading picture…');
-    try { done(await uploadThemeImage(file)); setMsg(''); } catch (e: any) { setMsg('Could not use that picture: ' + (e?.message || e)); }
+    try { done(await uploadThemeImage(file, maxSide)); setMsg(''); } catch (e: any) { setMsg('Could not use that picture: ' + (e?.message || e)); }
   }
 
   function choose(id: string) {
@@ -192,7 +214,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   function applyPreset(id: string) {
     const p = THEME_PRESETS.find(x => x.id === id); if (!p) return;
     if (!confirm('Replace the colors, fonts and part styles with "' + p.label + '"? Your elements, banners, categories and product picture settings are kept.')) return;
-    setCfg((c: any) => ({ ...blankTheme(), ...p.cfg, elements: c.elements, allowedCategories: c.allowedCategories, hideUncategorized: c.hideUncategorized, bannerIds: c.bannerIds, texts: c.texts, productImage: c.productImage, dark: c.dark, delivery: c.delivery }));
+    setCfg((c: any) => ({ ...blankTheme(), ...p.cfg, elements: c.elements, allowedCategories: c.allowedCategories, hideUncategorized: c.hideUncategorized, bannerIds: c.bannerIds, texts: { ...(p.cfg as any).texts, ...c.texts }, productImage: c.productImage, dark: c.dark, delivery: c.delivery, bannerImage: c.bannerImage || (p.cfg as any).bannerImage || '' }));
   }
   function surprise() {
     const h = rnd(0, 359);
@@ -202,6 +224,23 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
       bg: { ...c.bg, type: 'gradient', from: hslToHex(h, 85, 93), to: hslToHex((h + rnd(30, 80)) % 360, 85, 90), angle: rnd(100, 220) },
     }));
     setMsg('Random look applied — press it again for another one, or Undo with the preset list.');
+  }
+  const [newOnly, setNewOnly] = useState('');
+  async function addOnlyCat(raw: string) {
+    const nm = raw.trim();
+    if (!nm) return;
+    if (!selected) { setMsg('Save the theme first, then add its own categories.'); return; }
+    if (cats.some(c => c.theme_only_id === selected && String(c.name).toLowerCase() === nm.toLowerCase())) { setMsg('This theme already has a "' + nm + '" category.'); return; }
+    const r = await supabase.from('categories').insert({ name: nm, status: 'active', delivery_tracking_enabled: false, theme_only_id: selected }).select('id,name,theme_only_id').single();
+    if (r.error) { setMsg('Could not add the category: ' + r.error.message + (/theme_only_id/.test(r.error.message) ? ' — run supabase-chiikawa-complete.sql in Supabase first.' : '')); return; }
+    setCats(list => [...list, r.data].sort((a, b) => String(a.name).localeCompare(String(b.name))));
+    setNewOnly(''); setMsg('Added "' + nm + '". It only shows in this theme. Add products to it in Admin → Products.');
+  }
+  async function releaseOnlyCat(c: any) {
+    if (!confirm('Show "' + c.name + '" for everyone (normal mode and all themes)?')) return;
+    const r = await supabase.from('categories').update({ theme_only_id: null }).eq('id', c.id);
+    if (r.error) { setMsg(r.error.message); return; }
+    setCats(list => list.map(x => (x.id === c.id ? { ...x, theme_only_id: null } : x)));
   }
   function genCode() {
     const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -282,9 +321,28 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const widths = { phone: 390, tablet: 768, desktop: 0 };
   const allowed: string[] = cfg.allowedCategories || [];
   const countIn = (cid: string) => prods.filter(p => p.category_id === cid).length;
-  const shownCats = cats.filter(c => c.name.toLowerCase().includes(catQuery.toLowerCase()));
+  const ownCats = cats.filter(c => !c.theme_only_id || c.theme_only_id === selected);
+  const shownCats = ownCats.filter(c => c.name.toLowerCase().includes(catQuery.toLowerCase()));
   const pi = cfg.productImage;
   const di = cfg.dark;
+
+  /* ---------------- mascots (Chiikawa) ---------------- */
+  const mImgs: Record<string, string> = cfg.mascotImages || {};
+  const mPos: Record<string, any> = cfg.mascotPos || {};
+  const mg = MASCOT_GROUPS.find(g => g.key === mascotGroup) || MASCOT_GROUPS[0];
+  const mp = mPos[mg.key] || {};
+  const setMPos = (patchPos: Record<string, any>) => setCfg((c: any) => {
+    const cur: Record<string, any> = { ...((c.mascotPos || {})[mg.key] || {}), ...patchPos };
+    for (const k of Object.keys(cur)) if (cur[k] === undefined || cur[k] === 0 || cur[k] === false || (k === 's' && cur[k] === 100)) delete cur[k];
+    const all = { ...(c.mascotPos || {}) };
+    if (Object.keys(cur).length) all[mg.key] = cur; else delete all[mg.key];
+    return { ...c, mascotPos: all };
+  });
+  const setMImg = (slot: string, url: string) => setCfg((c: any) => {
+    const m = { ...(c.mascotImages || {}) };
+    if (url) m[slot] = url; else delete m[slot];
+    return { ...c, mascotImages: m };
+  });
 
   return (
     <Shell title="Secret Code">
@@ -309,6 +367,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
           <p className="ynHint">
             {mode === 'parts' ? 'Tap anything in the store to restyle it. Links are paused while selecting.'
               : mode === 'elements' ? 'Drag your buttons, texts and pictures to move them. Use the pink corner to resize. Animations are paused while editing.'
+                : mode === 'mascots' ? 'Grab any pink-dashed mascot box and drag it anywhere. Use the Mascots tab to change its picture or size.'
                 : 'Try it: browse the real store, tap your buttons and watch the animations.'} <code>{curPath}</code>
           </p>
           <div className="ynFrameWrap">
@@ -355,7 +414,9 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               <PicButton label="wallpaper" has={!!cfg.backgroundImage} onPick={f => pick(f, u => patch('backgroundImage', u))} onClear={() => patch('backgroundImage', '')} /></div>
             <div className="ynField"><span>Home banner picture (replaces the normal banners in this theme)</span>
               <PicButton label="banner (≈1600×500)" has={!!cfg.bannerImage} onPick={f => pick(f, u => patch('bannerImage', u))} onClear={() => patch('bannerImage', '')} />
-              {cfg.bannerImage && <img className="ynBannerSample" src={cfg.bannerImage} alt="" />}</div>
+              {cfg.bannerImage && <img className="ynBannerSample" src={cfg.bannerImage} alt="" />}
+              <span className="ynHint">Or pick a ready-made Chiikawa-style banner (you can still upload your own any time):</span>
+              <div className="ynBannerGrid">{READY_BANNERS.map(b => <button type="button" key={b.src} className={'ynBannerPick' + (cfg.bannerImage === b.src ? ' on' : '')} onClick={() => patch('bannerImage', b.src)} title={b.label}><img src={b.src} alt={b.label} /><small>{b.label}</small></button>)}</div></div>
 
             <h4>Dark mode</h4>
             <Select label="This theme in dark mode" value={di.mode} onChange={v => patchIn('dark', 'mode', v)}>
@@ -378,12 +439,47 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             <label className="ynField"><span>Google Fonts link (for fonts marked “needs font URL”)</span><input value={cfg.fontUrl} onChange={e => patch('fontUrl', e.target.value.trim())} placeholder="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" /></label>
           </div>}
 
+          {tab === 'Mascots' && <div className="ynPane">
+            {cfg.preset !== 'chiikawa' ? <p className="ynHint">The mascots and moving clouds belong to the Chiikawa look. Open <b>Theme &amp; code</b> and choose <b>Chiikawa storybook</b> first.</p> : <>
+              <p className="ynHint"><b>Drag any mascot in the preview</b> (the pink dashed boxes) to put it anywhere you like. Pick a place below to change its picture, make it bigger or smaller, or hide it.</p>
+              <div className="ynMascotPicker">
+                {MASCOT_GROUPS.map(g => <button type="button" key={g.key} className={'ynMascotChip' + (g.key === mg.key ? ' on' : '')} onClick={() => setMascotGroup(g.key)}>{g.label.replace(/\s*\(.*\)$/, '')}</button>)}
+              </div>
+              <div className="ynMascotPanel">
+                <h4>{mg.label}</h4>
+                <p className="ynHint">{mg.hint}</p>
+                {MASCOT_SLOTS.filter(sl => sl.group === mg.key).map(sl => (
+                  <div className="ynMascotSlot" key={sl.key}>
+                    <img src={mImgs[sl.key] || sl.fallback} alt="" className={sl.key === 'clouds' ? 'wide' : ''} />
+                    <div>
+                      <b>{sl.label}</b>
+                      <PicButton label="picture" has={!!mImgs[sl.key]} onPick={f => pick(f, u => setMImg(sl.key, u), sl.key === 'clouds' ? 2400 : 900)} onClear={() => setMImg(sl.key, '')} />
+                    </div>
+                  </div>
+                ))}
+                {mg.key === 'clouds' && <RangeField label="Seconds for the clouds to cross (smaller = faster)" value={cfg.cloudSeconds ?? DEFAULT_CLOUD_SECONDS} min={15} max={240} unit="s" onChange={v => patch('cloudSeconds', v)} onClear={() => patch('cloudSeconds', null)} />}
+                {mg.placeable && <>
+                  <RangeField label={mg.key === 'clouds' ? 'Clouds higher ↔ lower' : 'Move left ↔ right'} value={mg.key === 'clouds' ? (mp.dy ?? 0) : (mp.dx ?? 0)} min={mg.key === 'clouds' ? -80 : -240} max={mg.key === 'clouds' ? 220 : 240} onChange={v => setMPos(mg.key === 'clouds' ? { dy: v } : { dx: v })} onClear={() => setMPos(mg.key === 'clouds' ? { dy: 0 } : { dx: 0 })} />
+                  {mg.key !== 'clouds' && <RangeField label="Move up ↕ down" value={mp.dy ?? 0} min={-240} max={240} onChange={v => setMPos({ dy: v })} onClear={() => setMPos({ dy: 0 })} />}
+                  <RangeField label="Size" value={mp.s ?? 100} min={30} max={250} unit="%" onChange={v => setMPos({ s: v })} onClear={() => setMPos({ s: 100 })} />
+                  <Check checked={!!mp.hide} onChange={v => setMPos({ hide: v })}>Hide {mg.key === 'clouds' ? 'the clouds' : 'this mascot'}</Check>
+                  {(mp.dx || mp.dy || mp.s) ? <button type="button" className="secondary" onClick={() => setMPos({ dx: 0, dy: 0, s: 100 })}><Undo2 size={14} /> Put it back where it was</button> : null}
+                </>}
+              </div>
+
+              <h4>Put a mascot anywhere</h4>
+              <p className="ynHint">Want an extra mascot picture on a page — or one that flies around, or opens a page when tapped? Add a free picture, then drag it wherever you like (it shows up in the <b>Elements</b> tab, where you can also give it an action or animation).</p>
+              <label className="button secondary ynDropBtn"><ImagePlus size={15} /> Add a free mascot picture<input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void pick(f, u => { addElement('image', { image: u, w: 120, x: 40, y: 30 }); setTab('Elements'); }); }} /></label>
+              <button type="button" className="secondary ynDanger" onClick={() => { if (window.confirm('Put every mascot and the clouds back to the original pictures, places and sizes?')) setCfg((c: any) => ({ ...c, mascotImages: {}, mascotPos: {}, cloudSeconds: null })); }}><Undo2 size={14} /> Reset all mascots &amp; clouds</button>
+            </>}
+          </div>}
+
           {tab === 'Categories' && <div className="ynPane">
             <p className="ynHint"><b>Choose which categories this theme shows.</b> Customers with this theme only see the ticked categories and the products inside them. Tick nothing to show every category. The preview updates instantly (go to the Home page).</p>
             <div className="ynRow">
-              <button type="button" className="secondary" onClick={() => patch('allowedCategories', cats.map(c => c.id))}>Select all</button>
+              <button type="button" className="secondary" onClick={() => patch('allowedCategories', ownCats.map(c => c.id))}>Select all</button>
               <button type="button" className="secondary" onClick={() => patch('allowedCategories', [])}>Show everything</button>
-              <button type="button" className="secondary" onClick={() => patch('allowedCategories', cats.filter(c => !allowed.includes(c.id)).map(c => c.id))}>Invert</button>
+              <button type="button" className="secondary" onClick={() => patch('allowedCategories', ownCats.filter(c => !allowed.includes(c.id)).map(c => c.id))}>Invert</button>
             </div>
             <input value={catQuery} onChange={e => setCatQuery(e.target.value)} placeholder="Search categories…" />
             <div className="ynCatList">
@@ -398,8 +494,15 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               })}
               {!cats.length && <p className="ynHint">No active categories yet (Admin → Categories).</p>}
             </div>
-            <p className="ynHint">{allowed.length ? `Showing ${allowed.length} of ${cats.length} categories.` : 'Showing all categories.'}</p>
+            <p className="ynHint">{allowed.length ? `Showing ${allowed.length} of ${ownCats.length} categories.` : 'Showing all categories.'} Categories made only for this theme always show here.</p>
             <Check checked={!!cfg.hideUncategorized} onChange={v => patch('hideUncategorized', v)}>Also hide products that have no category</Check>
+            <h4>Categories only for this theme</h4>
+            <p className="ynHint">Normal customers never see these. They appear only while this theme is unlocked, next to all your normal categories and products. Products you put in them (Admin → Products) show up only here.</p>
+            {!selected ? <p className="ynHint">Save the theme first, then add its own categories here.</p> : <>
+              <div className="ynChecks">{cats.filter(c => c.theme_only_id === selected).map(c => <span className="ynOnlyChip" key={c.id}>{c.name}<small>{countIn(c.id)} product{countIn(c.id) === 1 ? '' : 's'}</small><button type="button" className="ynLink" onClick={() => releaseOnlyCat(c)}>show for everyone</button></span>)}{!cats.some(c => c.theme_only_id === selected) && <p className="ynHint">None yet.</p>}</div>
+              <div className="ynRow"><input value={newOnly} onChange={e => setNewOnly(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void addOnlyCat(newOnly); } }} placeholder="New category, e.g. Food" /><button type="button" className="secondary" onClick={() => addOnlyCat(newOnly)}><Plus size={15} /> Add</button></div>
+              <div className="ynRow"><button type="button" className="secondary" onClick={() => addOnlyCat('Food')}>+ Food</button><button type="button" className="secondary" onClick={() => addOnlyCat('Drink')}>+ Drink</button></div>
+            </>}
             <h4>Banners shown in this theme</h4>
             <p className="ynHint">Tick none to show all active banners (a theme banner picture overrides these).</p>
             <div className="ynChecks">{banners.map(b => <Check key={b.id} checked={cfg.bannerIds.includes(b.id)} onChange={v => patch('bannerIds', v ? [...cfg.bannerIds, b.id] : cfg.bannerIds.filter((x: string) => x !== b.id))}>{b.title || 'Untitled banner'}</Check>)}{!banners.length && <p className="ynHint">No active banners yet (Admin → Banners).</p>}</div>

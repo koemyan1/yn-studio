@@ -342,7 +342,7 @@ function ElementView({ el, edit, animate, selected, offPage, onMoveStart, onResi
 
 /* ------------------------------ overlay ------------------------------ */
 
-export type OverlayMode = 'live' | 'parts' | 'elements' | 'try';
+export type OverlayMode = 'live' | 'parts' | 'elements' | 'try' | 'mascots';
 type OverlayProps = {
   elements: ThemeEl[]; pageKey: string; mode: OverlayMode; selectedId: string;
   onSelect?: (id: string) => void; onPatch?: (id: string, patch: Partial<ThemeEl>) => void;

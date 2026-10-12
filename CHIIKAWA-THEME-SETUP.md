@@ -1,21 +1,39 @@
-# CHIIKAWA Secret Theme Setup
+# CHIIKAWA secret theme — setup (v2, full-site storybook look)
 
-This project update adds a pastel kawaii preset that is only activated when a signed-in customer enters the secret code `CHIIKAWA`. Normal storefront styling remains the default outside the activated theme. The existing admin secret-theme editor and category-to-theme mapping remain in use.
+Secret code: **CHIIKAWA** (not case sensitive). Customers enter it in **Messages → Secret theme**.
 
-## Apply to Supabase
-1. Open Supabase Dashboard → SQL Editor.
-2. Confirm `supabase-secret-themes-and-store-location.sql` has already been applied.
-3. Run `supabase-chiikawa-secret-theme.sql`.
-4. Confirm the signed-in admin has `profiles.role = 'admin'`.
-5. Deploy the frontend from this ZIP.
+## 1. Run the SQL once
+Supabase → SQL Editor → run `supabase-chiikawa-complete.sql` (safe to re-run). It
+* adds `categories.theme_only_id` (a category that exists only inside one secret theme),
+* creates/refreshes the **Chiikawa Secret Theme** (code `CHIIKAWA`) with the new look and the "Delivery 9-10 days" banner,
+* creates the extra **Food** and **Drink** categories for this theme only.
 
-## Set categories for the theme
-Open Admin → Categories → Category visibility by theme. Tick `Chiikawa Secret Theme` beside each category that should appear while this theme is active. The current app behavior is: if no categories are assigned to a theme, all categories remain visible in that theme. Assign at least one category to make the list restrictive.
+Prerequisite: `supabase-secret-themes-and-store-location.sql` was already run (it was for the earlier theme).
 
-## Upload a separate theme banner
-Open Admin → Secret Code, select `Chiikawa Secret Theme`, use **Upload banner for this secret theme**, then click **Save theme to Supabase**. Use an optimized image under 2 MB, ideally around 1600 × 500. The image is stored in the theme's `config.bannerImage` JSON field and shown only while the secret theme is active. It does not modify the normal marketplace banners.
+## 2. Deploy
+`npm install && npm run build` (then your normal Render deploy). New files: `src/chiikawa.css`, `public/chiikawa/*`.
 
-## Important notes
-- This code prepares the database seed and frontend changes; it does not connect to or modify your live Supabase project from this environment.
-- The banner is stored as a data URL in JSON, so keep it small. A future improvement would move theme images to Supabase Storage and store only their public URL.
-- The preset uses a more complete Chiikawa-inspired pastel style across the main customer-facing shopping screens. Add artwork you have permission to use through the theme image upload controls; this package does not include official licensed character assets. See `CHANGELOG-CHIIKAWA-COMPLETE.md` for changes and validation status.
+## What customers get
+Every customer page (home, product, wishlist, cart, checkout, orders, wallet, profile, rewards, chat, notifications)
+gets: sky + grass background, handwriting font, sticker-style pastel cards, mascot-faced category chips,
+cute bottom bar with the mascot trio. Normal mode and the admin panel are unchanged.
+
+## Admin
+* **Admin → Themes** shows the theme card (preview with its banner, code hidden by default, "theme-only categories" tag).
+* **Edit → Look → Home banner**: upload your own picture, or tap one of the 4 ready-made banners
+  (Delivery 9-10 days / Yummy food / Sip sip drinks / Welcome). Press **Save theme**.
+* **Edit → Categories → Categories only for this theme**: add more theme-only categories (+ Food, + Drink, or any name).
+* **Admin → Categories**: every category card has *Only for one theme*; the "Add category" bar has a "Show everywhere / Only in: …" picker.
+
+## Products
+* Products you add normally appear in normal mode AND in the Chiikawa theme (nothing to do).
+* To sell something only to your Chiikawa customer: Admin → Products → set Category to **Food** or **Drink**
+  (they are marked "secret theme only"). Those products appear only while the theme is unlocked.
+
+## Notes / limits
+* Theme-only categories are hidden by the storefront (home list, chips, search). They are not a security boundary:
+  someone who already has a direct product link can still open that product page.
+* The handwriting fonts (Gaegu / Patrick Hand) load from Google Fonts; offline devices fall back to a rounded system font.
+* Mascots are original drawings in a kawaii style — not official Chiikawa artwork. To use licensed art, replace the
+  files in `public/chiikawa/` (same names) and nothing else needs to change.
+* Banner words are part of the picture. Re-generate with `tools/chiikawa-art/gen_banners.py` or upload your own.
