@@ -11,6 +11,8 @@ import'./cool.css';import'./chiikawa.css';
 import AdminSecretCodeEditor from'./AdminSecretCode';import AdminThemesPage from'./AdminThemes';import'./admin.css';
 import L from 'leaflet';import'leaflet/dist/leaflet.css';
 import{BackgroundGeolocation}from'@capgo/background-geolocation';import{Capacitor}from'@capacitor/core';import{MapDeliveryPanel,LiveTrackMap as DeliveryMap,calcFee}from'./mapCheckout';import{startWebTracking,stopWebTracking}from'./webTracking';
+/** Looks up the profile rows for a list of user ids and returns them keyed by user_id (used by the admin Orders / Deposits / Transactions / Customers pages). */
+async function profileMap(ids:string[]){const m=new Map<string,any>();const u=Array.from(new Set((ids||[]).filter(Boolean)));for(let i=0;i<u.length;i+=100){const{data,error}=await supabase.from('profiles').select('*').in('user_id',u.slice(i,i+100));if(error){console.error(error);continue}(data||[]).forEach((p:any)=>m.set(p.user_id,p))}return m}
 
 let activeDeliveryTracker:{orderId:string;token:string;web?:boolean}|null=null;
 async function startNativeDeliveryTracking(orderId:string,token:string,onLocation?:(lat:number,lng:number)=>void){

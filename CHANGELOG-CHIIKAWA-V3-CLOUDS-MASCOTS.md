@@ -20,3 +20,6 @@ Edited: `src/secretTheme.tsx`, `src/themeElements.tsx` (one type), `src/AdminSec
 
 ## Not verified here
 No network / no browser in my environment: `npm install`, `npm run build` and a visual check were NOT run (syntax of all edited TS files was checked). Please run `npm run build` and look at the Mascots tab once before deploying.
+
+## Build fix
+`src/main.tsx` called `profileMap(...)` in 5 places (admin Orders, Deposits, Transactions, Customers) but the function was missing, so `tsc` failed on Render. Added it right after the imports.
