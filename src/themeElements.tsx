@@ -15,7 +15,7 @@ export type ActionType =
   | 'none' | 'page' | 'url' | 'category' | 'product' | 'search' | 'language' | 'dark'
   | 'randomBg' | 'resetBg' | 'shuffleColors' | 'confetti' | 'scrollTop' | 'call' | 'telegram' | 'message';
 export type AnimType = 'none' | 'float' | 'pulse' | 'spin' | 'wiggle' | 'jump' | 'wander' | 'dvd' | 'cross' | 'crossBack' | 'fall' | 'orbit';
-export type ElementType = 'button' | 'text' | 'image';
+export type ElementType = 'button' | 'text' | 'image' | 'video';
 export type Variant = 'solid' | 'gradient' | 'outline' | 'glass' | 'image' | 'plain';
 
 export type ElAction = { type: ActionType; value: string; newTab: boolean };
@@ -23,6 +23,8 @@ export type ThemeEl = {
   /** 3 = x/y are the CENTRE of the picture (same spot on every screen). 2 = older themes (x/y were the top-left corner). */
   v: 2 | 3; id: string; type: ElementType; name: string;
   text: string; image: string; icon: string;
+  /** Video elements: the file / link, and how it plays. Defaults: loops forever, silent, plays by itself (phones only allow autoplay when silent). */
+  video: string; videoLoop: boolean; videoMuted: boolean; videoControls: boolean;
   x: number; y: number; w: number; h: number; rotate: number; opacity: number; z: number;
   variant: Variant; color: string; background: string; gradientTo: string; angle: number;
   radius: number; fontSize: number; fontWeight: number; borderColor: string; borderWidth: number;
@@ -40,12 +42,15 @@ export const ELEMENT_PAGES: { key: string; label: string }[] = [
   { key: 'home', label: 'Home' }, { key: 'products', label: 'Product page' }, { key: 'wishlist', label: 'Wishlist' },
   { key: 'cart', label: 'Cart' }, { key: 'checkout', label: 'Checkout' }, { key: 'orders', label: 'Orders' },
   { key: 'wallet', label: 'Wallet' }, { key: 'profile', label: 'Profile' }, { key: 'support', label: 'Customer service' },
+  { key: 'notifications', label: 'Notifications' }, { key: 'rewards', label: 'Rewards' }, { key: 'debt', label: 'Debt' },
+  { key: 'snacks', label: 'Snacks' },
 ];
 
 export const STORE_PAGES: { path: string; label: string }[] = [
   { path: '/', label: 'Home' }, { path: '/cart', label: 'Cart' }, { path: '/wishlist', label: 'Wishlist' },
   { path: '/orders', label: 'Orders' }, { path: '/wallet', label: 'Wallet' }, { path: '/profile', label: 'Profile' },
   { path: '/rewards', label: 'Rewards' }, { path: '/notifications', label: 'Notifications' }, { path: '/support', label: 'Customer service' },
+  { path: '/snacks', label: 'Snacks (Chiikawa)' },
 ];
 
 export type ActionNeeds = 'none' | 'page' | 'url' | 'category' | 'product' | 'text' | 'phone' | 'handle' | 'lang' | 'dark';
@@ -92,7 +97,7 @@ const newId = () => (globalThis.crypto && 'randomUUID' in globalThis.crypto ? gl
 
 export function blankElement(type: ElementType, o: Partial<ThemeEl> = {}, z = 1): ThemeEl {
   const base: ThemeEl = {
-    v: 3, id: newId(), type, name: '', text: '', image: '', icon: '',
+    v: 3, id: newId(), type, name: '', text: '', image: '', icon: '', video: '', videoLoop: true, videoMuted: true, videoControls: false,
     x: 50, y: 45, w: 150, h: 0, rotate: 0, opacity: 100, z,
     variant: 'plain', color: '#241b35', background: 'transparent', gradientTo: '#ec4899', angle: 135,
     radius: 12, fontSize: 22, fontWeight: 700, borderColor: '#ffffff', borderWidth: 0, shadow: 'none',
@@ -107,6 +112,7 @@ export function blankElement(type: ElementType, o: Partial<ThemeEl> = {}, z = 1)
   });
   if (type === 'text') Object.assign(base, { text: 'Your custom text', w: 220, h: 0, fontSize: 24, x: 50, y: 30 });
   if (type === 'image') Object.assign(base, { w: 140, h: 0, radius: 16, fit: 'contain', x: 50, y: 45 });
+  if (type === 'video') Object.assign(base, { w: 300, h: 0, radius: 24, fit: 'cover', x: 50, y: 38 });
   return { ...base, ...o };
 }
 
@@ -115,7 +121,7 @@ export const REF_W = 390, REF_H = 844;
 
 /** Old themes stored the top-left corner. Convert to the centre so the picture stays exactly where it was on a phone. */
 function cornerToCentre(x: number, y: number, w: number, h: number, type: ElementType, fontSize: number) {
-  const hh = h > 0 ? h : type === 'button' ? 48 : type === 'image' ? w : Math.round(fontSize * 1.5);
+  const hh = h > 0 ? h : type === 'button' ? 48 : type === 'image' ? w : type === 'video' ? Math.round(w * 9 / 16) : Math.round(fontSize * 1.5);
   return {
     x: Math.round((x + (w / 2 / REF_W) * 100) * 10) / 10,
     y: Math.round((y + (hh / 2 / REF_H) * 100) * 10) / 10,
@@ -125,12 +131,13 @@ function cornerToCentre(x: number, y: number, w: number, h: number, type: Elemen
 /** Accepts anything saved earlier (including the first generation of text/image elements). */
 export function normalizeElement(raw: any, index = 0): ThemeEl {
   const r = raw || {};
-  const type: ElementType = r.type === 'button' ? 'button' : r.type === 'image' ? 'image' : 'text';
+  const type: ElementType = r.type === 'button' ? 'button' : r.type === 'image' ? 'image' : r.type === 'video' ? 'video' : 'text';
   if (r.v === 2 || r.v === 3) {
     const b = blankElement(type, {}, index + 1);
     const el: ThemeEl = { ...b, ...r, action: { ...b.action, ...(r.action || {}) }, anim: { ...b.anim, ...(r.anim || {}) }, pages: Array.isArray(r.pages) ? r.pages : [] };
     el.anim.speed = clamp(num(el.anim.speed, 5), 1, 10);
     el.pin = r.pin === 'page' ? 'page' : 'screen'; el.locked = !!r.locked;
+    el.video = typeof r.video === 'string' ? r.video : ''; el.videoLoop = r.videoLoop !== false; el.videoMuted = r.videoMuted !== false; el.videoControls = !!r.videoControls;
     if (r.v === 2) { Object.assign(el, cornerToCentre(num(r.x, 30), num(r.y, 40), num(el.w, 150), num(el.h, 0), type, num(el.fontSize, 22))); el.v = 3; }
     else el.v = 3;
     return el;
@@ -263,6 +270,26 @@ function shadowOf(el: ThemeEl): string {
   }
 }
 
+/** A video that plays by itself and (by default) loops forever, silent so phones allow it. Safe URLs only. */
+function LoopVideo({ el, edit, common, interactive, onActivate }: { el: ThemeEl; edit: boolean; common: React.CSSProperties; interactive: boolean; onActivate: (e: any, el: ThemeEl) => void }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const src = safeUrl(el.video);
+  useEffect(() => {
+    const v = ref.current; if (!v) return;
+    v.muted = el.videoMuted; v.loop = el.videoLoop;
+    const go = () => { const r = v.play(); if (r && typeof (r as any).catch === 'function') (r as any).catch(() => { /* browser blocked autoplay until the customer taps */ }); };
+    go();
+    const onVis = () => { if (document.visibilityState === 'visible') go(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [src, el.videoMuted, el.videoLoop]);
+  return (
+    <video ref={ref} className="ynVid" src={src} autoPlay loop={el.videoLoop} muted={el.videoMuted} playsInline preload="auto" controls={!edit && el.videoControls} draggable={false}
+      onClick={e => onActivate(e as any, el)}
+      style={{ ...common, objectFit: el.fit, display: 'block', pointerEvents: !edit && (el.videoControls || interactive) ? 'auto' : 'none', cursor: interactive ? 'pointer' : 'default', background: '#000' }} />
+  );
+}
+
 export function elementStyle(el: ThemeEl): React.CSSProperties {
   const s: React.CSSProperties = {
     color: el.color, borderRadius: el.radius, fontSize: el.fontSize, fontWeight: el.fontWeight, boxShadow: shadowOf(el),
@@ -376,6 +403,10 @@ function ElementView({ k, el, edit, animate, selected, offPage, page, box, onMov
         {iconNode(el)}<span className="ynElText">{el.text}</span>
       </button>
     );
+  } else if (el.type === 'video') {
+    body = el.video
+      ? <LoopVideo el={el} edit={edit} common={common} interactive={interactive} onActivate={onActivate} />
+      : <div className="ynPic ynPicEmpty" style={{ ...common, background: 'rgba(124,58,237,.12)', border: '2px dashed #7c3aed88', minHeight: 120, display: 'grid', placeItems: 'center' }}>🎬</div>;
   } else if (el.type === 'image') {
     body = el.image
       ? <img className={`ynPic ynHover-${el.hover}`} src={el.image} alt="" draggable={false} onClick={e => onActivate(e as any, el)}
@@ -473,7 +504,8 @@ export function ThemeOverlay({ elements, pageKey, mode, selectedId, paused, onSe
     runAction(el.action, navigate, { x: e.clientX, y: e.clientY });
   };
 
-  const visible = elements.filter(e => edit || !e.pages.length || e.pages.includes(pageKey));
+  // An element made for Home stays on Home: it is not drawn (or draggable) on other pages, not even in the editor – except the one being edited.
+  const visible = elements.filter(e => !e.pages.length || e.pages.includes(pageKey) || (edit && e.id === selectedId));
   if (!visible.length) return null;
   const draw = (raw: ThemeEl) => {
     const el = drag[raw.id] ? { ...raw, ...drag[raw.id] } : raw;

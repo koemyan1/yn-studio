@@ -102,6 +102,9 @@ export const PAGES: { key: string; label: string; path: string }[] = [
   { key: 'orders', label: 'Orders', path: '/orders' },
   { key: 'wallet', label: 'Wallet', path: '/wallet' },
   { key: 'profile', label: 'Profile', path: '/profile' },
+  { key: 'notifications', label: 'Notifications', path: '/notifications' },
+  { key: 'rewards', label: 'Rewards', path: '/rewards' },
+  { key: 'snacks', label: 'Snacks (Chiikawa)', path: '/snacks' },
 ];
 
 export const TEXT_KEYS: { key: string; label: string; fallback: string; multiline?: boolean }[] = [
@@ -118,6 +121,10 @@ export const TEXT_KEYS: { key: string; label: string; fallback: string; multilin
   { key: 'navOrders', label: 'Nav: Orders', fallback: 'Orders' },
   { key: 'navWallet', label: 'Nav: Wallet', fallback: 'Wallet' },
   { key: 'navProfile', label: 'Nav: Profile', fallback: 'Profile' },
+  { key: 'snacksChip', label: 'Snacks: button on Home + page title', fallback: 'Snacks' },
+  { key: 'snacksEyebrow', label: 'Snacks page: small heading', fallback: 'CHIIKAWA SNACK TIME' },
+  { key: 'snacksTitle', label: 'Snacks page: big title', fallback: 'Yummy little snacks.' },
+  { key: 'snacksIntro', label: 'Snacks page: text under the title', fallback: 'Pick your favorite treats and add them to your cart.' },
 ];
 
 /** The real colours of the default storefront (from style.css :root). */
@@ -125,6 +132,50 @@ export const DEFAULT_TOKENS = {
   background: '#faf8ff', surface: '#ffffff', text: '#241b35', muted: '#776f86',
   border: '#e9e2f4', accent: '#7c3aed', accent2: '#9b5cff',
 };
+
+/* ------------------------------ per-page edits ------------------------------ */
+
+/** Everything the Studio can change for a single page. Anything not listed here is shared by every page. */
+export type PageOverride = {
+  components?: Record<string, StyleProps>;
+  mascotPos?: Record<string, MascotPos>;
+  mascotImages?: Record<string, string>;
+  texts?: Record<string, string>;
+  customParts?: Record<string, CustomPart>;
+};
+export const PAGE_OVERRIDE_FIELDS = ['components', 'mascotPos', 'mascotImages', 'texts', 'customParts'] as const;
+
+/** Merge the page's own edits on top of the shared ones. Used by the live store, the editor preview and the editor's own panels. */
+export function effectiveTheme<T extends Record<string, any>>(c: T, pageKey: string): T {
+  const po: PageOverride | undefined = c && c.pageOverrides ? c.pageOverrides[pageKey] : undefined;
+  if (!po) return c;
+  const mergeMap = (a: Record<string, any> = {}, b: Record<string, any> = {}) => {
+    const out: Record<string, any> = { ...a };
+    for (const k of Object.keys(b)) out[k] = a[k] && typeof a[k] === 'object' && typeof b[k] === 'object' ? { ...a[k], ...b[k] } : b[k];
+    return out;
+  };
+  return {
+    ...c,
+    components: mergeMap(c.components, po.components),
+    mascotPos: mergeMap(c.mascotPos, po.mascotPos),
+    mascotImages: { ...(c.mascotImages || {}), ...(po.mascotImages || {}) },
+    texts: { ...(c.texts || {}), ...(po.texts || {}) },
+    customParts: { ...(c.customParts || {}), ...(po.customParts || {}) },
+  };
+}
+
+/** How many separate edits a page has of its own (for the “clear this page” button). */
+export function pageOverrideCount(c: any, pageKey: string): number {
+  const po: PageOverride | undefined = c?.pageOverrides?.[pageKey];
+  if (!po) return 0;
+  return PAGE_OVERRIDE_FIELDS.reduce((n, f) => n + Object.keys((po as any)[f] || {}).length, 0);
+}
+
+/** Text override helper that already knows which page it is on. */
+export function textFor(cfg: any, pageKey: string, key: string): string {
+  const v = effectiveTheme(cfg || {}, pageKey)?.texts?.[key];
+  return typeof v === 'string' ? v : '';
+}
 
 export const blankTheme = () => ({
   version: 3,
@@ -138,6 +189,8 @@ export const blankTheme = () => ({
   components: {} as Record<string, StyleProps>,
   customParts: {} as Record<string, CustomPart>,
   pageStyles: {} as Record<string, { background?: string; backgroundImage?: string }>,
+  /** Edits that belong to ONE page only (Home, Cart, Wallet…). Same shape as the global fields, merged on top of them on that page. */
+  pageOverrides: {} as Record<string, PageOverride>,
   elements: [] as any[],
   mascotImages: {} as Record<string, string>,
   mascotPos: {} as Record<string, MascotPos>,
@@ -153,6 +206,31 @@ export const blankTheme = () => ({
   bg: { type: 'none' as 'none' | 'gradient', from: '#ffd1e8', to: '#c7b8ff', angle: 160, animated: false, glass: false },
   productImage: { mode: 'original' as 'original' | 'remove' | 'color' | 'random' | 'gradient', color: '#ffe0ec', palette: 'pastel' as string, customColors: [] as string[], tolerance: 35, fillHoles: false, seed: 1, fit: 'contain' as 'contain' | 'cover', padding: 10 },
 });
+
+function normalizePageOverrides(raw: any): Record<string, PageOverride> {
+  const out: Record<string, PageOverride> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const key of Object.keys(raw)) {
+    const r = raw[key];
+    if (!r || typeof r !== 'object') continue;
+    const o: PageOverride = {};
+    if (r.components && typeof r.components === 'object') o.components = { ...r.components };
+    if (r.mascotPos && typeof r.mascotPos === 'object') {
+      const mp: Record<string, MascotPos> = {};
+      for (const g of Object.keys(r.mascotPos)) { const v = r.mascotPos[g]; if (v && typeof v === 'object') mp[g] = { ...v }; }
+      o.mascotPos = mp;
+    }
+    if (r.mascotImages && typeof r.mascotImages === 'object') o.mascotImages = normalizeMascotImages(r.mascotImages);
+    if (r.texts && typeof r.texts === 'object') o.texts = { ...r.texts };
+    if (r.customParts && typeof r.customParts === 'object') {
+      o.customParts = Object.fromEntries(Object.entries(r.customParts as Record<string, any>)
+        .map(([k, v]) => [k, { selector: cleanSelector(v?.selector), label: String(v?.label || 'Tapped part').slice(0, 60) }])
+        .filter(([, v]) => (v as CustomPart).selector)) as Record<string, CustomPart>;
+    }
+    if (Object.keys(o).length) out[key] = o;
+  }
+  return out;
+}
 
 /** Merge saved JSON onto the blank config so old themes keep working. */
 export function normalizeTheme(raw: any) {
@@ -170,6 +248,7 @@ export function normalizeTheme(raw: any) {
     customParts: Object.fromEntries(Object.entries((c.customParts && typeof c.customParts === 'object' ? c.customParts : {}) as Record<string, any>)
       .map(([k, v]) => [k, { selector: cleanSelector(v?.selector), label: String(v?.label || 'Tapped part').slice(0, 60) }]).filter(([, v]) => (v as CustomPart).selector)) as Record<string, CustomPart>,
     pageStyles: { ...(c.pageStyles || {}) },
+    pageOverrides: normalizePageOverrides(c.pageOverrides),
     elements: (Array.isArray(c.elements) ? c.elements : []).map((e: any, i: number) => normalizeElement(e, i)) as ThemeEl[],
     mascotImages: normalizeMascotImages(c.mascotImages),
     mascotPos: normalizeMascotPos(c.mascotPos),
@@ -266,9 +345,11 @@ export function scopeCustomCss(css: string): string {
 }
 
 export function pageKeyFor(path: string): string {
-  return path.includes('/cart') ? 'cart' : path.includes('/wishlist') ? 'wishlist' : path.includes('/orders') ? 'orders'
-    : path.includes('/wallet') ? 'wallet' : path.includes('/profile') ? 'profile' : path.includes('/checkout') ? 'checkout'
-    : path.includes('/product') ? 'products' : path.includes('/support') ? 'support' : 'home';
+  const p = path || '/';
+  return p.includes('/cart') ? 'cart' : p.includes('/wishlist') ? 'wishlist' : p.includes('/orders') ? 'orders'
+    : p.includes('/wallet') ? 'wallet' : p.includes('/profile') ? 'profile' : p.includes('/checkout') ? 'checkout'
+    : p.includes('/notifications') ? 'notifications' : p.includes('/rewards') ? 'rewards' : p.includes('/debt') ? 'debt'
+    : p.includes('/snacks') ? 'snacks' : p.includes('/product') ? 'products' : p.includes('/support') ? 'support' : p === '/' || p === '' ? 'home' : 'other';
 }
 
 const PAGE_SELECTORS = '.shop, .detail, .cartPage, .checkoutPage, .ordersPage, .walletPage, .profilePage, .wishlistPage';
@@ -304,7 +385,7 @@ const SURFACES = '.product, .panel, .detailCard, .cartrow, .ordercard, .transact
 const DARK_SURFACES = '.bottom,.cartItem,.categoryRail button:not(.on),.chatBubble.theirs,.chatComposer,.chatPanel,.checkoutbar,.chips button:not(.on),.couponCard,.customerMetrics,.detailCard,.gallery,.galleryArrow,.galleryViewport,.glass,.googleBtn,.icon,.miniCheckout,.notificationCard,.ordercard,.panel,.payModalCard,.profilePanel,.profileQuickGrid a,.profileStats a,.pwaInstall,.qtyControl,.rewardStandalone,.rewardTabs button:not(.on),.search,.secondary,.supportThread,.transaction,.walletDirectPay,.product,.heart,.cartrow,.profileHero,input,select,textarea';
 
 export function buildThemeCss(input: any, path = '/', opts: { dark?: boolean; liveBg?: string } = {}): string {
-  const c = normalizeTheme(input);
+  const c = effectiveTheme(normalizeTheme(input), pageKeyFor(path));   // shared edits + this page's own edits
   const dark = !!opts.dark;
   const t = dark ? { ...c, ...darkTokens(c) } : c;   // effective colours
   let css = '';
@@ -404,9 +485,11 @@ export function useLiveTick(): number {
 /** Text override helper: t('brandTitle','YN Studio') */
 export function useThemeText() {
   const cfg = useThemeConfig();
+  const loc = useLocation();
+  const pk = pageKeyFor(loc.pathname);
   return (key: string, fallback: string) => {
-    const v = cfg?.texts?.[key];
-    return typeof v === 'string' && v.trim() ? v : fallback;
+    const v = cfg ? textFor(cfg, pk, key) : '';
+    return v.trim() ? v : fallback;
   };
 }
 export const Lines = ({ text }: { text: string }) => <>{String(text).split('\n').map((l, i, a) => <React.Fragment key={i}>{l}{i < a.length - 1 && <br />}</React.Fragment>)}</>;
@@ -592,7 +675,9 @@ export function SecretThemeRuntime() {
     if (!preview) return;
     let selectedKey = '', selKind = '', selElId = '', lastDark = '__', lastAnchor = '', clicked: Element | null = null;
     const autoDefs: Record<string, ComponentDef> = {};          // tapped parts the editor has not echoed back yet
-    const defs = (): ComponentDef[] => { const base = allComponents(draftRef.current); return [...base, ...Object.values(autoDefs).filter(a => !base.some(b => b.key === a.key))]; };
+    /** The draft as this page shows it (shared edits + the page's own edits). */
+    const eff = (): any => { const d = draftRef.current; return d ? effectiveTheme(normalizeTheme(d), pageKeyFor(window.location.pathname)) : null; };
+    const defs = (): ComponentDef[] => { const base = allComponents(eff()); return [...base, ...Object.values(autoDefs).filter(a => !base.some(b => b.key === a.key))]; };
     let drag: { el: HTMLElement; def: ComponentDef; sx: number; sy: number; bx: number; by: number; moved: boolean; mx: number; my: number } | null = null;
     let justDragged = false;
     const hl = styleEl('yn-theme-preview-style');
@@ -634,7 +719,7 @@ export function SecretThemeRuntime() {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'yn-mascot-measure') {
         const g = String(e.data.group || '');
-        window.parent.postMessage({ type: 'yn-mascot-measured', group: g, info: measureMascotInfo(g), vw: window.innerWidth, vh: window.innerHeight, k: screenScale() }, window.location.origin);
+        window.parent.postMessage({ type: 'yn-mascot-measured', group: g, info: measureMascotInfo(g), vw: window.innerWidth, vh: window.innerHeight, k: screenScale(), path: window.location.pathname }, window.location.origin);
         return;
       }
       if (e.data?.type !== 'yn-theme-draft') return;
@@ -681,12 +766,12 @@ export function SecretThemeRuntime() {
       let def = componentAt(target, defs());
       if (!def && !isPageLevel(target)) { const a = autoSelectorFor(target); if (a) { const key = 'auto-' + hash36(a.selector); def = autoDefs[key] || { key, label: a.label, group: 'Tapped parts', selector: a.selector, props: AUTO_PROPS }; } }
       if (!def || !def.props.includes('moveX')) return;
-      if ((draftRef.current?.components || {})[def.key]?.locked) return;      // locked parts cannot be dragged
+      if ((eff()?.components || {})[def.key]?.locked) return;      // locked parts cannot be dragged
       // on a touch screen only the part that is already selected can be dragged (otherwise the page could not be scrolled)
       if (e.pointerType !== 'mouse' && !(selKind === 'part' && selectedKey === def.key)) return;
       const el = target.closest(def.selector) as HTMLElement | null;
       if (!el) return;
-      const cur = (draftRef.current?.components || {})[def.key] || {};
+      const cur = (eff()?.components || {})[def.key] || {};
       drag = { el, def, sx: e.clientX, sy: e.clientY, bx: Number(cur.moveX) || 0, by: Number(cur.moveY) || 0, moved: false, mx: 0, my: 0 };
     };
     const onMove = (e: PointerEvent) => {
@@ -706,7 +791,7 @@ export function SecretThemeRuntime() {
         if (d.def.key.startsWith('auto-')) { autoDefs[d.def.key] = d.def; window.parent.postMessage({ type: 'yn-theme-auto-part', key: d.def.key, selector: d.def.selector, label: d.def.label }, window.location.origin); }
         window.parent.postMessage({ type: 'yn-theme-select', key: d.def.key }, window.location.origin);
       }
-      window.parent.postMessage({ type: 'yn-theme-part-move', key: d.def.key, x: d.mx, y: d.my }, window.location.origin);
+      window.parent.postMessage({ type: 'yn-theme-part-move', key: d.def.key, x: d.mx, y: d.my, path: window.location.pathname }, window.location.origin);
       paint(); report();
       window.setTimeout(() => d.el.style.removeProperty('translate'), 300);   // the saved value (same position) takes over
     };
@@ -739,7 +824,7 @@ export function SecretThemeRuntime() {
     if (active) applyTheme(active, path); else clearTheme();
   }, [active, path, tick, osTick]);
 
-  const norm = active ? normalizeTheme(active) : null;
+  const norm = active ? effectiveTheme(normalizeTheme(active), pageKeyFor(path)) : null;   // this page's own edits on top of the shared ones
   const els: ThemeEl[] = norm ? norm.elements : [];
   const showHandles = preview && (mode === 'edit' || mode === 'mascots') && !!norm && norm.preset === 'chiikawa';
   const iconParts: PartIconSpec[] = norm
@@ -759,7 +844,7 @@ export function SecretThemeRuntime() {
       {showHandles ? (
         <MascotHandles pos={norm!.mascotPos} selected={selMascot} path={path}
           onSelect={g => { setSelMascot(g); window.parent.postMessage({ type: 'yn-theme-mascot-select', group: g }, window.location.origin); }}
-          onPatch={(g, patch) => window.parent.postMessage({ type: 'yn-theme-mascot-patch', group: g, patch }, window.location.origin)} />
+          onPatch={(g, patch) => window.parent.postMessage({ type: 'yn-theme-mascot-patch', group: g, patch, path }, window.location.origin)} />
       ) : null}
     </>
   );

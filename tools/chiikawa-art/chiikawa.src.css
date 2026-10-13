@@ -1,0 +1,571 @@
+/* ==========================================================================
+   CHIIKAWA secret theme  (preset id: "chiikawa")            v12 – full restyle
+   Pastel storybook look for EVERY customer page. Only active while a signed-in customer has unlocked the
+   secret code. Admin screens and normal mode are never touched (the runtime removes data-secret-theme there).
+
+   Written with two short words that tools/chiikawa-art/build_css.py expands into the long selector prefix:
+     @R   html[data-secret-theme="on"][data-secret-preset="chiikawa"]
+     @RT  the same + [data-yn-theme]:root   (as specific as the Theme Studio's own rules, so a part you restyle in the Studio still wins)
+
+   Mascots are NOT restyled here: every mascot picture below still reads the same CSS variables the Studio writes
+   (--ck-m-<slot> picture, --ck-dx/--ck-dy/--ck-s/--ck-d <group> place, size, hide), so the pictures you upload later drop straight in.
+   ========================================================================== */
+
+@R {
+  --ck-cream: #fffaf0;
+  --ck-paper: #fffdf7;
+  --ck-ink: #383257;
+  --ck-ink2: #6c6890;
+  --ck-blue: #4f6fb0;
+  --ck-blue-t: #6c9bd2;
+  --ck-line: #c5d9ef;
+  --ck-line2: #dbe6f3;
+  --ck-pink: #ff9fbe;
+  --ck-pink-l: #ffe3ec;
+  --ck-pink-d: #e8789f;
+  --ck-price: #ec5f93;
+  --ck-butter: #fff4d6;
+  --ck-butter-l: #ffd98a;
+  --ck-butter-t: #7a5a1e;
+  --ck-mint: #dcf3e2;
+  --ck-mint-t: #2f7a50;
+  --ck-lav: #efe7ff;
+  --ck-red: #ff6f8e;
+  --ck-hand: 'Gaegu', 'Patrick Hand', 'Nunito', 'Noto Sans Khmer', 'Kantumruy Pro', 'Comic Sans MS', 'Chalkboard SE', ui-rounded, system-ui, sans-serif;
+  --ck-blob: 30px 34px 28px 36px / 34px 28px 36px 30px;
+  --ck-sticker: 0 4px 0 rgba(125, 150, 190, .25);
+  --ck-halo: 3px 0 0 #fff, -3px 0 0 #fff, 0 3px 0 #fff, 0 -3px 0 #fff, 2px 2px 0 #fff, -2px 2px 0 #fff, 2px -2px 0 #fff, -2px -2px 0 #fff;
+}
+
+/* ------------------------------ sky, grass ------------------------------ */
+@R body { background-color: #fffaf0; min-height: 100vh; }
+@RT body {
+  background-image: url('/chiikawa/sky.svg') !important;
+  background-repeat: repeat-x !important; background-position: center top !important; background-size: auto 520px !important; background-attachment: scroll !important;
+}
+@R body::after {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 84px;
+  background: url('/chiikawa/grass.svg') left bottom / auto 100% repeat-x;
+  z-index: 20; pointer-events: none;
+}
+
+/* ------------------------------ text ------------------------------ */
+@RT,
+@RT body,
+@RT button,
+@RT input,
+@RT select,
+@RT textarea { font-family: var(--ck-hand) !important; }
+@RT body { font-size: 18px; letter-spacing: .01em; color: var(--ck-ink); }
+@RT h1, @RT h2, @RT h3, @RT h4 { font-family: var(--ck-hand) !important; font-weight: 700; letter-spacing: 0; color: var(--ck-ink) !important; }
+@RT p, @RT small, @RT label { line-height: 1.3; }
+@R .eyebrow {
+  display: inline-block; color: var(--ck-blue-t) !important; font-size: 15px; letter-spacing: .2em; font-weight: 700;
+  transform: rotate(-3deg); transform-origin: left center; text-transform: uppercase;
+}
+@R .muted, @R small { color: var(--ck-ink2); }
+@R p { color: var(--ck-ink2); }
+@R a { color: inherit; }
+
+/* ------------------------------ page frame ------------------------------ */
+@R .shop, @R .detail { position: relative; padding-bottom: 176px; }
+@R .shop, @R .detail, @R .cartPage, @R .checkoutPage, @R .ordersPage, @R .walletPage, @R .profilePage, @R .wishlistPage { background-color: transparent !important; }
+
+/* ------------------------------ home header ------------------------------ */
+@R .brandrow { position: relative; padding-top: 46px; align-items: flex-end; gap: 10px; }
+@R .brandrow > div:first-child { z-index: 1; min-width: 0; }
+@R .brandrow .eyebrow { font-size: 16px; letter-spacing: .26em; transform: rotate(-5deg); margin: 0 0 -4px 2px; }
+@R .brandrow h1 {
+  font-size: 52px; line-height: .95; margin: 2px 0 0; color: var(--ck-ink) !important; text-shadow: var(--ck-halo);
+  transform: rotate(-2deg); transform-origin: left center; font-size: clamp(36px, 11.5vw, 52px);
+}
+@R .homeActions { position: relative; z-index: 1; gap: 10px; margin-top: 26px; align-items: center; flex: 0 0 auto; }
+@RT .homeActions .icon,
+@RT .homeActions .avatar,
+@RT .homeActions .langButton {
+  width: 46px; height: 46px; min-width: 46px; padding: 0; border-radius: 20px 22px 18px 22px !important;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--ck-sticker);
+}
+@RT .homeActions .icon { background: #fff4d6 !important; color: #ef8f3d !important; border: 3px solid #ffd98a !important; }
+@RT .homeActions .avatar { background: #ffc9d9 !important; color: #fff !important; border: 3px solid #ffb0c8 !important; }
+@RT .homeActions .langButton { background: #e8f2ff !important; color: #4f6fb0 !important; border: 3px solid #bcd5ee !important; }
+@R .homeActions .langButton span { display: none; }
+@R .homeActions .icon svg, @R .homeActions .avatar svg, @R .homeActions .langButton svg { width: 24px; height: 24px; stroke-width: 2.4; }
+@R .notificationButton { position: relative; }
+@R .notificationButton::after { background: var(--ck-red) !important; border: 2px solid #fff; box-shadow: none; }
+
+/* ------------------------------ search ------------------------------ */
+@RT .shop .search {
+  position: relative; display: flex; align-items: center; gap: 10px; background: #fffdf7 !important; border: 3px solid #c9dcf0 !important; border-radius: 34px !important;
+  padding: 0 70px 0 20px; min-height: 60px; box-shadow: var(--ck-sticker); margin: 16px 0 18px;
+}
+@R .search svg { color: var(--ck-ink); width: 25px; height: 25px; flex: 0 0 auto; stroke-width: 2.4; }
+@R .search input { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; flex: 1; min-width: 0; font-size: 21px; color: var(--ck-ink); }
+@R .search input::placeholder { color: #9a95b3; }
+@R .search::after {
+  content: ''; position: absolute; right: 12px; top: 50%; width: 44px; height: 40px; transform: translateY(-50%) rotate(6deg);
+  background: url('/chiikawa/mochi.svg') center / contain no-repeat;
+}
+
+/* ------------------------------ banner ------------------------------ */
+@RT .shop .bannerSlider {
+  border: 3px solid #c5dcf3 !important; border-radius: 32px !important; box-shadow: var(--ck-sticker) !important; background-color: #d6ebfb; margin-bottom: 14px;
+}
+@R .secretCustomBanner { aspect-ratio: 3.2 / 1; min-height: 120px; background-size: cover; background-position: center; width: 100%; max-width: 100%; box-sizing: border-box; }
+@R .bannerShade { display: none; }
+
+/* ------------------------------ category buttons (text only) ------------------------------ */
+@R .categoryRail {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 12px 4px 16px; margin: 0 -4px;
+  overflow-x: auto; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+@R .categoryRail::-webkit-scrollbar { display: none; }
+@RT .categoryRail button {
+  flex: 0 0 auto; scroll-snap-align: start; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 6px 24px; margin: 0;
+  background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #d2dcea !important; border-radius: 30px !important;
+  font-size: 20px; font-weight: 700; line-height: 1.15; white-space: nowrap; box-shadow: var(--ck-sticker); text-shadow: none;
+}
+@R .categoryRail button::before, @R .categoryRail button::after { content: none !important; display: none !important; }
+@RT .categoryRail button.on {
+  background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; text-shadow: 0 2px 0 rgba(200, 80, 120, .35); box-shadow: 0 4px 0 #e8789f;
+}
+
+/* ------------------------------ product cards ------------------------------ */
+@R .grid { gap: 14px; }
+@RT .product {
+  --c-bg: #fff0f4; --c-bd: #f8c3d4; --c-ph: #ffe3ec;
+  position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 0 0 4px;
+  background-image: linear-gradient(var(--c-bg), var(--c-bg)) !important; background-color: var(--c-bg) !important;
+  border: 3px solid var(--c-bd) !important; border-radius: var(--ck-blob) !important; box-shadow: var(--ck-sticker) !important; color: var(--ck-ink);
+}
+@RT .product:nth-child(4n+2) { --c-bg: #fff8e4; --c-bd: #f6dd9f; --c-ph: #fff0c4; }
+@RT .product:nth-child(4n+3) { --c-bg: #eaf4ff; --c-bd: #bcd7f2; --c-ph: #d9eafb; }
+@RT .product:nth-child(4n) { --c-bg: #f4edff; --c-bd: #d5c5f4; --c-ph: #e7dcff; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme][data-yn-dark="1"]:root .product { background-image: none !important; }
+@R .product > img, @R .product .ph { background-color: var(--c-ph); aspect-ratio: 1 / .92; width: 100%; margin: 0; border-radius: 0 0 26px 26px; display: block; }
+@R .product > img { object-fit: contain; padding: 10px; box-sizing: border-box; }
+@R .product .ph { background-image: url('/chiikawa/mochi-box.svg'); background-repeat: no-repeat; background-position: center; background-size: 54%; }
+@R .product .ph img { display: none; }
+@R .saleTag { position: absolute; left: 10px; top: 10px; z-index: 2; background: #ff9fbe; color: #fff; border: 2px solid #fff; border-radius: 999px; padding: 2px 10px; font-size: 16px; font-weight: 700; font-style: normal; }
+@R .pcopy { padding: 10px 14px 10px 16px; position: relative; display: block; }
+@R .pcopy strong {
+  display: block; font-size: 21px; font-weight: 700; color: var(--ck-ink); line-height: 1.15;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+}
+@R .pcopy > div { padding-right: 56px; min-height: 36px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 6px; }
+@R .pcopy span { color: var(--ck-price) !important; font-size: 26px; font-weight: 700; line-height: 1.1; }
+@R .pcopy del { color: #a59fbe; font-size: 16px; margin: 0; }
+@R .product::after {
+  content: ''; position: absolute; right: 8px; bottom: 6px; width: 52px; height: 52px; pointer-events: none;
+  background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat; transform: rotate(-6deg);
+}
+@R .product:nth-child(3n+2)::after { background-image: url('/chiikawa/bun-happy.svg'); transform: rotate(6deg); }
+@R .product:nth-child(3n)::after { background-image: url('/chiikawa/kiki-happy.svg'); }
+@RT .product .heart {
+  position: absolute; top: 10px; right: 10px; left: auto; width: 42px; height: 42px; padding: 0; z-index: 2; border-radius: 50% !important;
+  display: inline-flex; align-items: center; justify-content: center; background: #fffdf7 !important; color: #ff7aa6 !important; border: 3px solid #ffd0de !important; box-shadow: none !important;
+}
+@R .product .heart svg { width: 22px; height: 22px; stroke-width: 2.4; }
+@RT .product .heart.liked { background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; }
+@media (prefers-reduced-motion: no-preference) {
+  @R .product { transition: transform .25s cubic-bezier(.3, 1.5, .5, 1); }
+  @R .product:hover { transform: translateY(-4px) rotate(-.8deg); }
+  @R .product:active { transform: scale(.98); }
+  @keyframes ckBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+  @R .brandrow::before { animation: ckBob 3.6s ease-in-out infinite; }
+  @R .brandrow::after { animation: ckBob 4.2s ease-in-out infinite reverse; }
+}
+
+/* ------------------------------ section titles ------------------------------ */
+@R .sectionHead { align-items: center; margin: 6px 2px 10px; }
+@R .sectionHead h2, @R .sectionHead h3 { font-size: 28px; margin: 0; }
+@R .pageIntro { margin: 14px 4px 14px; }
+@RT .pageIntro h1 { font-size: 40px; line-height: 1; margin: 4px 0 6px; transform: rotate(-1.5deg); transform-origin: left; text-shadow: var(--ck-halo); }
+@R .pageIntro p { color: var(--ck-ink2); font-size: 19px; margin: 0; }
+
+/* ------------------------------ inner-page header ------------------------------ */
+@RT .top {
+  position: relative; display: flex; align-items: center; gap: 10px; background: #fffdf7 !important; border: 3px solid #cfe0f2 !important; border-radius: 30px !important;
+  padding: 0 10px 0 12px; gap: 8px; min-height: 64px; height: auto; box-shadow: var(--ck-sticker); margin-bottom: 16px;
+}
+@R .top > b { font-size: 26px; font-weight: 700; flex: 1; min-width: 0; color: var(--ck-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@R .top .miniLogo { width: 44px; height: 44px; border-radius: 50%; background: url('/chiikawa/mochi.svg') center / contain no-repeat; flex: 0 0 auto; }
+@R .top .miniLogo img { display: none; }
+@RT .top .icon, @RT .icon {
+  width: 42px; height: 42px; min-width: 42px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff4d6 !important; color: #ef8f3d !important; border: 3px solid #ffd98a !important; border-radius: 20px 22px 18px 22px !important; box-shadow: 0 3px 0 rgba(235, 180, 90, .35);
+}
+@R .icon svg { width: 22px; height: 22px; stroke-width: 2.4; }
+@RT .top .langButton { width: 42px; height: 42px; min-width: 42px; padding: 0; background: #e8f2ff !important; color: #4f6fb0 !important; border: 3px solid #bcd5ee !important; border-radius: 20px 22px 18px 22px !important; box-shadow: 0 3px 0 rgba(125, 150, 190, .3); }
+@R .top .langButton span { display: none; }
+@RT .icon.danger { background: #ffe3ec !important; color: #e8648f !important; border-color: #ffc0d2 !important; box-shadow: 0 3px 0 rgba(235, 120, 160, .3); }
+
+/* ------------------------------ buttons ------------------------------ */
+/* main (pink) button: every button except the ones that have their own look below */
+@RT button:where(:not(.icon):not(.heart):not(.secondary):not(.on):not(.catSwitch):not(.galleryArrow):not(.langButton)),
+@RT .button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; min-height: 52px; cursor: pointer;
+  background: #ff9fbe !important; color: #fff !important; border: 3px solid #ff8db1 !important; border-bottom-width: 5px !important; border-radius: 999px !important;
+  font-size: 21px; font-weight: 700; line-height: 1.1; text-shadow: 0 2px 0 rgba(200, 80, 120, .3); box-shadow: none; padding: 8px 24px;
+}
+@R button svg, @R .button svg { width: 22px; height: 22px; flex: 0 0 auto; stroke-width: 2.4; }
+@RT button.secondary, @RT .secondary, @RT a.button.secondary {
+  background: #fffdf7 !important; color: #5b78b4 !important; border: 3px solid #c9dcf0 !important; border-bottom-width: 5px !important; border-radius: 999px !important; font-weight: 700; font-size: 20px; text-shadow: none;
+}
+@R button.wide, @R button.full, @R .full { width: 100%; }
+@R button:active:not(:disabled), @R .button:active { transform: translateY(2px); }
+@R button:disabled { filter: grayscale(.45); opacity: .7; cursor: not-allowed; }
+@RT .textBtn { background: transparent !important; border: 0 !important; color: var(--ck-blue) !important; text-shadow: none; text-decoration: underline; min-height: 0; }
+
+/* ------------------------------ inputs ------------------------------ */
+@RT input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+@RT select,
+@RT textarea {
+  box-sizing: border-box; background-color: #fffefb; border: 3px solid #cfe0f2; border-radius: 22px !important; color: var(--ck-ink); font-size: 19px; padding: 10px 16px; min-height: 50px; box-shadow: none;
+}
+@R textarea { border-radius: 24px !important; }
+@R input::placeholder, @R textarea::placeholder { color: #a39fbb; }
+@R input:focus, @R select:focus, @R textarea:focus { outline: none; border-color: #ff9fbe !important; box-shadow: 0 0 0 4px #ffe3ec; }
+@R input:disabled { background: #f3f1f6; color: #8c88a3; }
+@R input[type=checkbox], @R input[type=radio] { accent-color: #ff8db1; }
+@R label { color: var(--ck-ink); font-weight: 700; font-size: 18px; }
+@R label small, @R label .muted { font-weight: 400; }
+@R .qty { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ------------------------------ cards and panels ------------------------------ */
+@RT .panel, @RT .cartrow, @RT .ordercard, @RT .transaction, @RT .profilePanel, @RT .detailCard, @RT .notificationCard, @RT .couponCard, @RT .supportThread,
+@RT .walletPayPanel, @RT .walletDirectPay, @RT .rewardStandalone, @RT .customerMetrics, @RT .trackingCard, @RT .payModalCard, @RT .chatPanel, @RT .locationPanel, @RT .debtStats > div {
+  background: #fffdf7 !important; border: 3px solid #d5e3f3 !important; border-radius: var(--ck-blob) !important; box-shadow: var(--ck-sticker) !important; color: var(--ck-ink);
+}
+@RT .panel:nth-of-type(3n+2), @RT .ordercard:nth-of-type(3n+2) { border-color: #f8cbda !important; }
+@RT .panel:nth-of-type(3n), @RT .ordercard:nth-of-type(3n) { border-color: #f6dfa8 !important; }
+@R .panel, @R .profilePanel, @R .walletPayPanel, @R .detailCard, @R .ordercard, @R .locationPanel { padding: 18px; margin-bottom: 16px; }
+@R .panel h2, @R .profilePanel h2, @R .walletPayPanel h2, @R .locationPanel h2 { font-size: 28px; margin: 2px 0 4px; line-height: 1.05; }
+@R .panel p, @R .profilePanel p, @R .walletPayPanel p, @R .locationPanel p { margin: 0; font-size: 18px; }
+@R .line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+@R .profilePanelHead, @R .walletSectionTitle, @R .paymentHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+@R .profilePanelHead > svg, @R .walletSectionTitle > svg, @R .paymentHeader > svg, @R .checkoutDelivery .line > svg { color: #ff8db1; flex: 0 0 auto; width: 26px; height: 26px; }
+@R .notice { background: #fff4d6; border: 2px dashed #f1cd78; color: var(--ck-butter-t); border-radius: 20px; padding: 10px 14px; font-size: 18px; }
+@R .toast { border-radius: 24px; background: #383257; color: #fff; font-size: 18px; }
+@R .summaryLine { display: flex; justify-content: space-between; align-items: center; font-size: 20px; padding: 4px 0; }
+@R .summaryLine.grand { color: var(--ck-price); font-weight: 700; font-size: 26px; border-top: 3px dotted #d5e3f3; margin-top: 6px; padding-top: 10px; }
+@R .summaryLine.discountLine { color: var(--ck-mint-t); }
+@R .desc { color: var(--ck-ink2); font-size: 19px; line-height: 1.35; }
+@R .price { color: var(--ck-price) !important; font-weight: 700; }
+
+/* status chips */
+@R .status { display: inline-flex; align-items: center; padding: 3px 14px; border-radius: 999px; font-weight: 700; font-size: 16px; background: #fff4d6; color: var(--ck-butter-t); border: 2px solid #ffd98a; text-transform: capitalize; }
+@R .status.paid, @R .status.completed, @R .status.delivered, @R .status.approved, @R .status.claimed, @R .status.confirmed, @R .status.published { background: var(--ck-mint); color: var(--ck-mint-t); border-color: #b5e2c4; }
+@R .status.cancelled, @R .status.rejected { background: #ffe3ec; color: #c2456f; border-color: #ffc0d2; }
+@R .status.shipped, @R .status.processing { background: #e8f2ff; color: #4f6fb0; border-color: #bcd5ee; }
+
+/* ------------------------------ product detail ------------------------------ */
+@RT .gallery, @RT .galleryViewport { background: #eaf4ff !important; border: 3px solid #bcd7f2 !important; border-radius: 34px !important; box-shadow: var(--ck-sticker) !important; overflow: hidden; }
+@R .gallery { margin-bottom: 14px; }
+@R .gallery .galleryViewport { background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
+@RT .gallery .galleryArrow { background: #fffdf7 !important; color: var(--ck-blue) !important; border: 3px solid #c9dcf0 !important; border-radius: 50% !important; width: 42px; height: 42px; padding: 0; box-shadow: none; }
+@R .galleryThumbs button { border: 3px solid #d5e3f3 !important; border-radius: 18px !important; background: #fffdf7 !important; padding: 2px; overflow: hidden; min-height: 0; box-shadow: none; }
+@R .galleryThumbs button.active { border-color: #ff9fbe !important; }
+@R .detailCard h1 { font-size: 40px; line-height: 1.02; margin: 4px 0 6px; transform: rotate(-1deg); transform-origin: left; }
+@R .detailCard .price, @R .detail .price { font-size: 38px; line-height: 1; margin-bottom: 8px; }
+@R .variant { margin: 10px 0; }
+@R .variant > b, @R .optionTitle { font-size: 20px; display: block; margin-bottom: 6px; }
+@R .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+@RT .chips button { min-height: 44px; padding: 4px 18px; border-radius: 999px !important; font-size: 19px; background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #d2dcea !important; border-bottom-width: 3px !important; text-shadow: none; }
+@RT .chips button.on { background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; text-shadow: 0 2px 0 rgba(200, 80, 120, .3); }
+@R .choiceThumb { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+@RT .stickyActions { box-sizing: border-box; background: #fffdf7f2 !important; border: 3px solid #f8c3d4; border-radius: 34px; padding: 8px; bottom: 124px; display: flex; gap: 10px; box-shadow: var(--ck-sticker); }
+@R .stickyActions button { flex: 1; min-width: 0; white-space: nowrap; font-size: 20px; padding: 8px 12px; }
+@RT .qty button, @RT .qtyControl button {
+  width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50% !important; background: #ff9fbe !important; color: #fff !important; border: 3px solid #ff8db1 !important; border-bottom-width: 3px !important; text-shadow: none;
+}
+@R .qty button svg, @R .qtyControl button svg { width: 18px; height: 18px; }
+@RT .qty > div { display: inline-flex; align-items: center; gap: 12px; padding: 4px; background: #fff4d6; border: 3px solid #ffd98a; border-radius: 999px; }
+@RT .qtyControl { display: inline-flex; align-items: center; gap: 10px; padding: 4px; background: #fff4d6 !important; border: 3px solid #ffd98a !important; border-radius: 999px !important; }
+@R .qty span, @R .qtyControl span, @R .qtyControl b { min-width: 24px; text-align: center; font-size: 20px; font-weight: 700; }
+
+/* ------------------------------ cart ------------------------------ */
+@R .cartList { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@R .cartItem { min-width: 0; box-sizing: border-box; }
+@R .cartInfoTop > div:first-child { min-width: 0; }
+@R .cartInfoTop b { overflow-wrap: anywhere; }
+@RT .cartItem {
+  display: flex; align-items: center; gap: 12px; padding: 12px; background: #fffdf7 !important; border: 3px solid #d5e3f3 !important; border-radius: var(--ck-blob) !important; box-shadow: var(--ck-sticker) !important;
+}
+@RT .cartItem.selected { border-color: #ff9fbe !important; background: #fff6f9 !important; }
+@R .cartSelect span { width: 28px; height: 28px; border: 3px solid #f0b5c8 !important; border-radius: 50% !important; background: #fff !important; }
+@R .cartSelect input:checked + span { background: #ff9fbe !important; border-color: #ff8db1 !important; animation: none; }
+@R .cartSelect input:checked + span::after { left: 5px; top: 6px; }
+@R .cartImage { width: 84px; height: 84px; flex: 0 0 84px; border-radius: 22px; overflow: hidden; background: #eaf4ff; border: 3px solid #d9eafb; }
+@R .cartImage img, @R .cartImage .ph { width: 100%; height: 100%; object-fit: contain; border-radius: 0; aspect-ratio: auto; }
+@R .cartInfo { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+@R .cartInfoTop { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+@R .cartInfoTop b { font-size: 21px; line-height: 1.1; display: block; }
+@R .cartInfoTop small { display: block; font-size: 16px; }
+@R .cartInfoBottom { flex-wrap: wrap; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+@R .cartInfoBottom strong { font-size: 25px; color: var(--ck-price); }
+@RT .cartRemove { width: 38px; height: 38px; min-height: 0; padding: 0; background: #ffe3ec !important; color: #e8648f !important; border: 3px solid #ffc0d2 !important; border-bottom-width: 3px !important; border-radius: 50% !important; text-shadow: none; flex: 0 0 auto; }
+@RT .miniCheckout { box-sizing: border-box; bottom: 128px; transform: none; translate: -50% 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 30px !important; border: 3px solid #f8c3d4 !important; background: #fffdf7 !important; box-shadow: var(--ck-sticker); }
+@R .miniCheckout b { font-size: 26px; color: var(--ck-price); display: block; }
+@RT .checkoutbar { bottom: 124px; border-radius: 30px !important; }
+
+/* ------------------------------ orders ------------------------------ */
+@R .ordercard .line b { font-size: 22px; }
+@R .ordercard small { font-size: 16px; display: block; margin: 2px 0 8px; }
+@R .miniitem { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 2px dotted #d5e3f3; }
+@R .miniitem img { width: 52px; height: 52px; border-radius: 16px; object-fit: cover; background: #eaf4ff; border: 2px solid #d9eafb; flex: 0 0 auto; }
+@R .miniitem span { flex: 1; min-width: 0; font-size: 19px; }
+@R .line.total { border-top: 3px dotted #d5e3f3; padding-top: 10px; margin-top: 4px; font-size: 22px; }
+@R .line.total b { color: var(--ck-price); font-size: 26px; }
+@R .trackingCard { margin-top: 12px; padding: 14px; }
+
+/* ------------------------------ wallet ------------------------------ */
+@RT .walletHero {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px; margin-bottom: 16px; color: var(--ck-ink) !important;
+  background: radial-gradient(circle at 90% 20%, #fff 0, transparent 30%), linear-gradient(135deg, #bfe0fa, #e7dcff 55%, #ffd9e5) !important; border: 3px solid #c5dcf3 !important; border-radius: 36px !important; box-shadow: var(--ck-sticker) !important;
+}
+@R .walletHero small { color: #5b6fb0; font-size: 16px; letter-spacing: .14em; font-weight: 700; }
+@R .walletHero h1 { color: var(--ck-ink) !important; text-shadow: var(--ck-halo); font-size: 56px; line-height: 1; margin: 4px 0; }
+@R .walletHero span { color: #5b6fb0; opacity: 1; font-size: 18px; }
+@R .walletGlow { background: url('/chiikawa/mochi-box.svg') center / contain no-repeat; border: 0; backdrop-filter: none; transform: rotate(6deg); width: 100px; height: 100px; flex: 0 0 100px; }
+@R .walletGlow svg { display: none; }
+@R .walletForm { display: grid; gap: 12px; margin-top: 12px; }
+@R .walletForm label, @R .manualDeliveryForm label, @R .debtQrForm label, @R .supportForm label, @R .profilePanel label { display: grid; gap: 6px; }
+@RT .abaPaymentButton {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; text-align: left; text-shadow: none; box-sizing: border-box;
+  background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #c9dcf0 !important; border-bottom-width: 5px !important; border-radius: 28px !important;
+}
+@RT .abaPaymentButton.paywayButton { border-color: #ffc0d2 !important; background: #fff6f9 !important; }
+@R .abaPaymentButton > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+@R .abaPaymentButton b { font-size: 21px; color: var(--ck-ink); }
+@R .abaPaymentButton small { font-size: 16px; color: var(--ck-ink2); font-weight: 400; }
+@R .abaPaymentButton > svg { color: #ff8db1; }
+@R .abaBadge { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 40px; padding: 0 8px; border-radius: 14px; background: #3b5aa8; color: #fff; font-weight: 700; font-size: 18px; letter-spacing: .04em; text-shadow: none; flex: 0 0 auto; }
+@RT label.upload, @RT label.receiptUpload {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fffefb; border: 3px dashed #f1b5c9; border-radius: 26px; cursor: pointer; color: var(--ck-ink);
+}
+@R label.upload svg, @R label.receiptUpload svg { color: #ff8db1; width: 26px; height: 26px; flex: 0 0 auto; }
+@R label.upload span, @R label.receiptUpload span { display: grid; gap: 2px; min-width: 0; }
+@R label.upload b, @R label.receiptUpload b { font-size: 19px; }
+@R label.upload small, @R label.receiptUpload small { font-size: 15px; font-weight: 400; word-break: break-all; }
+
+/* ------------------------------ profile ------------------------------ */
+@RT .profileHero, @RT .profileHeroNew {
+  display: flex; align-items: center; gap: 14px; padding: 18px; margin-bottom: 14px; color: var(--ck-ink) !important;
+  background: linear-gradient(135deg, #ffe3ec, #fff3cf 55%, #dff0ff) !important; border: 3px solid #f8c3d4 !important; border-radius: 34px !important; box-shadow: var(--ck-sticker) !important;
+}
+@R .profileHero h1 { font-size: 36px; line-height: 1; margin: 2px 0; }
+@R .profileHero p { margin: 0; font-size: 17px; word-break: break-all; }
+@R .profileAvatar { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%; display: grid; place-items: center; background: #fffdf7 !important; border: 3px solid #ffc0d2; color: #ff8db1 !important; }
+@R .profileAvatar svg { width: 30px; height: 30px; color: #ff8db1; }
+@R .profileStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+@RT .profileStats a { display: grid; justify-items: center; gap: 0; padding: 10px 6px; background: #fffdf7 !important; border: 3px solid #d5e3f3 !important; border-radius: 26px !important; box-shadow: var(--ck-sticker); text-align: center; }
+@RT .profileStats a:nth-child(2) { border-color: #f8cbda !important; }
+@RT .profileStats a:nth-child(3) { border-color: #f6dfa8 !important; }
+@R .profileStats b { font-size: 32px; line-height: 1; color: var(--ck-price); }
+@R .profileStats span { font-size: 16px; color: var(--ck-ink2); }
+@R .profileQuickGrid { display: grid; gap: 10px; margin-bottom: 14px; }
+@RT .profileQuickGrid a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fffdf7 !important; border: 3px solid #d5e3f3 !important; border-radius: 28px !important; box-shadow: var(--ck-sticker); color: var(--ck-ink) !important; }
+@R .profileQuickGrid a > svg:first-child { width: 40px; height: 40px; padding: 9px; box-sizing: border-box; border-radius: 50%; background: #ffe3ec; color: #e8648f; flex: 0 0 auto; }
+@R .profileQuickGrid a > span { flex: 1; min-width: 0; display: grid; gap: 1px; }
+@R .profileQuickGrid b { font-size: 21px; }
+@R .profileQuickGrid small { font-size: 16px; }
+@R .profileQuickGrid a > svg:last-child { color: #ff8db1; flex: 0 0 auto; }
+@R .profileGrid { display: grid; gap: 14px; }
+@R .profileAdminActions { display: grid; grid-template-columns: 1fr; gap: 14px; margin: 6px 0 0; align-items: stretch; }
+@RT .profileAdminActions .button, @RT .profileAdminActions button { box-sizing: border-box; width: 100%; min-height: 56px; margin: 0; padding: 8px 22px; gap: 10px; font-size: 21px; text-align: center; white-space: nowrap; }
+@R .profileAdminActions svg { width: 22px; height: 22px; flex: 0 0 22px; margin: 0; }
+@R .profileAccountActions { align-self: stretch; display: flex; flex-direction: column; }
+@R .profileAccountActions .profileAdminActions { margin-top: auto; padding-top: 6px; }
+
+/* ------------------------------ checkout, delivery, coupons ------------------------------ */
+@R .checkoutLayout { display: grid; gap: 16px; }
+@R .checkoutMain, @R .checkoutAside { display: grid; gap: 16px; align-content: start; }
+@R .checkoutIntro h1 { font-size: 38px; line-height: 1.02; margin: 4px 0 6px; transform: rotate(-1deg); transform-origin: left; text-shadow: var(--ck-halo); }
+@R .savedDelivery { display: grid; gap: 2px; padding: 12px 14px; margin: 10px 0; background: #fff4d6; border: 2px dashed #f1cd78; border-radius: 22px; font-size: 19px; }
+@R .locationActions { margin: 8px 0; }
+@R .manualDeliveryForm { display: grid; gap: 12px; margin-top: 10px; }
+@R .defaultDeliveryChoice { display: flex !important; align-items: center; gap: 10px; font-weight: 400; font-size: 17px; }
+@R .couponApplyRow { display: flex; gap: 10px; align-items: center; }
+@R .couponApplyRow input { flex: 1; min-width: 0; }
+@R .couponApplied { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-top: 10px; background: var(--ck-mint); border: 2px solid #b5e2c4; border-radius: 22px; color: var(--ck-mint-t); }
+
+/* ------------------------------ notifications, rewards, debt ------------------------------ */
+@RT .notificationCard { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-bottom: 12px; text-align: left; min-height: 0; text-shadow: none; font-size: 19px; border-bottom-width: 3px !important; color: var(--ck-ink) !important; border-radius: 28px !important; }
+@RT .notificationCard.unread { border-color: #ffb0c8 !important; background: #fff6f9 !important; }
+@R .notificationCard b { font-size: 21px; display: block; }
+@R .notificationCard small { display: block; font-size: 16px; font-weight: 400; }
+@R .notificationCard > i { width: 12px; height: 12px; border-radius: 50%; background: var(--ck-red); flex: 0 0 auto; }
+@R .notificationIcon { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; display: grid; place-items: center; background: #ffe3ec; color: #e8648f; }
+@R .grow { flex: 1; min-width: 0; }
+@RT .rewardTabs { display: flex; gap: 10px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+@RT .rewardTabs button { min-height: 46px; padding: 4px 20px; background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #d2dcea !important; border-bottom-width: 3px !important; text-shadow: none; font-size: 19px; flex: 0 0 auto; }
+@RT .rewardTabs button.on { background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; text-shadow: 0 2px 0 rgba(200, 80, 120, .3); }
+@R .rewardGrid { display: grid; gap: 14px; margin-bottom: 14px; }
+@R .couponCard, @R .rewardStandalone { padding: 16px; display: grid; gap: 10px; }
+@R .rewardStandalone { grid-auto-flow: column; grid-template-columns: auto 1fr auto; align-items: center; }
+@R .couponCard h2, @R .rewardStandalone h2 { font-size: 30px; margin: 2px 0; }
+@R .couponCard > div:first-child b { color: var(--ck-price); font-size: 24px; }
+@R .couponCardFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 3px dotted #d5e3f3; padding-top: 10px; }
+@R .rewardIcon, @R .statIcon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #ffe3ec; color: #e8648f; }
+@RT .debtHero { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px; margin-bottom: 14px; background: linear-gradient(135deg, #ffe3ec, #fff3cf 60%, #dff0ff) !important; border: 3px solid #f8c3d4 !important; border-radius: 34px !important; box-shadow: var(--ck-sticker); color: var(--ck-ink) !important; }
+@R .debtHero h1 { font-size: 52px; line-height: 1; margin: 4px 0; text-shadow: var(--ck-halo); }
+@R .debtOrb { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: #fffdf7; border: 3px solid #ffc0d2; color: #ff8db1; flex: 0 0 auto; }
+@R .debtStats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+@R .debtStats > div { padding: 12px 14px; display: grid; gap: 2px; }
+@R .debtStats small { font-size: 16px; }
+@R .debtStats b { font-size: 26px; }
+@R .debtInterest { color: #c2456f; }
+@R .debtPaid { color: var(--ck-mint-t); }
+@R .debtMethodTabs { display: flex; gap: 10px; margin: 10px 0; }
+@RT .debtMethodTabs button { flex: 1; background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #d2dcea !important; border-bottom-width: 3px !important; text-shadow: none; font-size: 19px; }
+@RT .debtMethodTabs button.active { background: #ff9fbe !important; color: #fff !important; border-color: #ff8db1 !important; }
+@R .debtPayRow { display: grid; gap: 10px; }
+@R .debtQrPayment { display: grid; gap: 14px; justify-items: center; }
+@R .debtQrForm { display: grid; gap: 12px; width: 100%; }
+@R .qrFrame { padding: 10px; background: #fff; border: 3px solid #c9dcf0; border-radius: 26px; }
+@R .qrFrame img { max-width: 220px; width: 100%; display: block; }
+
+/* ------------------------------ messages / support chat ------------------------------ */
+@R .secretCodeHeading { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+@R .secretCodeHeading > svg { color: #ff8db1; width: 30px; height: 30px; flex: 0 0 auto; }
+@R .secretCodeHeading b { font-size: 22px; display: block; }
+@R .secretCodeEntry { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+@R .secretCodeEntry input { flex: 1; min-width: 150px; }
+@R .secretActiveLabel { display: inline-flex; align-items: center; gap: 8px; color: var(--ck-mint-t); font-weight: 700; flex: 1; }
+@R .supportThreads { display: grid; gap: 10px; margin-bottom: 14px; }
+@RT .supportThread { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; color: var(--ck-ink) !important; text-shadow: none; border-bottom-width: 3px !important; border-radius: 28px !important; font-size: 19px; }
+@RT .supportThread.active { border-color: #ff9fbe !important; }
+@R .supportThreadIcon { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; display: grid; place-items: center; background: #e8f2ff; color: #4f6fb0; }
+@R .chatPanel { padding: 14px; margin-bottom: 16px; }
+@R .chatHeader { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+@R .chatHeader b { font-size: 22px; display: block; }
+@R .chatMessages { display: grid; gap: 10px; max-height: 52vh; overflow-y: auto; padding: 4px; }
+@RT .chatBubble { max-width: 86%; padding: 10px 14px; border-radius: 22px; font-size: 19px; line-height: 1.3; box-shadow: none; }
+@RT .chatBubble.theirs { background: #eaf4ff !important; color: var(--ck-ink) !important; border: 2px solid #bcd7f2; border-bottom-left-radius: 6px; justify-self: start; }
+@RT .chatBubble.mine { background: #ffd0de !important; color: var(--ck-ink) !important; border: 2px solid #ffb0c8; border-bottom-right-radius: 6px; justify-self: end; }
+@R .chatBubble p { color: inherit; margin: 0; }
+@R .chatBubble small { display: block; font-size: 14px; margin-top: 4px; opacity: .8; }
+@RT .chatComposer { display: flex; align-items: center; gap: 8px; padding: 8px; margin-top: 10px; background: #fffdf7 !important; border: 3px solid #cfe0f2; border-radius: 28px; }
+@R .chatComposer input, @R .chatComposer textarea { flex: 1; min-width: 0; border-width: 2px; }
+@R .chatRewardCard, @R .rewardIcon + .rewardBody { border-radius: 22px; }
+@R .chatRewardCard { display: flex; gap: 12px; padding: 12px; margin-top: 8px; background: #fff4d6; border: 2px dashed #f1cd78; }
+@R .attachmentPreview { display: flex; align-items: center; gap: 10px; }
+@R .attachmentPreview img { width: 56px; height: 56px; border-radius: 16px; object-fit: cover; }
+
+/* ------------------------------ empty and loading ------------------------------ */
+@R .empty { text-align: center; padding: 18px 12px; }
+@R .empty svg { display: none; }
+@R .empty::before { content: ''; display: block; width: 130px; height: 120px; margin: 0 auto 8px; background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat; }
+@R .empty h3 { font-size: 26px; margin: 0; }
+@R .empty p { margin: 4px 0 0; }
+@R .marketLoading { display: flex; align-items: center; gap: 14px; justify-content: center; padding: 20px 8px; }
+@R .marketLoadingOrb { background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat !important; border: 0 !important; box-shadow: none !important; width: 84px; height: 84px; flex: 0 0 auto; }
+@R .marketLoadingOrb img { display: none; }
+@R .loader { text-align: center; padding: 26px 0; }
+@R .loader .logo { background: url('/chiikawa/mochi-happy.svg') center / contain no-repeat !important; border: 0 !important; box-shadow: none !important; width: 90px; height: 84px; margin: 0 auto 6px; }
+@R .loader .logo img { display: none; }
+@R .loaderGlow { display: none; }
+@R .loaderDots i { background: #ff9fbe !important; }
+@RT .pwaInstall { bottom: 132px; border-radius: 28px !important; border: 3px solid #cfe0f2 !important; background: #fffdf7 !important; }
+
+/* ------------------------------ bottom navigation ------------------------------ */
+@RT nav.bottom {
+  bottom: 28px; display: flex; align-items: stretch; gap: 2px; background: #fffdf7 !important; border: 3px solid #c5d9ef !important;
+  border-radius: 38px 38px 34px 34px / 40px 40px 34px 34px !important; padding: 7px 8px; box-shadow: 0 5px 0 rgba(125, 150, 190, .3) !important; backdrop-filter: none; z-index: 30; isolation: isolate;
+}
+@R nav.bottom::after {
+  content: ''; position: absolute; left: 50%; bottom: -40px; width: 168px; height: 60px; transform: translateX(-50%); z-index: -1; pointer-events: none;
+  background: url('/chiikawa/trio.svg') center bottom / contain no-repeat;
+}
+@RT nav.bottom a {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #4f6fb0; font-size: 15px; font-weight: 700; line-height: 1.1; gap: 2px; border-radius: 26px !important; padding: 7px 2px; text-align: center;
+}
+@R nav.bottom a svg { width: 26px; height: 26px; stroke-width: 2.3; }
+@RT nav.bottom a.active { background: #ffc4d4 !important; color: var(--ck-ink) !important; box-shadow: 0 3px 0 rgba(235, 120, 160, .35); }
+@R nav.bottom a.active svg { color: #e8648f; }
+
+/* ------------------------------ mascots: picture + position + size + hide (read by the Studio, keep as is) ------------------------------ */
+@R body { isolation: isolate; }
+@R body::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 340px; z-index: -1; pointer-events: none;
+  --ck-cw1: calc(1600px * var(--ck-s-clouds, 1)); --ck-cw2: calc(1000px * var(--ck-s-clouds, 1));
+  --ck-cy1: calc(4px + var(--ck-dy-clouds, 0px)); --ck-cy2: calc(78px + var(--ck-dy-clouds, 0px));
+  background-image: var(--ck-m-clouds, url('/chiikawa/clouds.svg')), var(--ck-m-clouds, url('/chiikawa/clouds.svg'));
+  background-repeat: repeat-x, repeat-x;
+  background-size: var(--ck-cw1) auto, var(--ck-cw2) auto;
+  background-position: 0 var(--ck-cy1), -380px var(--ck-cy2);
+  display: var(--ck-d-clouds, block);
+  animation: ckCloudsLeft var(--ck-cloud-t, 80s) linear infinite;
+}
+@keyframes ckCloudsLeft {
+  from { background-position: 0 var(--ck-cy1), -380px var(--ck-cy2); }
+  to { background-position: calc(var(--ck-cw1) * -1) var(--ck-cy1), calc(-380px - var(--ck-cw2)) var(--ck-cy2); }
+}
+@R .brandrow::before, @R .brandrow::after { content: ''; position: absolute; top: -20px; width: 92px; height: 72px; background-repeat: no-repeat; background-size: contain; background-position: center top; pointer-events: none; }
+@R .brandrow::before { left: -6px; transform: rotate(-8deg); }
+@R .brandrow::after { right: -2px; transform: rotate(7deg); }
+@R .brandrow h1::after { content: ''; display: inline-block; width: 38px; height: 38px; margin-left: 8px; vertical-align: -6px; background: url('/chiikawa/mochi.svg') center / contain no-repeat; transform: rotate(8deg); }
+@R .brandrow::before { background-image: var(--ck-m-headLeft, url('/chiikawa/mochi-happy.svg')); translate: var(--ck-dx-headLeft, 0px) var(--ck-dy-headLeft, 0px); scale: var(--ck-s-headLeft, 1); display: var(--ck-d-headLeft, block); }
+@R .brandrow::after { background-image: var(--ck-m-headRight, url('/chiikawa/bun-happy.svg')); translate: var(--ck-dx-headRight, 0px) var(--ck-dy-headRight, 0px); scale: var(--ck-s-headRight, 1); display: var(--ck-d-headRight, block); }
+@R .brandrow h1::after { background-image: var(--ck-m-title, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-title, 0px) var(--ck-dy-title, 0px); scale: var(--ck-s-title, 1); display: var(--ck-d-title, inline-block); }
+@R .search::after { background-image: var(--ck-m-search, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-search, 0px) var(--ck-dy-search, 0px); scale: var(--ck-s-search, 1); display: var(--ck-d-search, block); }
+@R .product::after { background-image: var(--ck-m-cardA, url('/chiikawa/mochi-happy.svg')); translate: var(--ck-dx-cards, 0px) var(--ck-dy-cards, 0px); scale: var(--ck-s-cards, 1); display: var(--ck-d-cards, block); }
+@R .product:nth-child(3n+2)::after { background-image: var(--ck-m-cardB, url('/chiikawa/bun-happy.svg')); }
+@R .product:nth-child(3n)::after { background-image: var(--ck-m-cardC, url('/chiikawa/kiki-happy.svg')); }
+@R .top .miniLogo { background-image: var(--ck-m-pageLogo, url('/chiikawa/mochi.svg')); translate: var(--ck-dx-pageLogo, 0px) var(--ck-dy-pageLogo, 0px); scale: var(--ck-s-pageLogo, 1); visibility: var(--ck-v-pageLogo, visible); }
+@R nav.bottom::after { background-image: var(--ck-m-nav, url('/chiikawa/trio.svg')); translate: var(--ck-dx-nav, 0px) var(--ck-dy-nav, 0px); scale: var(--ck-s-nav, 1); display: var(--ck-d-nav, block); }
+@R .empty::before { background-image: var(--ck-m-empty, url('/chiikawa/mochi-happy.svg')); translate: var(--ck-dx-empty, 0px) var(--ck-dy-empty, 0px); scale: var(--ck-s-empty, 1); display: var(--ck-d-empty, block); }
+@R .walletGlow { background-image: var(--ck-m-wallet, url('/chiikawa/mochi-box.svg')); translate: var(--ck-dx-wallet, 0px) var(--ck-dy-wallet, 0px); scale: var(--ck-s-wallet, 1); visibility: var(--ck-v-wallet, visible); }
+@R .product .ph { background-image: var(--ck-m-noPhoto, url('/chiikawa/mochi-box.svg')); }
+@R .marketLoadingOrb, @R .loader .logo { background-image: var(--ck-m-loading, url('/chiikawa/mochi-happy.svg')) !important; }
+
+/* ------------------------------ phones and wide screens ------------------------------ */
+@media (max-width: 759px) {
+  @R .detail { grid-template-columns: minmax(0, 1fr); }
+  @R .detail > * { min-width: 0; }
+}
+@media (max-width: 440px) {
+    @R .homeActions { gap: 8px; }
+    @RT nav.bottom { padding: 6px 5px; }
+  @RT nav.bottom a { font-size: 12.5px; padding: 6px 1px; gap: 1px; }
+  @R nav.bottom a svg { width: 23px; height: 23px; }
+  @R nav.bottom::after { width: 140px; }
+  @R .pcopy strong { font-size: 19px; }
+  @R .pcopy span { font-size: 24px; }
+  @RT .categoryRail button { font-size: 18px; min-height: 46px; padding: 6px 20px; }
+}
+@media (max-width: 350px) {
+    @RT nav.bottom a { font-size: 10.5px; }
+  @R nav.bottom a svg { width: 20px; height: 20px; }
+  @R .debtStats { grid-template-columns: 1fr; }
+}
+@media (min-width: 760px) {
+  @R .checkoutLayout { grid-template-columns: 1.4fr 1fr; align-items: start; }
+  @R .profileGrid { grid-template-columns: 1fr 1fr; }
+  @R .rewardGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ------------------------------ respect reduced motion ------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  @R * { animation: none !important; transition: none !important; }
+}
+
+/* ------------------------------ Snacks page + Snacks button + looping videos (v13) ------------------------------ */
+/* 7+ items in the bottom bar (Snacks, Debt): a little tighter so everything fits */
+@media (max-width: 440px) {
+  @RT nav.bottom:has(> a:nth-child(7)) a { font-size: 11px; padding: 6px 0; }
+  @R nav.bottom:has(> a:nth-child(7)) a svg { width: 21px; height: 21px; }
+  @RT nav.bottom:has(> a:nth-child(8)) a { font-size: 9.5px; }
+}
+@R .snacksIntro { position: relative; padding: 16px 18px 18px; margin: 4px 0 16px; background: #fff8e4; border: 3px dashed #f6dd9f; border-radius: var(--ck-blob); box-shadow: var(--ck-sticker); }
+@R .snacksIntro h1 { margin: 2px 0 4px; }
+@R .snacksIntro::after { content: '✦'; position: absolute; right: 16px; top: 10px; color: #ffb7cf; font-size: 26px; }
+@R .snacksGrid { margin-bottom: 8px; }
+@RT .snacksGrid .product { --c-ph: transparent; }
+@R .snacksGrid .product > img { aspect-ratio: 1 / 1; padding: 16px; background: transparent; filter: drop-shadow(0 6px 0 rgba(56, 50, 87, .10)); transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+@R .snacksGrid .product:hover > img { transform: scale(1.06) rotate(-2deg); }
+@R .snacksLocked .button { margin-top: 12px; }
+@R .snacksLocked > svg { display: block; margin: 0 auto 8px; width: 56px; height: 56px; color: #ffb06a; }
+@R .snacksLocked::before { display: none; }
+@R .ynVid { border: 3px solid #fffdf7; box-sizing: border-box; box-shadow: var(--ck-sticker); }

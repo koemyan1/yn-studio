@@ -7,8 +7,8 @@ import {
 import { FloatingBar, QBtn, QColor, QPic, QRange, QSelect, QSep, type Anchor } from './QuickBar';
 import { supabase } from './supabase';
 import {
-  COMPONENTS, DEFAULT_TOKENS, PAGES, TEXT_KEYS, THEME_PRESETS,
-  allComponents, blankTheme, normalizeTheme, type CustomPart, type PropName, type StyleProps,
+  COMPONENTS, DEFAULT_TOKENS, PAGES, PAGE_OVERRIDE_FIELDS, TEXT_KEYS, THEME_PRESETS,
+  allComponents, blankTheme, effectiveTheme, normalizeTheme, pageKeyFor, pageOverrideCount, type CustomPart, type PropName, type StyleProps,
 } from './secretTheme';
 import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, REF_H, REF_W, STORE_PAGES, blankElement, screenScale, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
@@ -44,6 +44,15 @@ export async function uploadThemeImage(file: File, maxSide = 1100): Promise<stri
     if (!up.error) return supabase.storage.from('theme-assets').getPublicUrl(path).data.publicUrl;
   } catch { /* fall back */ }
   return data;
+}
+
+/** Uploads a video to the public theme-assets bucket (Supabase's normal upload limit is 50 MB – short looping clips are best). */
+export async function uploadThemeVideo(file: File): Promise<string> {
+  const ext = (file.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp4';
+  const path = `themes/videos/${crypto.randomUUID()}.${ext}`;
+  const up = await supabase.storage.from('theme-assets').upload(path, file, { contentType: file.type || 'video/mp4', cacheControl: '31536000' });
+  if (up.error) throw new Error(up.error.message + ' — use a shorter / smaller clip (under 50 MB), or paste a link to a hosted video instead.');
+  return supabase.storage.from('theme-assets').getPublicUrl(path).data.publicUrl;
 }
 
 function ColorField({ label, value, fallback, onChange, onClear }: { label: string; value?: string; fallback: string; onChange: (v: string) => void; onClear?: () => void }) {
@@ -88,6 +97,24 @@ function PicButton({ label, has, onPick, onClear }: { label: string; has: boolea
 
 const rnd = (a: number, b: number) => Math.round(a + Math.random() * (b - a));
 
+/** Where an edit goes: 'page' = only the page being edited (Home, Cart…), 'all' = every page. */
+type Scope = 'page' | 'all';
+/**
+ * Apply an edit to the shared theme (scope "all") or to one page's own bucket (scope "page").
+ * `fn` receives the bucket (same field names either way: components, mascotPos, mascotImages, texts, customParts)
+ * plus the shared theme, and returns the fields to replace.
+ */
+function writeScoped(c: any, scope: Scope, pageKey: string, fn: (bucket: any, shared: any) => Record<string, any>): any {
+  if (scope === 'all') return { ...c, ...fn(c, c) };
+  const all = { ...(c.pageOverrides || {}) };
+  const cur = all[pageKey] || {};
+  const next: Record<string, any> = { ...cur, ...fn(cur, c) };
+  for (const f of PAGE_OVERRIDE_FIELDS) if (next[f] && !Object.keys(next[f]).length) delete next[f];
+  if (Object.keys(next).length) all[pageKey] = next; else delete all[pageKey];
+  return { ...c, pageOverrides: all };
+}
+const PAGE_LABELS: Record<string, string> = { ...Object.fromEntries(ELEMENT_PAGES.map(p => [p.key, p.label])), other: 'this page' };
+
 export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const [themes, setThemes] = useState<any[]>([]);
   const [selected, setSelected] = useState('');
@@ -106,6 +133,8 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   useEffect(() => { tappedRef.current = {}; setTapped({}); }, [selected]);
   const [elementId, setElementId] = useState('');
   const [pauseMotion, setPauseMotion] = useState(false);
+  /** Edits go to the page being previewed by default, so Home changes never leak into Cart, Wallet… */
+  const [scope, setScope] = useState<Scope>('page');
   const [cats, setCats] = useState<any[]>([]);
   const [mapFlags, setMapFlags] = useState<Record<string, boolean>>({});
   const [mapMsg, setMapMsg] = useState('');
@@ -135,6 +164,18 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const dirty = useMemo(() => JSON.stringify({ n: name, c: code, a: active, cfg }) !== snapshot, [name, code, active, cfg, snapshot]);
   const productId = prods[0]?.id || '';
   const cfgRef = useRef<any>(cfg); cfgRef.current = cfg;
+  const pageKey = pageKeyFor(curPath);
+  const pageLabel = PAGE_LABELS[pageKey] || 'this page';
+  const scopeRef = useRef<Scope>(scope); scopeRef.current = scope;
+  const pathRef = useRef(curPath); pathRef.current = curPath;
+  /** Edit the shared theme or the current page's own edits (path = page the preview reported, if any). */
+  const edit = (fn: (bucket: any, shared: any) => Record<string, any>, path?: string) =>
+    setCfg((c: any) => writeScoped(c, scopeRef.current, pageKeyFor(path || pathRef.current), fn));
+  /** What the preview shows right now on this page (shared + the page's own edits). */
+  const eff = useMemo(() => effectiveTheme(cfg, pageKey), [cfg, pageKey]);
+  /** What the panels show: in "every page" mode the shared values, in "this page" mode the merged values. */
+  const view = scope === 'all' ? cfg : eff;
+  const ownCount = pageOverrideCount(cfg, pageKey);
 
   async function loadThemes() {
     const r = await supabase.from('site_themes').select('*').order('created_at', { ascending: false });
@@ -196,11 +237,11 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         setTapped(tappedRef.current);
       }
       if (d.type === 'yn-theme-part-move' && typeof d.key === 'string') {
-        setCfg((c: any) => {
-          const cur = { ...(c.components?.[d.key] || {}), moveX: Number(d.x) || 0, moveY: Number(d.y) || 0 };
-          const cps = d.key.startsWith('auto-') && !c.customParts?.[d.key] && tappedRef.current[d.key] ? { ...(c.customParts || {}), [d.key]: tappedRef.current[d.key] } : (c.customParts || {});
-          return { ...c, components: { ...(c.components || {}), [d.key]: cur }, customParts: cps };
-        });
+        edit((b: any, shared: any) => {
+          const cur = { ...(b.components?.[d.key] || {}), moveX: Number(d.x) || 0, moveY: Number(d.y) || 0 };
+          const cps = d.key.startsWith('auto-') && !b.customParts?.[d.key] && !shared.customParts?.[d.key] && tappedRef.current[d.key] ? { ...(b.customParts || {}), [d.key]: tappedRef.current[d.key] } : (b.customParts || {});
+          return { components: { ...(b.components || {}), [d.key]: cur }, customParts: cps };
+        }, typeof d.path === 'string' ? d.path : undefined);
       }
       if (d.type === 'yn-theme-deselect') setSelKind('');
       if (d.type === 'yn-theme-anchor') setAnchor(d.rect && d.hasRect !== false ? d.rect : null);
@@ -231,13 +272,14 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
           image, name: ((g?.label || 'Mascot').replace(/\s*\(.*\)$/, '') + ' copy').slice(0, 40),
           x: ex, y: ey, w: ew, h: 0, pin,
           anim: { type: motion.type as any, speed: motion.speed },
+          pages: scopeRef.current === 'page' ? [pageKeyFor(typeof d.path === 'string' ? d.path : pathRef.current)] : [],
         }, (cur.elements || []).length + 1);
         setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
         setElementId(e.id); setSelKind('element'); setMode('edit');
         setMsg(box ? (pin === 'page' ? 'Copied. The new picture sits next to the original and scrolls with the page, just like it. Drag it where you want it.' : 'Copied. The new picture sits next to the original – drag it where you want it.') : 'That mascot is not on this page, so the copy was put in the middle. Drag it where you want it.');
       }
       if (d.type === 'yn-theme-mascot-select') { setMascotGroup(d.group); setSelKind('mascot'); }
-      if (d.type === 'yn-theme-mascot-patch') setCfg((c: any) => ({ ...c, mascotPos: { ...(c.mascotPos || {}), [d.group]: { ...((c.mascotPos || {})[d.group] || {}), ...d.patch } } }));
+      if (d.type === 'yn-theme-mascot-patch') edit((b: any) => ({ mascotPos: { ...(b.mascotPos || {}), [d.group]: { ...((b.mascotPos || {})[d.group] || {}), ...d.patch } } }), typeof d.path === 'string' ? d.path : undefined);
       if (d.type === 'yn-theme-element-patch') setCfg((c: any) => ({ ...c, elements: (c.elements || []).map((x: ThemeEl) => (x.id === d.id ? { ...x, ...d.patch } : x)) }));
     };
     window.addEventListener('message', onMsg);
@@ -246,22 +288,37 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
 
   const patch = (k: string, v: any) => setCfg((c: any) => ({ ...c, [k]: v }));
   const patchIn = (group: string, k: string, v: any) => setCfg((c: any) => ({ ...c, [group]: { ...(c[group] || {}), [k]: v } }));
-  const setProp = (key: string, prop: PropName, v: any) => setCfg((c: any) => {
-    const cur = { ...(c.components?.[key] || {}) };
-    if (v === undefined || v === '' || v === false) delete (cur as any)[prop]; else (cur as any)[prop] = v;
-    const components = { ...(c.components || {}) };
+  /** Wording changes follow the “this page / every page” switch. Empty = use the shared (or normal) wording. */
+  const setText = (key: string, v: string) => edit((b: any) => { const texts = { ...(b.texts || {}) }; if (v) texts[key] = v; else delete texts[key]; return { texts }; });
+  const setProp = (key: string, prop: PropName, v: any) => edit((b: any, shared: any) => {
+    const cur: any = { ...(b.components?.[key] || {}) };
+    const onePage = scopeRef.current === 'page';
+    if (v === undefined || v === '' || v === false) {
+      // "off" on one page must beat an "on" that the shared theme has (e.g. show a part here that is hidden everywhere else)
+      if (onePage && v === false && (shared.components?.[key] as any)?.[prop]) cur[prop] = false; else delete cur[prop];
+    } else cur[prop] = v;
+    const components = { ...(b.components || {}) };
     if (Object.keys(cur).length) components[key] = cur; else delete components[key];
-    const customParts = key.startsWith('auto-') && !c.customParts?.[key] && tappedRef.current[key] ? { ...(c.customParts || {}), [key]: tappedRef.current[key] } : (c.customParts || {});
-    return { ...c, components, customParts };
+    const customParts = key.startsWith('auto-') && !b.customParts?.[key] && !shared.customParts?.[key] && tappedRef.current[key] ? { ...(b.customParts || {}), [key]: tappedRef.current[key] } : (b.customParts || {});
+    return { components, customParts };
   });
   /** Move a part a little (arrow buttons in the toolbar). */
-  const nudge = (key: string, dx: number, dy: number) => setCfg((c: any) => {
-    const cur: any = { ...(c.components?.[key] || {}) };
-    cur.moveX = Math.max(-600, Math.min(600, (Number(cur.moveX) || 0) + dx));
-    cur.moveY = Math.max(-600, Math.min(600, (Number(cur.moveY) || 0) + dy));
-    const customParts = key.startsWith('auto-') && !c.customParts?.[key] && tappedRef.current[key] ? { ...(c.customParts || {}), [key]: tappedRef.current[key] } : (c.customParts || {});
-    return { ...c, components: { ...(c.components || {}), [key]: cur }, customParts };
+  const nudge = (key: string, dx: number, dy: number) => edit((b: any, shared: any) => {
+    const cur: any = { ...(b.components?.[key] || {}) };
+    const base: any = scopeRef.current === 'page' ? (effectiveTheme(shared, pageKeyFor(pathRef.current)).components?.[key] || {}) : cur;
+    cur.moveX = Math.max(-600, Math.min(600, (Number(base.moveX) || 0) + dx));
+    cur.moveY = Math.max(-600, Math.min(600, (Number(base.moveY) || 0) + dy));
+    const customParts = key.startsWith('auto-') && !b.customParts?.[key] && !shared.customParts?.[key] && tappedRef.current[key] ? { ...(b.customParts || {}), [key]: tappedRef.current[key] } : (b.customParts || {});
+    return { components: { ...(b.components || {}), [key]: cur }, customParts };
   });
+  /** Put a part back to what the shared theme says (page mode) or to the plain default (every-page mode). */
+  const resetPart = (key: string) => edit((b: any) => { const components = { ...(b.components || {}) }; delete components[key]; return { components }; });
+  /** Throw away everything this one page has of its own. */
+  const clearPage = () => {
+    if (!ownCount || !window.confirm('Remove the ' + ownCount + ' change' + (ownCount === 1 ? '' : 's') + ' made only for ' + pageLabel + '? It will look like the shared theme again. Other pages are not touched.')) return;
+    setCfg((c: any) => { const po = { ...(c.pageOverrides || {}) }; delete po[pageKeyFor(pathRef.current)]; return { ...c, pageOverrides: po }; });
+    setMsg(pageLabel + ' is back to the shared look.');
+  };
   const token = (k: string) => (
     <ColorField key={k} label={({ background: 'Page background', surface: 'Cards & surfaces', text: 'Main text', muted: 'Soft text', border: 'Borders', accent: 'Accent (buttons, highlights)', accent2: 'Accent 2 (button gradient end)' } as any)[k]}
       value={cfg[k]} fallback={(DEFAULT_TOKENS as any)[k]} onChange={v => patch(k, v)} onClear={() => patch(k, '')} />
@@ -272,6 +329,14 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (file.size > 15 * 1024 * 1024) { setMsg('Please use a picture under 15 MB.'); return; }
     setMsg('Uploading picture…');
     try { done(await uploadThemeImage(file, maxSide)); setMsg(''); } catch (e: any) { setMsg('Could not use that picture: ' + (e?.message || e)); }
+  }
+
+  /** Same for videos. */
+  async function pickVideo(file: File, done: (url: string) => void) {
+    if (!/^video\//.test(file.type) && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) { setMsg('Please choose a video file (MP4 or WebM works everywhere).'); return; }
+    if (file.size > 50 * 1024 * 1024) { setMsg('That video is over 50 MB. Please use a shorter clip, or paste a link to a hosted video.'); return; }
+    setMsg('Uploading video… this can take a minute.');
+    try { done(await uploadThemeVideo(file)); setMsg('Video added. It loops by itself.'); } catch (e: any) { setMsg('Could not upload that video: ' + (e?.message || e)); }
   }
 
   function choose(id: string) {
@@ -366,7 +431,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   /* ---- lock (like Adobe Illustrator): a locked thing cannot be selected-and-dragged, resized or changed until it is unlocked ---- */
   const lockedCount = elements.filter(x => x.locked).length
     + Object.values((cfg.mascotPos || {}) as Record<string, any>).filter(p => p?.locked).length
-    + Object.values((cfg.components || {}) as Record<string, any>).filter(p => p?.locked).length;
+    + Object.values((cfg.components || {}) as Record<string, any>).filter(p => p?.locked).length
+    + (Object.values((cfg.pageOverrides || {}) as Record<string, any>) as any[]).reduce((n: number, po: any) => n
+      + Object.values((po?.mascotPos || {}) as Record<string, any>).filter(p => p?.locked).length
+      + Object.values((po?.components || {}) as Record<string, any>).filter(p => p?.locked).length, 0);
   const lockEverything = () => { setCfg((c: any) => {
     const mascotPos = { ...(c.mascotPos || {}) };
     for (const g of MASCOT_GROUPS) if (g.handle) mascotPos[g.key] = { ...(mascotPos[g.key] || {}), locked: true };
@@ -380,11 +448,20 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
       for (const key of Object.keys(src || {})) { const { locked: _l, ...rest } = src[key] || {}; void _l; if (Object.keys(rest).length) out[key] = rest; }
       return out;
     };
-    return { ...c, elements: (c.elements || []).map((x: ThemeEl) => ({ ...x, locked: false })), mascotPos: strip(c.mascotPos), components: strip(c.components) };
+    const pageOverrides: Record<string, any> = {};
+    for (const k of Object.keys(c.pageOverrides || {})) {
+      const po = { ...(c.pageOverrides[k] || {}) };
+      if (po.mascotPos) po.mascotPos = strip(po.mascotPos);
+      if (po.components) po.components = strip(po.components);
+      for (const f of PAGE_OVERRIDE_FIELDS) if (po[f] && !Object.keys(po[f]).length) delete po[f];
+      if (Object.keys(po).length) pageOverrides[k] = po;
+    }
+    return { ...c, elements: (c.elements || []).map((x: ThemeEl) => ({ ...x, locked: false })), mascotPos: strip(c.mascotPos), components: strip(c.components), pageOverrides };
   }); setMsg('Everything is unlocked.'); };
   const patchEl = (id: string, p: Partial<ThemeEl>) => setCfg((c: any) => ({ ...c, elements: (c.elements || []).map((x: ThemeEl) => (x.id === id ? { ...x, ...p } : x)) }));
-  const addElement = (type: 'button' | 'text' | 'image', o: Partial<ThemeEl> = {}) => {
-    const e = blankElement(type, o, elements.length + 1);
+  const addElement = (type: 'button' | 'text' | 'image' | 'video', o: Partial<ThemeEl> = {}) => {
+    // A new button / text / picture belongs to the page you are looking at (Home → only Home). Switch to “Every page” to put it everywhere.
+    const e = blankElement(type, { pages: scope === 'page' && pageKey !== 'other' ? [pageKey] : [], ...o }, elements.length + 1);
     if (type === 'text') e.color = cfg.text || DEFAULT_TOKENS.text;
     setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
     setElementId(e.id); setSelKind('element'); setMode('edit');
@@ -397,15 +474,15 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     [a[i], a[j]] = [a[j], a[i]];
     return { ...c, elements: a.map((x: ThemeEl, k: number) => ({ ...x, z: k + 1 })) };
   });
-  const elLabel = (x: ThemeEl, i: number) => `${x.type === 'button' ? '🔘' : x.type === 'image' ? '🖼️' : '🔤'} ${x.name || x.text.slice(0, 22) || (x.type === 'image' ? 'Picture' : 'Element')} (${i + 1})`;
+  const elLabel = (x: ThemeEl, i: number) => `${x.type === 'button' ? '🔘' : x.type === 'image' ? '🖼️' : x.type === 'video' ? '🎬' : '🔤'} ${x.name || x.text.slice(0, 22) || (x.type === 'image' ? 'Picture' : x.type === 'video' ? 'Video' : 'Element')} (${i + 1})`;
 
   const actionNeeds = el ? (ACTION_TYPES.find(a => a.type === el.action.type)?.needs || 'none') : 'none';
   const actionGroups = Array.from(new Set(ACTION_TYPES.map(a => a.group)));
 
   /* ---------------- parts ---------------- */
-  const comps = allComponents({ customParts: { ...tapped, ...(cfg.customParts || {}) } });
+  const comps = allComponents({ customParts: { ...tapped, ...(view.customParts || {}) } });
   const def = comps.find(x => x.key === compKey) || COMPONENTS[0];
-  const cp: StyleProps = cfg.components?.[def.key] || {};
+  const cp: StyleProps = view.components?.[def.key] || {};
   const groups = Array.from(new Set(comps.map(x => x.group)));
   const field = (prop: PropName) => {
     const k = def.key;
@@ -449,25 +526,33 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const di = cfg.dark;
 
   /* ---------------- mascots (Chiikawa) ---------------- */
-  const mImgs: Record<string, string> = cfg.mascotImages || {};
-  const mPos: Record<string, any> = cfg.mascotPos || {};
+  const mImgs: Record<string, string> = view.mascotImages || {};
+  const mPos: Record<string, any> = view.mascotPos || {};
   const mg = MASCOT_GROUPS.find(g => g.key === mascotGroup) || MASCOT_GROUPS[0];
   const mp = mPos[mg.key] || {};
-  const setMPos = (patchPos: Record<string, any>) => setCfg((c: any) => {
-    const cur: Record<string, any> = { ...((c.mascotPos || {})[mg.key] || {}), ...patchPos };
-    for (const k of Object.keys(cur)) if (cur[k] === undefined || cur[k] === 0 || cur[k] === false || (k === 's' && cur[k] === 100)) delete cur[k];
-    const all = { ...(c.mascotPos || {}) };
+  const setMPos = (patchPos: Record<string, any>) => edit((b: any, shared: any) => {
+    const cur: Record<string, any> = { ...((b.mascotPos || {})[mg.key] || {}), ...patchPos };
+    const onePage = scopeRef.current === 'page';
+    const inherited: Record<string, any> = onePage ? ((shared.mascotPos || {})[mg.key] || {}) : {};
+    for (const k of Object.keys(cur)) {
+      const plain = k === 's' ? 100 : (k === 'hide' || k === 'locked') ? false : 0;
+      if (cur[k] === undefined || cur[k] === plain) {
+        // on one page, "back to normal" must still beat a different value the shared theme has
+        if (onePage && inherited[k] !== undefined && inherited[k] !== plain) cur[k] = plain; else delete cur[k];
+      }
+    }
+    const all = { ...(b.mascotPos || {}) };
     if (Object.keys(cur).length) all[mg.key] = cur; else delete all[mg.key];
-    return { ...c, mascotPos: all };
+    return { mascotPos: all };
   });
   const duplicateMascot = (group: string) => {
     setMsg('');
     frame.current?.contentWindow?.postMessage({ type: 'yn-mascot-measure', group }, window.location.origin);
   };
-  const setMImg = (slot: string, url: string) => setCfg((c: any) => {
-    const m = { ...(c.mascotImages || {}) };
+  const setMImg = (slot: string, url: string) => edit((b: any) => {
+    const m = { ...(b.mascotImages || {}) };
     if (url) m[slot] = url; else delete m[slot];
-    return { ...c, mascotImages: m };
+    return { mascotImages: m };
   });
 
   /* ---------------- floating on-screen toolbar ---------------- */
@@ -514,7 +599,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         <QSep />
         {def.props.includes('hidden') ? <QBtn label={cp.hidden ? 'Show' : 'Hide'} icon={cp.hidden ? <Eye size={16} /> : <EyeOff size={16} />} on={!!cp.hidden} onClick={() => setProp(k, 'hidden', !cp.hidden)} /> : null}
         <QBtn label="Lock" icon={glyph('🔒')} onClick={() => setProp(k, 'locked', true)} />
-        <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => setCfg((c: any) => { const components = { ...(c.components || {}) }; delete components[k]; return { ...c, components }; })} />
+        <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => resetPart(k)} />
         </>}
       </FloatingBar>
     );
@@ -531,13 +616,14 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
       </FloatingBar>
     );
   } else if (selKind === 'element' && el) {
-    const isImg = el.type === 'image';
-    const title = (el.type === 'button' ? 'Button' : isImg ? 'Picture' : 'Text') + (el.name ? ': ' + el.name : '');
+    const isVid = el.type === 'video';
+    const isImg = el.type === 'image' || isVid;
+    const title = (el.type === 'button' ? 'Button' : isVid ? 'Video' : isImg ? 'Picture' : 'Text') + (el.name ? ': ' + el.name : '');
     quickBar = (
       <FloatingBar title={title} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Elements')} moreLabel="Action & more">
         {el.locked ? <QBtn label="Unlock" icon={glyph('🔓')} on onClick={() => patchEl(el.id, { locked: false })} /> : <>
         {!isImg ? <input className="ynQText" value={el.text} placeholder="Text" onChange={e => patchEl(el.id, { text: e.target.value })} onPointerDown={e => e.stopPropagation()} /> : null}
-        <QPic label="Picture" has={!!el.image} onPick={f => pick(f, u => patchEl(el.id, { image: u, variant: el.type === 'button' && el.variant !== 'image' ? 'image' : el.variant }))} onClear={() => patchEl(el.id, { image: '', variant: el.variant === 'image' ? 'gradient' : el.variant })} />
+        {isVid ? <QBtn label="Video…" icon={glyph('🎬')} onClick={() => openMore('Elements')} /> : <QPic label="Picture" has={!!el.image} onPick={f => pick(f, u => patchEl(el.id, { image: u, variant: el.type === 'button' && el.variant !== 'image' ? 'image' : el.variant }))} onClear={() => patchEl(el.id, { image: '', variant: el.variant === 'image' ? 'gradient' : el.variant })} />}
         {!isImg && (el.variant === 'solid' || el.variant === 'gradient') ? <QColor label={el.variant === 'gradient' ? 'Colour 1' : 'Fill'} value={el.background} fallback="#7c3aed" onChange={v => patchEl(el.id, { background: v })} /> : null}
         {!isImg && el.variant === 'gradient' ? <QColor label="Colour 2" value={el.gradientTo} fallback="#ec4899" onChange={v => patchEl(el.id, { gradientTo: v })} /> : null}
         {!isImg ? <QColor label="Text" value={el.color} fallback="#ffffff" onChange={v => patchEl(el.id, { color: v })} /> : null}
@@ -605,9 +691,17 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             </div>
           </div>
           <p className="ynHint">
-            {mode === 'edit' ? 'Tap anything in the store to edit it right here — a toolbar pops up above it. Drag mascots and your own buttons / pictures to move them (pink corner = resize). Press Esc to close the toolbar.'
+            {mode === 'edit' ? 'Tap anything in the store to edit it right here — a toolbar pops up above it. Drag mascots and your own buttons / pictures to move them (pink corner = resize). Press Esc to close the toolbar. Open another page from the list above to edit that page separately.'
               : 'Try it: browse the real store, tap your buttons and watch the animations.'} <code>{curPath}</code>
           </p>
+          <div className="ynScope" role="group" aria-label="Where your changes go">
+            <span className="ynScopeText">Your changes go to</span>
+            <div className="ynSeg">
+              <button type="button" className={scope === 'page' ? 'on' : ''} onClick={() => setScope('page')} title="Only the page you are looking at changes">Only {pageLabel}</button>
+              <button type="button" className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')} title="The same change is used on every page">Every page</button>
+            </div>
+            {ownCount > 0 ? <button type="button" className="ynLink" onClick={clearPage} title="Remove what was changed only for this page">Clear {pageLabel}’s own changes ({ownCount})</button> : null}
+          </div>
           <div className="ynStage" ref={stage}>
             <div className="ynFrameWrap">
               <iframe ref={frame} key={frameSrc} name="yn-theme-preview" src={frameSrc} title="Live storefront preview" style={{ width: widths[device] ? widths[device] : '100%' }} />
@@ -642,7 +736,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
 
           {tab === 'Look' && <div className="ynPane">
             <button type="button" className="ynSurprise" onClick={surprise}><Sparkles size={16} /> Surprise me — random colours &amp; background</button>
-            <p className="ynHint">Empty colour = the normal YN Studio look. Change only what you want.</p>
+            <p className="ynHint">Empty colour = the normal YN Studio look. Change only what you want. Colours, fonts and the dark mode are shared by every page; a different background for one page is set in <b>Layout &amp; pages</b>.</p>
             <div className="ynGrid">{['background', 'surface', 'text', 'muted', 'border', 'accent', 'accent2'].map(token)}</div>
 
             <h4>Background of everything</h4>
@@ -821,16 +915,17 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
           </div>}
 
           {tab === 'Elements' && <div className="ynPane">
-            <p className="ynHint">Add buttons, text and pictures on top of the store. <b>Drag them in the preview</b> to place them, tap the pink corner to resize. Give a button an action, a look, and even make it fly around the screen.</p>
+            <p className="ynHint">Add buttons, text, pictures and looping videos on top of the store. <b>Drag them in the preview</b> to place them, tap the pink corner to resize. Give a button an action, a look, and even make it fly around the screen. {scope === 'page' ? <>New ones are put <b>only on {pageLabel}</b>.</> : <>New ones are put on <b>every page</b>.</>}</p>
             <div className="ynRow">
               <button type="button" onClick={() => addElement('button')}><Plus size={15} /> Button</button>
               <button type="button" className="secondary" onClick={() => addElement('text')}><Plus size={15} /> Text</button>
               <label className="button secondary ynDropBtn"><ImagePlus size={15} /> Picture<input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void pick(f, u => addElement('image', { image: u })); }} /></label>
+              <label className="button secondary ynDropBtn">🎬 Video<input type="file" accept="video/*" onChange={e => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void pickVideo(f, u => addElement('video', { video: u })); }} /></label>
             </div>
             {elements.length > 0 && <div className="ynElList">
               {elements.map((x, i) => (
                 <div key={x.id} className={'ynElRow' + (x.id === elementId ? ' on' : '')}>
-                  <button type="button" className="ynElPick" onClick={() => { const off = x.id === elementId && selKind === 'element'; setElementId(off ? '' : x.id); setSelKind(off ? '' : 'element'); }}>{elLabel(x, i)}</button>
+                  <button type="button" className="ynElPick" onClick={() => { const off = x.id === elementId && selKind === 'element'; setElementId(off ? '' : x.id); setSelKind(off ? '' : 'element'); }}>{elLabel(x, i)}<small className="ynElWhere">{x.pages.length ? x.pages.map(k => PAGE_LABELS[k] || k).join(', ') : 'Every page'}</small></button>
                   <button type="button" className="icon" title="Move forward" onClick={() => moveEl(x.id, 1)}><ArrowUp size={14} /></button>
                   <button type="button" className="icon" title="Move backward" onClick={() => moveEl(x.id, -1)}><ArrowDown size={14} /></button>
                   <button type="button" className={'icon' + (x.locked ? ' on' : '')} title={x.locked ? 'Locked – tap to unlock' : 'Lock'} onClick={() => patchEl(x.id, { locked: !x.locked })}>{x.locked ? '🔒' : '🔓'}</button>
@@ -844,15 +939,30 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             {el && <div className="ynElement">
               <h4>Content</h4>
               <label className="ynField"><span>Name (only you see this)</span><input value={el.name} onChange={e => patchEl(el.id, { name: e.target.value })} placeholder="e.g. Khmer button" /></label>
-              {el.type !== 'image' && <label className="ynField"><span>{el.type === 'button' ? 'Button label' : 'Text'}</span><textarea rows={el.type === 'button' ? 1 : 3} value={el.text} onChange={e => patchEl(el.id, { text: e.target.value })} /></label>}
-              {el.type !== 'image' && <label className="ynField"><span>Emoji / icon (optional)</span><input value={el.icon} maxLength={4} onChange={e => patchEl(el.id, { icon: e.target.value })} placeholder="🎁" /></label>}
-              <div className="ynField"><span>{el.type === 'image' ? 'Picture' : el.type === 'button' ? 'Button picture' : 'Picture'}</span>
-                <PicButton label="picture" has={!!el.image} onPick={f => pick(f, u => patchEl(el.id, { image: u, variant: el.type === 'button' && el.variant !== 'image' ? 'image' : el.variant }))} onClear={() => patchEl(el.id, { image: '', variant: el.variant === 'image' ? 'gradient' : el.variant })} /></div>
-              {el.type !== 'image' && el.image && <>
+              {el.type !== 'image' && el.type !== 'video' && <label className="ynField"><span>{el.type === 'button' ? 'Button label' : 'Text'}</span><textarea rows={el.type === 'button' ? 1 : 3} value={el.text} onChange={e => patchEl(el.id, { text: e.target.value })} /></label>}
+              {el.type !== 'image' && el.type !== 'video' && <label className="ynField"><span>Emoji / icon (optional)</span><input value={el.icon} maxLength={4} onChange={e => patchEl(el.id, { icon: e.target.value })} placeholder="🎁" /></label>}
+              {el.type !== 'video' && <div className="ynField"><span>{el.type === 'image' ? 'Picture' : el.type === 'button' ? 'Button picture' : 'Picture'}</span>
+                <PicButton label="picture" has={!!el.image} onPick={f => pick(f, u => patchEl(el.id, { image: u, variant: el.type === 'button' && el.variant !== 'image' ? 'image' : el.variant }))} onClear={() => patchEl(el.id, { image: '', variant: el.variant === 'image' ? 'gradient' : el.variant })} /></div>}
+              {el.type !== 'image' && el.type !== 'video' && el.image && <>
                 <Select label="Use the picture as" value={el.variant === 'image' ? 'background' : 'icon'} onChange={v => v === 'background' ? patchEl(el.id, { variant: 'image', imageMode: 'background' }) : patchEl(el.id, { variant: el.variant === 'image' ? 'gradient' : el.variant, imageMode: 'icon' })}>
                   <option value="background">The whole button face</option><option value="icon">A small icon next to the text</option></Select>
                 {el.variant === 'image' && <Select label="Picture fit" value={el.fit} onChange={v => patchEl(el.id, { fit: v as any })}><option value="cover">Fill (crop)</option><option value="contain">Show whole picture</option></Select>}
                 {el.variant !== 'image' && <RangeField label="Icon size" value={el.imageSize} min={12} max={80} onChange={v => patchEl(el.id, { imageSize: v })} />}
+              </>}
+              {el.type === 'video' && <>
+                <div className="ynField"><span>Video file</span>
+                  <div className="ynRow">
+                    <label className="ynDrop">🎬 {el.video ? 'Replace video' : 'Upload video'}<input type="file" accept="video/*" onChange={e => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void pickVideo(f, u => patchEl(el.id, { video: u })); }} /></label>
+                    {el.video ? <button type="button" className="ynLink" onClick={() => patchEl(el.id, { video: '' })}>remove</button> : null}
+                  </div>
+                </div>
+                <label className="ynField"><span>…or paste a link to a video (https://…mp4)</span><input value={el.video} onChange={e => patchEl(el.id, { video: e.target.value })} placeholder="https://example.com/clip.mp4" /></label>
+                <Check checked={el.videoLoop} onChange={v => patchEl(el.id, { videoLoop: v })}>Loop forever</Check>
+                <Check checked={el.videoMuted} onChange={v => patchEl(el.id, { videoMuted: v })}>Silent (phones only start a video by themselves when it is silent)</Check>
+                <Check checked={el.videoControls} onChange={v => patchEl(el.id, { videoControls: v })}>Show play / pause buttons to customers</Check>
+                <Select label="Video fit" value={el.fit} onChange={v => patchEl(el.id, { fit: v as any })}><option value="cover">Fill (crop the edges)</option><option value="contain">Show the whole video</option></Select>
+                <RangeField label="Corner roundness" value={el.radius} min={0} max={80} onChange={v => patchEl(el.id, { radius: v })} />
+                <p className="ynHint">Tip: short MP4 clips (a few seconds, under 50 MB) work best. Drag the video in the preview to place it and use the pink corner to resize.</p>
               </>}
               {el.type === 'image' && <Select label="Picture fit" value={el.fit} onChange={v => patchEl(el.id, { fit: v as any })}><option value="contain">Show whole picture</option><option value="cover">Fill (crop)</option></Select>}
 
@@ -872,7 +982,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               {actionNeeds === 'dark' && <Select label="Mode" value={el.action.value || 'toggle'} onChange={v => patchEl(el.id, { action: { ...el.action, value: v === 'toggle' ? '' : v } })}><option value="toggle">Swap dark ⇄ light</option><option value="on">Dark</option><option value="off">Light</option></Select>}
 
               <h4>Look</h4>
-              {el.type !== 'image' && <>
+              {el.type !== 'image' && el.type !== 'video' && <>
                 <Select label="Style" value={el.variant === 'image' ? 'image' : el.variant} onChange={v => patchEl(el.id, { variant: v as any })}>
                   <option value="gradient">Gradient</option><option value="solid">Solid colour</option><option value="outline">Outline</option><option value="glass">Frosted glass</option><option value="plain">No background (text only)</option>{el.image && <option value="image">Picture</option>}
                 </Select>
@@ -924,7 +1034,11 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               {el.anim.type !== 'none' && <RangeField label="Speed" value={el.anim.speed} min={1} max={10} unit="" onChange={v => patchEl(el.id, { anim: { ...el.anim, speed: v } })} />}
 
               <h4>Where it shows</h4>
-              <p className="ynHint">Tick pages to limit it. Tick none to show it on every page.</p>
+              <p className="ynHint">Right now: <b>{el.pages.length ? el.pages.map(k => PAGE_LABELS[k] || k).join(', ') : 'every page'}</b>. Tick pages to limit it. Tick none to show it on every page.</p>
+              <div className="ynRow">
+                {pageKey !== 'other' ? <button type="button" className="secondary" onClick={() => patchEl(el.id, { pages: [pageKey] })}>Only on {pageLabel}</button> : null}
+                <button type="button" className="secondary" onClick={() => patchEl(el.id, { pages: [] })}>Every page</button>
+              </div>
               <div className="ynChecks">{ELEMENT_PAGES.map(p => <Check key={p.key} checked={el.pages.includes(p.key)} onChange={v => patchEl(el.id, { pages: v ? [...el.pages, p.key] : el.pages.filter(k => k !== p.key) })}>{p.label}</Check>)}</div>
             </div>}
           </div>}
@@ -932,17 +1046,21 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
           {tab === 'Parts' && <div className="ynPane">
             <label className="ynField"><span>Part to restyle (or tap it in the preview)</span>
               <select value={compKey} onChange={e => { setCompKey(e.target.value); setSelKind('part'); }}>{groups.map(g => <optgroup key={g} label={g}>{comps.filter(x => x.group === g).map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</optgroup>)}</select></label>
-            <p className="ynHint">Tip: tap anything in the preview, then drag it to move it, or use the sliders. A change applies to every part of the same kind (for example all product cards).</p>
+            <p className="ynHint">Tip: tap anything in the preview, then drag it to move it, or use the sliders. {scope === 'page' ? <>The change is made <b>only on {pageLabel}</b>. Pick “Every page” above the preview to change it everywhere.</> : <>The change is used on <b>every page</b>. Pick “Only …” above the preview to change just one page.</>} It applies to every part of the same kind on that page (for example all product cards).</p>
             <div className="ynGrid">{def.props.filter(p => p !== 'hidden').map(field)}</div>
             {def.props.includes('icon') && cp.icon ? <Check checked={!!cp.iconKeep} onChange={v => setProp(def.key, 'iconKeep', v)}>Keep the old icon as well</Check> : null}
             {def.props.includes('hidden') && field('hidden')}
-            <button type="button" className="secondary" onClick={() => setCfg((c: any) => { const components = { ...(c.components || {}) }; delete components[def.key]; return { ...c, components }; })}><Undo2 size={15} /> Reset “{def.label}”</button>
+            <button type="button" className="secondary" onClick={() => resetPart(def.key)}><Undo2 size={15} /> Reset “{def.label}”{scope === 'page' ? ' on ' + pageLabel : ''}</button>
           </div>}
 
           {tab === 'Text' && <div className="ynPane">
-            <p className="ynHint">Leave blank to keep the normal wording. (Customers who choose Khmer see the normal Khmer wording unless you type your own here.)</p>
-            {TEXT_KEYS.map(t => <label key={t.key} className="ynField"><span>{t.label}</span>
-              {t.multiline ? <textarea rows={2} value={cfg.texts[t.key] || ''} placeholder={t.fallback} onChange={e => patchIn('texts', t.key, e.target.value)} /> : <input value={cfg.texts[t.key] || ''} placeholder={t.fallback} onChange={e => patchIn('texts', t.key, e.target.value)} />}</label>)}
+            <p className="ynHint">Leave blank to keep the normal wording. {scope === 'page' ? <>You are changing the wording <b>only on {pageLabel}</b> (a blank box uses the shared wording).</> : <>You are changing the wording <b>on every page</b>.</>} Customers who choose Khmer see the normal Khmer wording unless you type your own here.</p>
+            {TEXT_KEYS.map(t => {
+              const own = scope === 'all' ? (cfg.texts || {})[t.key] : ((cfg.pageOverrides || {})[pageKey]?.texts || {})[t.key];
+              const shared = scope === 'all' ? '' : (cfg.texts || {})[t.key];
+              return <label key={t.key} className="ynField"><span>{t.label}</span>
+                {t.multiline ? <textarea rows={2} value={own || ''} placeholder={shared || t.fallback} onChange={e => setText(t.key, e.target.value)} /> : <input value={own || ''} placeholder={shared || t.fallback} onChange={e => setText(t.key, e.target.value)} />}</label>;
+            })}
           </div>}
 
           {tab === 'Layout & pages' && <div className="ynPane">
