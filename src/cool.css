@@ -213,3 +213,14 @@ html[data-yn-pm="on"][data-secret-preset="chiikawa"] .product::after{background-
 .ynPMa-jump{animation:ynPMJump 1.7s ease-in-out infinite}
 .ynPMa-pulse{animation:ynPMPulse 2.2s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.ynPMa{animation:none!important}}
+
+/* ---------- Pictures glued to the page (scroll with it) + lock ---------- */
+.ynOverlayPage{position:absolute;top:0;overflow:hidden;pointer-events:none;z-index:100}
+.ynElLocked.ynElEdit::after{content:'🔒';position:absolute;right:-9px;top:-9px;width:20px;height:20px;display:grid;place-items:center;font-size:12px;line-height:1;background:#fff;border-radius:50%;box-shadow:0 1px 5px #0005;pointer-events:none}
+.ynElLocked.ynElEdit{outline:1.5px dotted #8b83a3;outline-offset:4px;border-radius:8px}
+.ynMascotBox.locked{pointer-events:none;cursor:default;border-style:dotted;border-color:rgba(120,110,150,.55)}
+.ynMascotBox.locked::after{content:'🔒';position:absolute;right:-8px;top:-8px;width:18px;height:18px;display:grid;place-items:center;font-size:11px;background:#fff;border-radius:50%;box-shadow:0 1px 4px #0005}
+.ynLockBar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ynLockBar button{padding:9px 13px;font-size:13px}
+.ynElRow .icon.on{background:var(--soft,#f4efff);border-color:var(--purple,#7c3aed)}
+.admin.admin-dark .ynElRow .icon.on{background:#33265a!important}

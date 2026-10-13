@@ -25,6 +25,8 @@ export type StyleProps = {
   shadow?: 'none' | 'soft' | 'medium' | 'strong';
   fontSize?: number; fontWeight?: number; padding?: number; opacity?: number;
   hidden?: boolean; fit?: 'cover' | 'contain';
+  /** Locked in the editor (like Adobe Illustrator): cannot be dragged or changed until unlocked. Has no effect on customers. */
+  locked?: boolean;
   /** Move the part (px) without touching the page layout around it. */
   moveX?: number; moveY?: number;
   /** A picture used as the part's icon (replaces the little built-in icon of buttons / nav items). */
@@ -547,6 +549,7 @@ export function SecretThemeRuntime() {
   const [mode, setMode] = useState<OverlayMode>('edit');
   const [selEl, setSelEl] = useState('');
   const [selMascot, setSelMascot] = useState('');
+  const [paused, setPaused] = useState(false);
   const tick = useLiveTick();
   const [osTick, setOsTick] = useState(0);
   const modeRef = useRef<OverlayMode>('edit');
@@ -643,12 +646,12 @@ export function SecretThemeRuntime() {
       if (nextKind !== 'part') clicked = null;
       selKind = nextKind;
       if (typeof e.data.previewDark === 'string' && e.data.previewDark !== lastDark) { lastDark = e.data.previewDark; setDarkPref(lastDark as '' | '1' | '0'); }
-      setSelEl(selElId);
+      setSelEl(selElId); setPaused(!!e.data.pauseMotion);
       setSelMascot(e.data.selectedMascot || '');
       setDraft(e.data.config); paint();
       window.setTimeout(report, 60);
     };
-    const inOverlay = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.secretThemeOverlay, .ynMascotLayer');
+    const inOverlay = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('.secretThemeOverlay, .ynOverlayPage, .ynMascotLayer');
     const onClick = (e: MouseEvent) => {
       if (!editing()) return;
       if (inOverlay(e.target)) { e.preventDefault(); return; }
@@ -678,6 +681,7 @@ export function SecretThemeRuntime() {
       let def = componentAt(target, defs());
       if (!def && !isPageLevel(target)) { const a = autoSelectorFor(target); if (a) { const key = 'auto-' + hash36(a.selector); def = autoDefs[key] || { key, label: a.label, group: 'Tapped parts', selector: a.selector, props: AUTO_PROPS }; } }
       if (!def || !def.props.includes('moveX')) return;
+      if ((draftRef.current?.components || {})[def.key]?.locked) return;      // locked parts cannot be dragged
       // on a touch screen only the part that is already selected can be dragged (otherwise the page could not be scrolled)
       if (e.pointerType !== 'mouse' && !(selKind === 'part' && selectedKey === def.key)) return;
       const el = target.closest(def.selector) as HTMLElement | null;
@@ -748,7 +752,7 @@ export function SecretThemeRuntime() {
     <>
       <PartIcons parts={iconParts} />
       {els.length ? (
-        <ThemeOverlay elements={els} pageKey={pageKeyFor(path)} mode={preview ? mode : 'live'} selectedId={selEl}
+        <ThemeOverlay elements={els} pageKey={pageKeyFor(path)} mode={preview ? mode : 'live'} selectedId={selEl} paused={preview && paused}
           onSelect={id => { setSelEl(id); if (preview) window.parent.postMessage({ type: 'yn-theme-element-select', id }, window.location.origin); }}
           onPatch={(id, patch) => { if (preview) window.parent.postMessage({ type: 'yn-theme-element-patch', id, patch }, window.location.origin); }} />
       ) : null}

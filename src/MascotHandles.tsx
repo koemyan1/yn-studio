@@ -65,19 +65,27 @@ function measure(g: MascotGroup): Box | null {
 }
 
 /** Where a built-in mascot is right now and which picture it shows (used by "Duplicate this mascot"). */
-export function measureMascotInfo(groupKey: string): { box: Box | null; image: string } {
+export type MascotInfo = { box: Box | null; image: string; /** the mascot is glued to the glass of the screen (fixed bar) rather than to the page */ fixed: boolean; scrollY: number; column: { left: number; width: number } | null };
+export function measureMascotInfo(groupKey: string): MascotInfo {
+  const col = document.querySelector('.shop, .detail') as HTMLElement | null;
+  const cr = col ? col.getBoundingClientRect() : null;
+  const column = cr && cr.width > 40 ? { left: cr.left, width: cr.width } : null;
   const g = MASCOT_GROUPS.find(x => x.key === groupKey);
-  if (!g) return { box: null, image: '' };
+  if (!g) return { box: null, image: '', fixed: false, scrollY: window.scrollY, column };
   const box = measure(g);
   let image = '';
   const host = visibleHost(g.host);
+  // fixed bars (the bottom navigation…) do not scroll, so a copy of their mascot must not scroll either
+  let fixed = false;
+  for (let n: HTMLElement | null = host; n && n !== document.documentElement; n = n.parentElement) { if (getComputedStyle(n).position === 'fixed') { fixed = true; break; } }
+  if (host && !fixed && g.pseudo && getComputedStyle(host, g.pseudo).position === 'fixed') fixed = true;
   if (host) {
     const cs = getComputedStyle(host, g.pseudo || undefined);
     const m = /url\(["']?(.*?)["']?\)/.exec(cs.backgroundImage || '');
     if (m) image = m[1];
   }
   if (image.startsWith(window.location.origin)) image = image.slice(window.location.origin.length);
-  return { box, image };
+  return { box, image, fixed, scrollY: window.scrollY, column };
 }
 
 type Props = {
@@ -148,14 +156,14 @@ export function MascotHandles({ pos, selected, path, onSelect, onPatch }: Props)
     <div className="ynMascotLayer" aria-hidden="true">
       {MASCOT_GROUPS.filter(g => g.handle && boxes[g.key]).map(g => {
         const b = boxes[g.key];
-        const base = pos[g.key], l = live[g.key];
+        const base = pos[g.key], l = live[g.key], locked = !!base?.locked;
         // while dragging the real picture lags a frame behind, so the box follows the pointer immediately
         const shiftX = l ? l.dx - (base?.dx || 0) : 0, shiftY = l ? l.dy - (base?.dy || 0) : 0;
         return (
-          <div key={g.key} className={'ynMascotBox' + (selected === g.key ? ' on' : '')}
+          <div key={g.key} className={'ynMascotBox' + (selected === g.key ? ' on' : '') + (locked ? ' locked' : '')}
             style={{ left: b.left + shiftX, top: b.top + shiftY, width: Math.max(24, b.width), height: Math.max(24, b.height) }}
-            onPointerDown={e => start(e, g, b)} title={g.label}>
-            <span className="ynMascotTag">{g.label.replace(/\s*\(.*\)$/, '')}</span>
+            onPointerDown={locked ? undefined : e => start(e, g, b)} title={locked ? g.label + ' (locked)' : g.label}>
+            <span className="ynMascotTag">{(locked ? '🔒 ' : '') + g.label.replace(/\s*\(.*\)$/, '')}</span>
           </div>
         );
       })}

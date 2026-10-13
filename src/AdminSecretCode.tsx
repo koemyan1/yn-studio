@@ -10,7 +10,7 @@ import {
   COMPONENTS, DEFAULT_TOKENS, PAGES, TEXT_KEYS, THEME_PRESETS,
   allComponents, blankTheme, normalizeTheme, type CustomPart, type PropName, type StyleProps,
 } from './secretTheme';
-import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, STORE_PAGES, blankElement, type ThemeEl } from './themeElements';
+import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, REF_H, REF_W, STORE_PAGES, blankElement, screenScale, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
 import { KHMER_FONTS } from './lang';
 import { DEFAULT_CLOUD_SECONDS, MASCOT_GROUPS, MASCOT_NATIVE_MOTION, MASCOT_SLOTS } from './chiikawaMascots';
@@ -105,6 +105,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const tappedRef = useRef<Record<string, CustomPart>>({});
   useEffect(() => { tappedRef.current = {}; setTapped({}); }, [selected]);
   const [elementId, setElementId] = useState('');
+  const [pauseMotion, setPauseMotion] = useState(false);
   const [cats, setCats] = useState<any[]>([]);
   const [mapFlags, setMapFlags] = useState<Record<string, boolean>>({});
   const [mapMsg, setMapMsg] = useState('');
@@ -177,9 +178,9 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (!ready) return;
     frame.current?.contentWindow?.postMessage({
       type: 'yn-theme-draft', config: { ...cfg, _themeId: selected }, mode, selKind,
-      selectedKey: selKind === 'part' ? compKey : '', selectedElementId: selKind === 'element' ? elementId : '', selectedMascot: selKind === 'mascot' ? mascotGroup : '', previewDark,
+      selectedKey: selKind === 'part' ? compKey : '', selectedElementId: selKind === 'element' ? elementId : '', selectedMascot: selKind === 'mascot' ? mascotGroup : '', previewDark, pauseMotion,
     }, window.location.origin);
-  }, [cfg, ready, mode, compKey, selKind, elementId, mascotGroup, previewDark, selected]);
+  }, [cfg, ready, mode, compKey, selKind, elementId, mascotGroup, previewDark, selected, pauseMotion]);
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
@@ -211,17 +212,29 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         const info = d.info || {}, box = info.box as { left: number; top: number; width: number; height: number } | null;
         const image: string = info.image || (cur.mascotImages || {})[slot?.key || ''] || slot?.fallback || '/chiikawa/mochi.svg';
         const motion = MASCOT_NATIVE_MOTION[d.group] || { type: 'none', speed: 5 };
-        const vw = Number(d.vw) || 390, vh = Number(d.vh) || 844;
+        const vw = Number(d.vw) || 390, vh = Number(d.vh) || 844, kk = Number(d.k) || 1;
+        // The built-in mascots are glued to the PAGE (they scroll with it), so the copy is glued to the page too – except mascots of a fixed bar, which stay on the screen.
+        const pin: 'screen' | 'page' = box && !info.fixed ? 'page' : 'screen';
+        const col = info.column as { left: number; width: number } | null;
+        const r1 = (n: number) => Math.round(n * 10) / 10;
+        let ex = 50, ey = 40, ew = 120;
+        if (box && pin === 'page') {
+          ex = r1(((box.left + box.width / 2 - (col ? col.left : 0)) / (col ? col.width : vw)) * 100 + 3);
+          ey = r1(((box.top + (Number(info.scrollY) || 0) + box.height / 2) / REF_H) * 100 + 3);
+          ew = Math.max(24, Math.round(box.width));
+        } else if (box) {
+          ex = r1(((box.left + box.width / 2) / vw) * 100 + 5);
+          ey = r1(((box.top + box.height / 2) / vh) * 100 + 4);
+          ew = Math.max(24, Math.round(box.width / kk));
+        }
         const e = blankElement('image', {
           image, name: ((g?.label || 'Mascot').replace(/\s*\(.*\)$/, '') + ' copy').slice(0, 40),
-          x: box ? Math.round(((box.left + box.width / 2) / vw) * 1000) / 10 + 5 : 50,
-          y: box ? Math.round(((box.top + box.height / 2) / vh) * 1000) / 10 + 4 : 40,
-          w: box ? Math.max(24, Math.round(box.width / (Number(d.k) || 1))) : 120, h: 0,
+          x: ex, y: ey, w: ew, h: 0, pin,
           anim: { type: motion.type as any, speed: motion.speed },
         }, (cur.elements || []).length + 1);
         setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
         setElementId(e.id); setSelKind('element'); setMode('edit');
-        setMsg(box ? 'Copied. The new picture sits just next to the original – drag it where you want it.' : 'That mascot is not on this page, so the copy was put in the middle. Drag it where you want it.');
+        setMsg(box ? (pin === 'page' ? 'Copied. The new picture sits next to the original and scrolls with the page, just like it. Drag it where you want it.' : 'Copied. The new picture sits next to the original – drag it where you want it.') : 'That mascot is not on this page, so the copy was put in the middle. Drag it where you want it.');
       }
       if (d.type === 'yn-theme-mascot-select') { setMascotGroup(d.group); setSelKind('mascot'); }
       if (d.type === 'yn-theme-mascot-patch') setCfg((c: any) => ({ ...c, mascotPos: { ...(c.mascotPos || {}), [d.group]: { ...((c.mascotPos || {})[d.group] || {}), ...d.patch } } }));
@@ -335,6 +348,40 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   /* ---------------- elements ---------------- */
   const elements: ThemeEl[] = cfg.elements || [];
   const el = elements.find(x => x.id === elementId);
+
+  /** Switch a picture between "stays on the screen" and "scrolls with the page" without it jumping: the numbers are converted using what the preview shows right now. */
+  const switchPin = (x: ThemeEl, to: 'screen' | 'page') => {
+    if (x.pin === to) return;
+    try {
+      const win = frame.current?.contentWindow;
+      const vw = win?.innerWidth || REF_W, vh = win?.innerHeight || REF_H, sy = win?.scrollY || 0;
+      const ce = win?.document.querySelector('.shop, .detail') as HTMLElement | null, cr = ce ? ce.getBoundingClientRect() : null;
+      const cl = cr && cr.width > 40 ? cr.left : 0, cw = cr && cr.width > 40 ? cr.width : vw;
+      const k = screenScale(vw), r1 = (n: number) => Math.round(n * 10) / 10, cl100 = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+      if (to === 'page') patchEl(x.id, { pin: 'page', x: cl100(r1((((x.x / 100) * vw - cl) / cw) * 100), -10, 110), y: cl100(r1((((x.y / 100) * vh + sy) / REF_H) * 100), -10, 700), w: cl100(Math.round(x.w * k), 24, 900), h: x.h > 0 ? Math.round(x.h * k) : 0 });
+      else patchEl(x.id, { pin: 'screen', x: cl100(r1(((cl + (x.x / 100) * cw) / vw) * 100), -10, 110), y: cl100(r1((((x.y / 100) * REF_H - sy) / vh) * 100), -10, 110), w: cl100(Math.round(x.w / k), 24, 900), h: x.h > 0 ? Math.round(x.h / k) : 0 });
+    } catch { patchEl(x.id, { pin: to }); }
+  };
+
+  /* ---- lock (like Adobe Illustrator): a locked thing cannot be selected-and-dragged, resized or changed until it is unlocked ---- */
+  const lockedCount = elements.filter(x => x.locked).length
+    + Object.values((cfg.mascotPos || {}) as Record<string, any>).filter(p => p?.locked).length
+    + Object.values((cfg.components || {}) as Record<string, any>).filter(p => p?.locked).length;
+  const lockEverything = () => { setCfg((c: any) => {
+    const mascotPos = { ...(c.mascotPos || {}) };
+    for (const g of MASCOT_GROUPS) if (g.handle) mascotPos[g.key] = { ...(mascotPos[g.key] || {}), locked: true };
+    const components = { ...(c.components || {}) };
+    for (const d of allComponents({ customParts: { ...tappedRef.current, ...(c.customParts || {}) } })) components[d.key] = { ...(components[d.key] || {}), locked: true };
+    return { ...c, elements: (c.elements || []).map((x: ThemeEl) => ({ ...x, locked: true })), mascotPos, components };
+  }); setMsg('Everything is locked. Use “Unlock everything” under the preview to move things again.'); };
+  const unlockEverything = () => { setCfg((c: any) => {
+    const strip = (src: Record<string, any>) => {
+      const out: Record<string, any> = {};
+      for (const key of Object.keys(src || {})) { const { locked: _l, ...rest } = src[key] || {}; void _l; if (Object.keys(rest).length) out[key] = rest; }
+      return out;
+    };
+    return { ...c, elements: (c.elements || []).map((x: ThemeEl) => ({ ...x, locked: false })), mascotPos: strip(c.mascotPos), components: strip(c.components) };
+  }); setMsg('Everything is unlocked.'); };
   const patchEl = (id: string, p: Partial<ThemeEl>) => setCfg((c: any) => ({ ...c, elements: (c.elements || []).map((x: ThemeEl) => (x.id === id ? { ...x, ...p } : x)) }));
   const addElement = (type: 'button' | 'text' | 'image', o: Partial<ThemeEl> = {}) => {
     const e = blankElement(type, o, elements.length + 1);
@@ -342,7 +389,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
     setElementId(e.id); setSelKind('element'); setMode('edit');
   };
-  const dupEl = (x: ThemeEl) => { const c = { ...x, id: crypto.randomUUID(), anim: { ...x.anim }, action: { ...x.action }, pages: [...x.pages], x: Math.min(100, Math.round((x.x + 5) * 10) / 10), y: Math.min(100, Math.round((x.y + 4) * 10) / 10), z: elements.length + 1, name: x.name ? x.name + ' copy' : '' }; setCfg((s: any) => ({ ...s, elements: [...s.elements, c] })); setElementId(c.id); setSelKind('element'); };
+  const dupEl = (x: ThemeEl) => { const c = { ...x, id: crypto.randomUUID(), anim: { ...x.anim }, action: { ...x.action }, pages: [...x.pages], x: Math.min(100, Math.round((x.x + 5) * 10) / 10), y: Math.min(x.pin === 'page' ? 700 : 100, Math.round((x.y + (x.pin === 'page' ? 3 : 4)) * 10) / 10), z: elements.length + 1, locked: false, name: x.name ? x.name + ' copy' : '' }; setCfg((s: any) => ({ ...s, elements: [...s.elements, c] })); setElementId(c.id); setSelKind('element'); };
   const delEl = (id: string) => { setCfg((c: any) => ({ ...c, elements: c.elements.filter((x: ThemeEl) => x.id !== id) })); setElementId(''); setSelKind(k => (k === 'element' ? '' : k)); };
   const moveEl = (id: string, dir: -1 | 1) => setCfg((c: any) => {
     const a = [...c.elements], i = a.findIndex((x: ThemeEl) => x.id === id), j = i + dir;
@@ -459,13 +506,16 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     });
     quickBar = (
       <FloatingBar title={def.label} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Parts')}>
+        {cp.locked ? <QBtn label="Unlock" icon={glyph('🔓')} on onClick={() => setProp(k, 'locked', false)} /> : <>
         {tools}
  {def.props.includes('moveY') ? <><QSep /><QBtn label="Up" icon={<ArrowUp size={16} />} onClick={() => nudge(k, 0, -8)} /><QBtn label="Down" icon={<ArrowDown size={16} />} onClick={() => nudge(k, 0, 8)} /></> : null}
         {cp.icon ? <QBtn label={cp.iconKeep ? 'Old icon: on' : 'Old icon: off'} icon={glyph('☺')} on={!!cp.iconKeep} onClick={() => setProp(k, 'iconKeep', !cp.iconKeep)} /> : null}
         {k === 'banner' ? <QPic label="Banner picture" has={!!cfg.bannerImage} onPick={f => pick(f, u => patch('bannerImage', u), 1600)} onClear={() => patch('bannerImage', '')} /> : null}
         <QSep />
         {def.props.includes('hidden') ? <QBtn label={cp.hidden ? 'Show' : 'Hide'} icon={cp.hidden ? <Eye size={16} /> : <EyeOff size={16} />} on={!!cp.hidden} onClick={() => setProp(k, 'hidden', !cp.hidden)} /> : null}
+        <QBtn label="Lock" icon={glyph('🔒')} onClick={() => setProp(k, 'locked', true)} />
         <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => setCfg((c: any) => { const components = { ...(c.components || {}) }; delete components[k]; return { ...c, components }; })} />
+        </>}
       </FloatingBar>
     );
   } else if (selKind === 'page') {
@@ -485,6 +535,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     const title = (el.type === 'button' ? 'Button' : isImg ? 'Picture' : 'Text') + (el.name ? ': ' + el.name : '');
     quickBar = (
       <FloatingBar title={title} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Elements')} moreLabel="Action & more">
+        {el.locked ? <QBtn label="Unlock" icon={glyph('🔓')} on onClick={() => patchEl(el.id, { locked: false })} /> : <>
         {!isImg ? <input className="ynQText" value={el.text} placeholder="Text" onChange={e => patchEl(el.id, { text: e.target.value })} onPointerDown={e => e.stopPropagation()} /> : null}
         <QPic label="Picture" has={!!el.image} onPick={f => pick(f, u => patchEl(el.id, { image: u, variant: el.type === 'button' && el.variant !== 'image' ? 'image' : el.variant }))} onClear={() => patchEl(el.id, { image: '', variant: el.variant === 'image' ? 'gradient' : el.variant })} />
         {!isImg && (el.variant === 'solid' || el.variant === 'gradient') ? <QColor label={el.variant === 'gradient' ? 'Colour 1' : 'Fill'} value={el.background} fallback="#7c3aed" onChange={v => patchEl(el.id, { background: v })} /> : null}
@@ -497,11 +548,14 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         <QRange label="Fade" icon={glyph('◐')} value={el.opacity} min={10} max={100} unit="%" {...qr('o')} onChange={v => patchEl(el.id, { opacity: v })} />
         <QRange label="Turn" icon={glyph('↻')} value={el.rotate} min={-180} max={180} unit="°" {...qr('t')} onChange={v => patchEl(el.id, { rotate: v })} />
         <QSelect label="Move" value={el.anim.type} onChange={v => patchEl(el.id, { anim: { ...el.anim, type: v as any } })}>{ANIM_TYPES.map(a => <option key={a.type} value={a.type}>{a.label}</option>)}</QSelect>
+        <QSelect label="Stays" value={el.pin} onChange={v => switchPin(el, v === 'page' ? 'page' : 'screen')}><option value="screen">On the screen</option><option value="page">On the page (scrolls)</option></QSelect>
         <QSep />
         <QBtn label="Front" icon={<ArrowUp size={16} />} onClick={() => moveEl(el.id, 1)} />
         <QBtn label="Back" icon={<ArrowDown size={16} />} onClick={() => moveEl(el.id, -1)} />
+        <QBtn label="Lock" icon={glyph('🔒')} onClick={() => patchEl(el.id, { locked: true })} />
         <QBtn label="Copy" icon={<Copy size={16} />} onClick={() => dupEl(el)} />
         <QBtn label="Delete" icon={<Trash2 size={16} />} danger onClick={() => delEl(el.id)} />
+        </>}
       </FloatingBar>
     );
   } else if (selKind === 'mascot') {
@@ -509,6 +563,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     const isCloud = mg.key === 'clouds';
     quickBar = (
       <FloatingBar title={mg.label.replace(/\s*\(.*\)$/, '')} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Mascots')}>
+        {mp.locked ? <QBtn label="Unlock" icon={glyph('🔓')} on onClick={() => setMPos({ locked: false })} /> : <>
         {slots.map(sl => <QPic key={sl.key} label={slots.length === 1 ? 'Picture' : shortSlot(sl)} has={!!mImgs[sl.key]} onPick={f => pick(f, u => setMImg(sl.key, u), isCloud ? 2400 : 900)} onClear={() => setMImg(sl.key, '')} />)}
         {mg.placeable ? <>
           <QRange label="Size" icon={glyph('⤢')} value={mp.s ?? 100} min={30} max={250} unit="%" {...qr('s')} onChange={v => setMPos({ s: v })} onClear={() => setMPos({ s: 100 })} />
@@ -522,8 +577,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
           <QSep />
           {mg.handle ? <QBtn label="Copy" icon={<Copy size={16} />} onClick={() => duplicateMascot(mg.key)} /> : null}
           <QBtn label={mp.hide ? 'Show' : 'Hide'} icon={mp.hide ? <Eye size={16} /> : <EyeOff size={16} />} on={!!mp.hide} onClick={() => setMPos({ hide: !mp.hide })} />
+          {mg.handle ? <QBtn label="Lock" icon={glyph('🔒')} onClick={() => setMPos({ locked: true })} /> : null}
           <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => setMPos({ dx: 0, dy: 0, s: 100, hide: false })} />
         </> : null}
+        </>}
       </FloatingBar>
     );
   }
@@ -556,6 +613,11 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               <iframe ref={frame} key={frameSrc} name="yn-theme-preview" src={frameSrc} title="Live storefront preview" style={{ width: widths[device] ? widths[device] : '100%' }} />
             </div>
             {mode === 'edit' ? quickBar : null}
+          </div>
+          <div className="ynLockBar">
+            <button type="button" className={lockedCount ? '' : 'secondary'} onClick={unlockEverything} disabled={!lockedCount} title="Unlock every locked picture, mascot and part">🔓 Unlock everything{lockedCount ? ' (' + lockedCount + ')' : ''}</button>
+            <button type="button" className="secondary" onClick={lockEverything} title="Lock every picture, mascot and part so nothing moves by accident">🔒 Lock everything</button>
+            <button type="button" className="secondary" onClick={() => setPauseMotion(v => !v)} title="Movement is shown in the preview; this freezes it while you work">{pauseMotion ? '▶ Play motion' : '⏸ Pause motion'}</button>
           </div>
         </section>
 
@@ -648,6 +710,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
                   {mg.key !== 'clouds' && <RangeField label="Move up ↕ down" value={mp.dy ?? 0} min={-240} max={240} onChange={v => setMPos({ dy: v })} onClear={() => setMPos({ dy: 0 })} />}
                   <RangeField label="Size" value={mp.s ?? 100} min={30} max={250} unit="%" onChange={v => setMPos({ s: v })} onClear={() => setMPos({ s: 100 })} />
                   <Check checked={!!mp.hide} onChange={v => setMPos({ hide: v })}>Hide {mg.key === 'clouds' ? 'the clouds' : 'this mascot'}</Check>
+                  {mg.handle ? <Check checked={!!mp.locked} onChange={v => setMPos({ locked: v })}>Lock this mascot (cannot be dragged in the preview until unlocked)</Check> : null}
                   {mg.handle ? <button type="button" onClick={() => duplicateMascot(mg.key)}><Copy size={14} /> Duplicate this mascot (keeps its movement)</button> : null}
                   {(mp.dx || mp.dy || mp.s) ? <button type="button" className="secondary" onClick={() => setMPos({ dx: 0, dy: 0, s: 100 })}><Undo2 size={14} /> Put it back where it was</button> : null}
                 </>}
@@ -770,6 +833,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
                   <button type="button" className="ynElPick" onClick={() => { const off = x.id === elementId && selKind === 'element'; setElementId(off ? '' : x.id); setSelKind(off ? '' : 'element'); }}>{elLabel(x, i)}</button>
                   <button type="button" className="icon" title="Move forward" onClick={() => moveEl(x.id, 1)}><ArrowUp size={14} /></button>
                   <button type="button" className="icon" title="Move backward" onClick={() => moveEl(x.id, -1)}><ArrowDown size={14} /></button>
+                  <button type="button" className={'icon' + (x.locked ? ' on' : '')} title={x.locked ? 'Locked – tap to unlock' : 'Lock'} onClick={() => patchEl(x.id, { locked: !x.locked })}>{x.locked ? '🔒' : '🔓'}</button>
                   <button type="button" className="icon" title="Duplicate" onClick={() => dupEl(x)}><Copy size={14} /></button>
                   <button type="button" className="icon danger" title="Delete" onClick={() => delEl(x.id)}><Trash2 size={14} /></button>
                 </div>
@@ -834,15 +898,20 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               <Select label="When touched" value={el.hover} onChange={v => patchEl(el.id, { hover: v as any })}><option value="none">Nothing</option><option value="lift">Lift up</option><option value="grow">Grow</option><option value="glow">Glow</option></Select>
 
               <h4>Size &amp; position</h4>
+              <Select label="Where it stays" value={el.pin} onChange={v => switchPin(el, v === 'page' ? 'page' : 'screen')}>
+                <option value="screen">On the screen – stays put while the page scrolls</option>
+                <option value="page">On the page – scrolls with the page (like the built-in mascots)</option>
+              </Select>
+              <Check checked={!!el.locked} onChange={v => patchEl(el.id, { locked: v })}>Lock it (cannot be dragged or resized in the preview until unlocked)</Check>
               <p className="ynHint">Easiest: drag it in the preview. The spot is measured from the <b>middle</b> of the picture, as a share of the screen – so a picture placed in the middle is in the middle on every phone, tablet and computer. Its size grows and shrinks with the screen. Check the three device buttons above the preview.</p>
               <div className="ynRow">
                 <button type="button" className="secondary" onClick={() => patchEl(el.id, { x: 50 })}>Centre left-right</button>
-                <button type="button" className="secondary" onClick={() => patchEl(el.id, { y: 50 })}>Centre up-down</button>
+                <button type="button" className="secondary" onClick={() => patchEl(el.id, { y: el.pin === 'page' ? 30 : 50 })}>Centre up-down</button>
                 <button type="button" className="secondary" onClick={() => patchEl(el.id, { x: 50, y: 50 })}>Dead centre</button>
               </div>
               <div className="ynGrid">
                 <RangeField label="Left ↔ right (50 = middle)" value={el.x} min={-10} max={110} unit="%" step={0.5} onChange={v => patchEl(el.id, { x: v })} />
-                <RangeField label="Up ↕ down (50 = middle)" value={el.y} min={-10} max={110} unit="%" step={0.5} onChange={v => patchEl(el.id, { y: v })} />
+                <RangeField label={el.pin === 'page' ? 'Up ↕ down (distance from the top of the page)' : 'Up ↕ down (50 = middle)'} value={el.y} min={-10} max={el.pin === 'page' ? 700 : 110} unit="%" step={0.5} onChange={v => patchEl(el.id, { y: v })} />
                 <RangeField label="Width" value={el.w} min={24} max={700} onChange={v => patchEl(el.id, { w: v })} />
                 <RangeField label={el.h ? 'Height' : 'Height (auto)'} value={el.h} min={0} max={700} onChange={v => patchEl(el.id, { h: v })} />
                 <RangeField label="Turn" value={el.rotate} min={-180} max={180} unit="°" onChange={v => patchEl(el.id, { rotate: v })} />

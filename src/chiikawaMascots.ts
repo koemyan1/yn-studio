@@ -18,7 +18,7 @@ export type MascotGroup = {
   /** false = only the picture can be changed */
   placeable: boolean;
 };
-export type MascotPos = { dx?: number; dy?: number; s?: number; hide?: boolean };
+export type MascotPos = { dx?: number; dy?: number; s?: number; hide?: boolean; locked?: boolean };
 
 export const MASCOT_GROUPS: MascotGroup[] = [
   { key: 'clouds', label: 'Clouds (drifting across the top)', hint: 'A wide strip of clouds that slides from right to left.', host: 'body', pseudo: '::before', handle: false, placeable: true },
@@ -26,7 +26,6 @@ export const MASCOT_GROUPS: MascotGroup[] = [
   { key: 'headRight', label: 'Top-right mascot (Home)', hint: 'Sits above the bell / profile buttons.', host: '.brandrow', pseudo: '::after', handle: true, placeable: true },
   { key: 'title', label: 'Mascot next to the store name', hint: 'Small face after the big title.', host: '.brandrow h1', pseudo: '::after', handle: true, placeable: true },
   { key: 'search', label: 'Mascot in the search bar', hint: 'The little face at the end of the search bar.', host: '.shop .search', pseudo: '::after', handle: true, placeable: true },
-  { key: 'chips', label: 'Mascots on the category buttons', hint: 'One picture per kind of category. Position and size apply to all of them.', host: '.categoryRail button', pseudo: '::before', handle: true, placeable: true },
   { key: 'cards', label: 'Mascots on the product cards', hint: 'The face in the corner of every product. Position and size apply to all of them.', host: '.product', pseudo: '::after', handle: true, placeable: true },
   { key: 'pageLogo', label: 'Mascot in the top bar (inner pages)', hint: 'Replaces the round logo on Cart, Orders, Wallet…', host: '.top .miniLogo', pseudo: '', handle: true, placeable: true },
   { key: 'nav', label: 'Mascot trio under the bottom bar', hint: 'The three friends peeking from under the navigation bar.', host: 'nav.bottom', pseudo: '::after', handle: true, placeable: true },
@@ -42,15 +41,6 @@ export const MASCOT_SLOTS: MascotSlot[] = [
   { key: 'headRight', group: 'headRight', label: 'Picture', fallback: '/chiikawa/bun-happy.svg' },
   { key: 'title', group: 'title', label: 'Picture', fallback: '/chiikawa/mochi.svg' },
   { key: 'search', group: 'search', label: 'Picture', fallback: '/chiikawa/mochi.svg' },
-  { key: 'chipA', group: 'chips', label: 'Category button – 1st, 4th, 7th…', fallback: '/chiikawa/mochi.svg' },
-  { key: 'chipB', group: 'chips', label: 'Category button – 2nd, 5th, 8th…', fallback: '/chiikawa/bun.svg' },
-  { key: 'chipC', group: 'chips', label: 'Category button – 3rd, 6th, 9th…', fallback: '/chiikawa/kiki.svg' },
-  { key: 'chipFood', group: 'chips', label: 'Food categories', fallback: '/chiikawa/onigiri.svg' },
-  { key: 'chipBurger', group: 'chips', label: 'Burger categories', fallback: '/chiikawa/burger.svg' },
-  { key: 'chipSweet', group: 'chips', label: 'Sweets / cake categories', fallback: '/chiikawa/cake.svg' },
-  { key: 'chipDrink', group: 'chips', label: 'Drink categories', fallback: '/chiikawa/boba.svg' },
-  { key: 'chipCoffee', group: 'chips', label: 'Coffee categories', fallback: '/chiikawa/latte.svg' },
-  { key: 'chipIce', group: 'chips', label: 'Ice cream categories', fallback: '/chiikawa/icecream.svg' },
   { key: 'cardA', group: 'cards', label: 'Product card – 1st, 4th, 7th…', fallback: '/chiikawa/mochi-happy.svg' },
   { key: 'cardB', group: 'cards', label: 'Product card – 2nd, 5th, 8th…', fallback: '/chiikawa/bun-happy.svg' },
   { key: 'cardC', group: 'cards', label: 'Product card – 3rd, 6th, 9th…', fallback: '/chiikawa/kiki-happy.svg' },
@@ -109,6 +99,7 @@ export function normalizeMascotPos(raw: any): Record<string, MascotPos> {
     if (typeof r.dy === 'number') p.dy = r.dy;
     if (typeof r.s === 'number') p.s = r.s;
     if (r.hide) p.hide = true;
+    if (r.locked) p.locked = true;
     if (Object.keys(p).length) o[g.key] = p;
   }
   return o;
