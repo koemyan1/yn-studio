@@ -64,6 +64,22 @@ function measure(g: MascotGroup): Box | null {
   return { left, top, width: w * sc, height: h * sc };
 }
 
+/** Where a built-in mascot is right now and which picture it shows (used by "Duplicate this mascot"). */
+export function measureMascotInfo(groupKey: string): { box: Box | null; image: string } {
+  const g = MASCOT_GROUPS.find(x => x.key === groupKey);
+  if (!g) return { box: null, image: '' };
+  const box = measure(g);
+  let image = '';
+  const host = visibleHost(g.host);
+  if (host) {
+    const cs = getComputedStyle(host, g.pseudo || undefined);
+    const m = /url\(["']?(.*?)["']?\)/.exec(cs.backgroundImage || '');
+    if (m) image = m[1];
+  }
+  if (image.startsWith(window.location.origin)) image = image.slice(window.location.origin.length);
+  return { box, image };
+}
+
 type Props = {
   pos: Record<string, MascotPos>; selected: string; path: string;
   onSelect: (group: string) => void; onPatch: (group: string, patch: MascotPos) => void;

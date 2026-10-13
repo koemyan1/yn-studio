@@ -62,6 +62,12 @@ export const MASCOT_SLOTS: MascotSlot[] = [
   { key: 'loading', group: 'loading', label: 'Picture', fallback: '/chiikawa/mochi-happy.svg' },
 ];
 
+/** Built-in mascots that already move in chiikawa.css. A copy made with "Duplicate" gets the same movement (type = a themeElements AnimType). */
+export const MASCOT_NATIVE_MOTION: Record<string, { type: string; speed: number }> = {
+  headLeft: { type: 'float', speed: 5 },
+  headRight: { type: 'float', speed: 4 },
+};
+
 const cssUrl = (u: string) => `url("${String(u).replace(/"/g, '%22')}")`;
 const n = (v: any, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
 

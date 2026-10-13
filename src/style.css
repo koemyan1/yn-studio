@@ -422,6 +422,8 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;col
   background-repeat: no-repeat;
   border-radius: var(--secret-radius);
   overflow: hidden;
+  /* without an explicit width, min-height + aspect-ratio made the banner wider than the page on phones */
+  width: 100%; max-width: 100%; box-sizing: border-box;
 }
 .secretThemeBannerSample { width: 100%; max-height: 180px; object-fit: cover; border-radius: 16px; border: 1px solid var(--border,#ddd); }
 @media (max-width: 520px) { .secretCustomBanner { min-height: 115px; } }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ArrowDown, ArrowUp, Copy, Dices, Eye, EyeOff, Hand, ImagePlus, Monitor, MousePointerClick, Plus, Save, Shuffle,
   Smartphone, Sparkles, Tablet, Trash2, Undo2, Wand2,
@@ -12,7 +13,7 @@ import {
 import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, STORE_PAGES, blankElement, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
 import { KHMER_FONTS } from './lang';
-import { DEFAULT_CLOUD_SECONDS, MASCOT_GROUPS, MASCOT_SLOTS } from './chiikawaMascots';
+import { DEFAULT_CLOUD_SECONDS, MASCOT_GROUPS, MASCOT_NATIVE_MOTION, MASCOT_SLOTS } from './chiikawaMascots';
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
 const TABS = ['Theme & code', 'Look', 'Mascots', 'Categories', 'Delivery', 'Products', 'Elements', 'Parts', 'Text', 'Layout & pages', 'Advanced'] as const;
@@ -34,7 +35,7 @@ const FONTS: [string, string][] = [
 ];
 
 /** Uploads to the public theme-assets bucket; falls back to a small embedded picture if the bucket is not set up yet. */
-async function uploadThemeImage(file: File, maxSide = 1100): Promise<string> {
+export async function uploadThemeImage(file: File, maxSide = 1100): Promise<string> {
   const data = await shrinkImage(file, maxSide);
   try {
     const blob = await (await fetch(data)).blob();
@@ -132,6 +133,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
 
   const dirty = useMemo(() => JSON.stringify({ n: name, c: code, a: active, cfg }) !== snapshot, [name, code, active, cfg, snapshot]);
   const productId = prods[0]?.id || '';
+  const cfgRef = useRef<any>(cfg); cfgRef.current = cfg;
 
   async function loadThemes() {
     const r = await supabase.from('site_themes').select('*').order('created_at', { ascending: false });
@@ -202,6 +204,25 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
       if (d.type === 'yn-theme-deselect') setSelKind('');
       if (d.type === 'yn-theme-anchor') setAnchor(d.rect && d.hasRect !== false ? d.rect : null);
       if (d.type === 'yn-theme-element-select') { setElementId(d.id); setSelKind('element'); }
+      if (d.type === 'yn-mascot-measured' && typeof d.group === 'string') {
+        // The preview told us where a built-in mascot is, how big, and which picture it shows → make a free copy that behaves the same.
+        const g = MASCOT_GROUPS.find(x => x.key === d.group), slot = MASCOT_SLOTS.find(x => x.group === d.group);
+        const cur = cfgRef.current || {};
+        const info = d.info || {}, box = info.box as { left: number; top: number; width: number; height: number } | null;
+        const image: string = info.image || (cur.mascotImages || {})[slot?.key || ''] || slot?.fallback || '/chiikawa/mochi.svg';
+        const motion = MASCOT_NATIVE_MOTION[d.group] || { type: 'none', speed: 5 };
+        const vw = Number(d.vw) || 390, vh = Number(d.vh) || 844;
+        const e = blankElement('image', {
+          image, name: ((g?.label || 'Mascot').replace(/\s*\(.*\)$/, '') + ' copy').slice(0, 40),
+          x: box ? Math.round(((box.left + box.width / 2) / vw) * 1000) / 10 + 5 : 50,
+          y: box ? Math.round(((box.top + box.height / 2) / vh) * 1000) / 10 + 4 : 40,
+          w: box ? Math.max(24, Math.round(box.width / (Number(d.k) || 1))) : 120, h: 0,
+          anim: { type: motion.type as any, speed: motion.speed },
+        }, (cur.elements || []).length + 1);
+        setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
+        setElementId(e.id); setSelKind('element'); setMode('edit');
+        setMsg(box ? 'Copied. The new picture sits just next to the original – drag it where you want it.' : 'That mascot is not on this page, so the copy was put in the middle. Drag it where you want it.');
+      }
       if (d.type === 'yn-theme-mascot-select') { setMascotGroup(d.group); setSelKind('mascot'); }
       if (d.type === 'yn-theme-mascot-patch') setCfg((c: any) => ({ ...c, mascotPos: { ...(c.mascotPos || {}), [d.group]: { ...((c.mascotPos || {})[d.group] || {}), ...d.patch } } }));
       if (d.type === 'yn-theme-element-patch') setCfg((c: any) => ({ ...c, elements: (c.elements || []).map((x: ThemeEl) => (x.id === d.id ? { ...x, ...d.patch } : x)) }));
@@ -289,12 +310,19 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (!name.trim()) { setMsg('Enter a theme name.'); return; }
     if (c.length < 3 || /\s/.test(c)) { setMsg('The secret code needs at least 3 characters and no spaces.'); return; }
     setBusy(true); setMsg('');
-    const payload = { name: name.trim(), secret_code: c, active, config: cfg, updated_at: new Date().toISOString() };
+    // The Product Mascots page saves its own settings straight into the theme; never overwrite them with an older copy.
+    let configToSave = cfg;
+    if (selected) {
+      const latest = await supabase.from('site_themes').select('config').eq('id', selected).maybeSingle();
+      const pmLatest = latest.data?.config?.productMascots;
+      if (pmLatest) configToSave = { ...cfg, productMascots: pmLatest };
+    }
+    const payload = { name: name.trim(), secret_code: c, active, config: configToSave, updated_at: new Date().toISOString() };
     const r = selected
       ? await supabase.from('site_themes').update(payload).eq('id', selected).select().single()
       : await supabase.from('site_themes').insert(payload).select().single();
     if (r.error) setMsg(r.error.code === '23505' ? 'That secret code is already used by another theme. Choose a different code.' : 'Could not save: ' + r.error.message);
-    else { setSelected(r.data.id); setSnapshot(JSON.stringify({ n: name, c, a: active, cfg })); setMsg('Saved. Customers can now unlock it with the code "' + c + '" (Messages → Secret theme).'); await loadThemes(); }
+    else { setSelected(r.data.id); if (configToSave !== cfg) setCfg(configToSave); setSnapshot(JSON.stringify({ n: name, c, a: active, cfg: configToSave })); setMsg('Saved. Customers can now unlock it with the code "' + c + '" (Messages → Secret theme).'); await loadThemes(); }
     setBusy(false);
   }
   async function removeTheme() {
@@ -314,7 +342,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     setCfg((c: any) => ({ ...c, elements: [...(c.elements || []), e] }));
     setElementId(e.id); setSelKind('element'); setMode('edit');
   };
-  const dupEl = (x: ThemeEl) => { const c = { ...x, id: crypto.randomUUID(), x: Math.min(90, x.x + 4), y: Math.min(90, x.y + 4), z: elements.length + 1, name: x.name ? x.name + ' copy' : '' }; setCfg((s: any) => ({ ...s, elements: [...s.elements, c] })); setElementId(c.id); setSelKind('element'); };
+  const dupEl = (x: ThemeEl) => { const c = { ...x, id: crypto.randomUUID(), anim: { ...x.anim }, action: { ...x.action }, pages: [...x.pages], x: Math.min(100, Math.round((x.x + 5) * 10) / 10), y: Math.min(100, Math.round((x.y + 4) * 10) / 10), z: elements.length + 1, name: x.name ? x.name + ' copy' : '' }; setCfg((s: any) => ({ ...s, elements: [...s.elements, c] })); setElementId(c.id); setSelKind('element'); };
   const delEl = (id: string) => { setCfg((c: any) => ({ ...c, elements: c.elements.filter((x: ThemeEl) => x.id !== id) })); setElementId(''); setSelKind(k => (k === 'element' ? '' : k)); };
   const moveEl = (id: string, dir: -1 | 1) => setCfg((c: any) => {
     const a = [...c.elements], i = a.findIndex((x: ThemeEl) => x.id === id), j = i + dir;
@@ -385,6 +413,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (Object.keys(cur).length) all[mg.key] = cur; else delete all[mg.key];
     return { ...c, mascotPos: all };
   });
+  const duplicateMascot = (group: string) => {
+    setMsg('');
+    frame.current?.contentWindow?.postMessage({ type: 'yn-mascot-measure', group }, window.location.origin);
+  };
   const setMImg = (slot: string, url: string) => setCfg((c: any) => {
     const m = { ...(c.mascotImages || {}) };
     if (url) m[slot] = url; else delete m[slot];
@@ -488,6 +520,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
             </>}
           {isCloud ? <QRange label="Speed (s)" icon={glyph('⏱')} value={cfg.cloudSeconds ?? DEFAULT_CLOUD_SECONDS} min={15} max={240} unit="s" {...qr('cs')} onChange={v => patch('cloudSeconds', v)} onClear={() => patch('cloudSeconds', null)} /> : null}
           <QSep />
+          {mg.handle ? <QBtn label="Copy" icon={<Copy size={16} />} onClick={() => duplicateMascot(mg.key)} /> : null}
           <QBtn label={mp.hide ? 'Show' : 'Hide'} icon={mp.hide ? <Eye size={16} /> : <EyeOff size={16} />} on={!!mp.hide} onClick={() => setMPos({ hide: !mp.hide })} />
           <QBtn label="Reset" icon={<Undo2 size={16} />} onClick={() => setMPos({ dx: 0, dy: 0, s: 100, hide: false })} />
         </> : null}
@@ -615,13 +648,18 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
                   {mg.key !== 'clouds' && <RangeField label="Move up ↕ down" value={mp.dy ?? 0} min={-240} max={240} onChange={v => setMPos({ dy: v })} onClear={() => setMPos({ dy: 0 })} />}
                   <RangeField label="Size" value={mp.s ?? 100} min={30} max={250} unit="%" onChange={v => setMPos({ s: v })} onClear={() => setMPos({ s: 100 })} />
                   <Check checked={!!mp.hide} onChange={v => setMPos({ hide: v })}>Hide {mg.key === 'clouds' ? 'the clouds' : 'this mascot'}</Check>
+                  {mg.handle ? <button type="button" onClick={() => duplicateMascot(mg.key)}><Copy size={14} /> Duplicate this mascot (keeps its movement)</button> : null}
                   {(mp.dx || mp.dy || mp.s) ? <button type="button" className="secondary" onClick={() => setMPos({ dx: 0, dy: 0, s: 100 })}><Undo2 size={14} /> Put it back where it was</button> : null}
                 </>}
               </div>
 
+              <h4>A mascot on every product</h4>
+              <p className="ynHint">Choose how many mascots you want and every product card gets one at random – new products too.</p>
+              <Link className="button secondary" to={'/admin/product-mascots' + (selected ? '?theme=' + selected : '')}><Sparkles size={15} /> Open the Product Mascots page</Link>
+
               <h4>Put a mascot anywhere</h4>
               <p className="ynHint">Want an extra mascot picture on a page — or one that flies around, or opens a page when tapped? Add a free picture, then drag it wherever you like (it shows up in the <b>Elements</b> tab, where you can also give it an action or animation).</p>
-              <label className="button secondary ynDropBtn"><ImagePlus size={15} /> Add a free mascot picture<input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void pick(f, u => { addElement('image', { image: u, w: 120, x: 40, y: 30 }); setTab('Elements'); }); }} /></label>
+              <label className="button secondary ynDropBtn"><ImagePlus size={15} /> Add a free mascot picture<input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void pick(f, u => { addElement('image', { image: u, w: 120, x: 50, y: 35 }); setTab('Elements'); }); }} /></label>
               <button type="button" className="secondary ynDanger" onClick={() => { if (window.confirm('Put every mascot and the clouds back to the original pictures, places and sizes?')) setCfg((c: any) => ({ ...c, mascotImages: {}, mascotPos: {}, cloudSeconds: null })); }}><Undo2 size={14} /> Reset all mascots &amp; clouds</button>
             </>}
           </div>}
@@ -796,10 +834,15 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
               <Select label="When touched" value={el.hover} onChange={v => patchEl(el.id, { hover: v as any })}><option value="none">Nothing</option><option value="lift">Lift up</option><option value="grow">Grow</option><option value="glow">Glow</option></Select>
 
               <h4>Size &amp; position</h4>
-              <p className="ynHint">Easiest: drag it in the preview. Fine-tune here.</p>
+              <p className="ynHint">Easiest: drag it in the preview. The spot is measured from the <b>middle</b> of the picture, as a share of the screen – so a picture placed in the middle is in the middle on every phone, tablet and computer. Its size grows and shrinks with the screen. Check the three device buttons above the preview.</p>
+              <div className="ynRow">
+                <button type="button" className="secondary" onClick={() => patchEl(el.id, { x: 50 })}>Centre left-right</button>
+                <button type="button" className="secondary" onClick={() => patchEl(el.id, { y: 50 })}>Centre up-down</button>
+                <button type="button" className="secondary" onClick={() => patchEl(el.id, { x: 50, y: 50 })}>Dead centre</button>
+              </div>
               <div className="ynGrid">
-                <RangeField label="Left" value={el.x} min={-10} max={100} unit="%" step={0.5} onChange={v => patchEl(el.id, { x: v })} />
-                <RangeField label="Top" value={el.y} min={-10} max={100} unit="%" step={0.5} onChange={v => patchEl(el.id, { y: v })} />
+                <RangeField label="Left ↔ right (50 = middle)" value={el.x} min={-10} max={110} unit="%" step={0.5} onChange={v => patchEl(el.id, { x: v })} />
+                <RangeField label="Up ↕ down (50 = middle)" value={el.y} min={-10} max={110} unit="%" step={0.5} onChange={v => patchEl(el.id, { y: v })} />
                 <RangeField label="Width" value={el.w} min={24} max={700} onChange={v => patchEl(el.id, { w: v })} />
                 <RangeField label={el.h ? 'Height' : 'Height (auto)'} value={el.h} min={0} max={700} onChange={v => patchEl(el.id, { h: v })} />
                 <RangeField label="Turn" value={el.rotate} min={-180} max={180} unit="°" onChange={v => patchEl(el.id, { rotate: v })} />

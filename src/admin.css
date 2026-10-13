@@ -331,3 +331,46 @@
 .ynMascotSlot b{display:block;font-size:12px;margin-bottom:4px}
 .ynDanger{color:#c0392b}
 .cutPreview img{background:repeating-conic-gradient(#0000000f 0 25%,#fff 0 50%) 0 0/14px 14px}
+
+/* ---------- Admin → Product Mascots ---------- */
+.pmx{display:grid;gap:16px;padding-bottom:90px;max-width:1180px}
+.pmx h2,.pmx h3{margin:4px 0}.pmx h3 small{font-weight:500;font-size:13px;opacity:.7;margin-left:8px}
+.pmxIntro{display:grid;gap:14px}.pmxIntro p{margin:6px 0 0}
+.pmxWarn{color:#b45309;font-weight:600}
+.pmxThemeRow{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.pmxThemeRow label,.pmxGrid2 label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}
+.pmxSwitch{flex-direction:row!important;align-items:center;gap:8px!important;padding-bottom:10px}
+.pmxBlock{display:grid;gap:12px}
+.pmxCountRow{display:flex;align-items:center;gap:12px}.pmxCountRow input{flex:1;max-width:520px}
+.pmxCount{font-size:28px;min-width:36px;text-align:center}
+.pmxActions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pmxActions button,.pmxActions .button{display:inline-flex;align-items:center;gap:7px}
+.pmxGrid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.pmxTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.pmxTileWrap{position:relative}
+.pmxTile{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px 8px;border-radius:16px;border:2px solid var(--admin-line,#e9e2f4)!important;background:var(--admin-card2,#fff)!important;color:inherit!important;font-size:12px;font-weight:600;cursor:pointer;box-shadow:none!important}
+.pmxTile img{width:56px;height:56px;object-fit:contain}
+.pmxTile span{line-height:1.15;text-align:center}
+.pmxTile.on{border-color:#ec4899!important;background:color-mix(in srgb,#ec4899 12%,transparent)!important}
+.pmxTile.on::after{content:'✓';position:absolute;top:6px;right:8px;font-size:13px;color:#ec4899;font-weight:800}
+.pmxTile.small img{width:44px;height:44px}
+.pmxTileWrap .pmxTile{position:relative}
+.pmxDel{position:absolute;top:-6px;left:-6px;width:24px;height:24px;padding:0;border-radius:50%;display:grid;place-items:center;background:#ef4444!important;color:#fff!important}
+.pmxUpload{position:relative;overflow:hidden}.pmxUpload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.pmxHead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.pmxSearch{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--admin-line,#e9e2f4);border-radius:12px;background:var(--admin-card2,#fff)}
+.pmxSearch input{border:0!important;background:transparent!important;box-shadow:none!important;min-width:180px}
+.pmxNew{display:flex;align-items:center;gap:6px;color:#059669;font-weight:700;margin:0}
+.pmxProducts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.pmxProd{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:18px;border:1px solid var(--admin-line,#e9e2f4);background:var(--admin-card2,#fff)}
+.pmxProd b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pmxProd small{opacity:.7;font-size:12px}.pmxProd button{padding:7px 10px;font-size:13px}
+.pmxPic{position:relative;aspect-ratio:1/.92;border-radius:14px;background:#f4eefc;overflow:hidden}
+.pmxPic>img{width:100%;height:100%;object-fit:contain}
+.pmxNoPic{display:grid;place-items:center;height:100%;font-size:12px;opacity:.6}
+.pmxProd.off .pmxPic{opacity:.9}
+.pmxSave{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 18px;border-radius:999px;background:var(--admin-card,#fff);border:1px solid var(--admin-line,#e9e2f4);box-shadow:0 12px 30px rgba(30,20,50,.22);max-width:calc(100vw - 24px);font-size:13px;font-weight:600}
+.pmxSave.dirty{border-color:#ec4899}.pmxSave button{display:inline-flex;align-items:center;gap:6px;border-radius:999px}
+.pmxSheetBack{position:fixed;inset:0;z-index:50;background:rgba(20,10,35,.5);display:grid;place-items:end center}
+.pmxSheet{width:min(640px,100%);max-height:86vh;overflow:auto;display:grid;gap:12px;padding:18px;border-radius:24px 24px 0 0;background:var(--admin-card,#fff);color:var(--admin-text,#241b35)}
+@media(min-width:700px){.pmxSheetBack{place-items:center}.pmxSheet{border-radius:24px}}

@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from './supabase';
-import { ThemeOverlay, normalizeElement, type OverlayMode, type ThemeEl } from './themeElements';
+import { ThemeOverlay, normalizeElement, screenScale, type OverlayMode, type ThemeEl } from './themeElements';
 import { colorForProduct, gradientForProduct, processedImageUrl } from './imageTools';
 import { LIVE_EVT, getDarkPref, getLiveBg, getSeedOffset, isPreviewFrame, setDarkPref } from './themeLive';
-import { MascotHandles } from './MascotHandles';
+import { MascotHandles, measureMascotInfo } from './MascotHandles';
 import { PartIcons, type PartIconSpec } from './PartIcons';
 import { setKhmerFont } from './lang';
 import { mascotVars, normalizeMascotImages, normalizeMascotPos, type MascotPos } from './chiikawaMascots';
+import { blankProductMascots, normalizeProductMascots } from './productMascotsCore';
 
 export { isPreviewFrame };
 
@@ -139,6 +140,8 @@ export const blankTheme = () => ({
   mascotImages: {} as Record<string, string>,
   mascotPos: {} as Record<string, MascotPos>,
   cloudSeconds: null as number | null,
+  /** a mascot on every product card – managed on Admin → Product Mascots */
+  productMascots: blankProductMascots(),
   customCss: '',
   allowedCategories: [] as string[],
   hideUncategorized: false,
@@ -169,6 +172,7 @@ export function normalizeTheme(raw: any) {
     mascotImages: normalizeMascotImages(c.mascotImages),
     mascotPos: normalizeMascotPos(c.mascotPos),
     cloudSeconds: typeof c.cloudSeconds === 'number' && c.cloudSeconds > 0 ? c.cloudSeconds : null,
+    productMascots: normalizeProductMascots(c.productMascots),
     dark: { ...b.dark, ...(c.dark || {}) },
     bg: { ...b.bg, ...(c.bg || {}) },
     productImage: { ...b.productImage, ...(c.productImage || {}) },
@@ -441,7 +445,7 @@ function styleEl(id: string): HTMLStyleElement {
 function clearTheme() {
   setKhmerFont('');
   const root = document.documentElement;
-  root.removeAttribute('data-secret-theme'); root.removeAttribute('data-secret-preset'); root.removeAttribute('data-yn-theme'); root.removeAttribute('data-yn-dark');
+  root.removeAttribute('data-secret-theme'); root.removeAttribute('data-secret-preset'); root.removeAttribute('data-yn-theme'); root.removeAttribute('data-yn-dark'); root.removeAttribute('data-yn-pm');
   ['--secret-bg', '--secret-surface', '--secret-text', '--secret-accent', '--secret-radius', '--secret-font', '--secret-wallpaper', '--secret-banner'].forEach(k => root.style.removeProperty(k));
   document.getElementById('yn-theme-style')?.remove();
   document.getElementById('yn-theme-font')?.remove();
@@ -460,6 +464,7 @@ function applyTheme(raw: any, path: string) {
   root.setAttribute('data-secret-preset', c.preset || 'custom');
   root.setAttribute('data-yn-theme', '1');
   root.setAttribute('data-yn-dark', dark ? '1' : '0');
+  root.setAttribute('data-yn-pm', c.productMascots.enabled ? 'on' : 'off');
   // Variables the built-in Chiikawa preset (and older themes) read.
   root.style.setProperty('--secret-bg', live || t.background || DEFAULT_TOKENS.background);
   root.style.setProperty('--secret-surface', t.surface || DEFAULT_TOKENS.surface);
@@ -623,7 +628,13 @@ export function SecretThemeRuntime() {
       window.parent.postMessage({ type: 'yn-theme-anchor', rect: r === undefined ? undefined : r, hasRect: r !== null }, window.location.origin);
     };
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.data?.type !== 'yn-theme-draft') return;
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === 'yn-mascot-measure') {
+        const g = String(e.data.group || '');
+        window.parent.postMessage({ type: 'yn-mascot-measured', group: g, info: measureMascotInfo(g), vw: window.innerWidth, vh: window.innerHeight, k: screenScale() }, window.location.origin);
+        return;
+      }
+      if (e.data?.type !== 'yn-theme-draft') return;
       const m: OverlayMode = e.data.mode === 'try' || e.data.mode === 'elements' || e.data.mode === 'mascots' || e.data.mode === 'parts' ? e.data.mode : 'edit';
       modeRef.current = m; setMode(m);
       selectedKey = e.data.selectedKey || '';

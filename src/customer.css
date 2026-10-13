@@ -455,3 +455,7 @@ html:not([data-secret-theme="on"]) .shop .grid>.product:nth-child(n+7){--n:6}
   .authBrand .logo,.authBrand h1,.brandrow h1,.bannerSlide img,.bottom a.active svg,.chatBubble,.payModal,.payModalCard,.miniCheckout,.shop .empty svg,.marketLoading{animation:none!important}
   .bottom::before,.product,.cartItem,.categoryRail button,.chips button{transition:none!important}
 }
+
+/* Debt page now shows four figures: original, interest, additional, paid */
+.debtStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:700px){.debtStats{grid-template-columns:repeat(4,minmax(0,1fr))}}

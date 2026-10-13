@@ -19,7 +19,8 @@ export type Variant = 'solid' | 'gradient' | 'outline' | 'glass' | 'image' | 'pl
 
 export type ElAction = { type: ActionType; value: string; newTab: boolean };
 export type ThemeEl = {
-  v: 2; id: string; type: ElementType; name: string;
+  /** 3 = x/y are the CENTRE of the picture (same spot on every screen). 2 = older themes (x/y were the top-left corner). */
+  v: 2 | 3; id: string; type: ElementType; name: string;
   text: string; image: string; icon: string;
   x: number; y: number; w: number; h: number; rotate: number; opacity: number; z: number;
   variant: Variant; color: string; background: string; gradientTo: string; angle: number;
@@ -86,8 +87,8 @@ const newId = () => (globalThis.crypto && 'randomUUID' in globalThis.crypto ? gl
 
 export function blankElement(type: ElementType, o: Partial<ThemeEl> = {}, z = 1): ThemeEl {
   const base: ThemeEl = {
-    v: 2, id: newId(), type, name: '', text: '', image: '', icon: '',
-    x: 30, y: 40, w: 150, h: 0, rotate: 0, opacity: 100, z,
+    v: 3, id: newId(), type, name: '', text: '', image: '', icon: '',
+    x: 50, y: 45, w: 150, h: 0, rotate: 0, opacity: 100, z,
     variant: 'plain', color: '#241b35', background: 'transparent', gradientTo: '#ec4899', angle: 135,
     radius: 12, fontSize: 22, fontWeight: 700, borderColor: '#ffffff', borderWidth: 0, shadow: 'none',
     fit: 'contain', imageMode: 'background', imageSize: 28, hover: 'none',
@@ -95,33 +96,63 @@ export function blankElement(type: ElementType, o: Partial<ThemeEl> = {}, z = 1)
   };
   if (type === 'button') Object.assign(base, {
     text: 'Tap me', variant: 'gradient', background: '#7c3aed', gradientTo: '#ec4899', color: '#ffffff',
-    radius: 999, fontSize: 16, fontWeight: 800, w: 150, h: 48, shadow: 'medium', hover: 'lift', x: 32, y: 78,
+    radius: 999, fontSize: 16, fontWeight: 800, w: 150, h: 48, shadow: 'medium', hover: 'lift', x: 50, y: 86,
     action: { type: 'confetti', value: '', newTab: true },
   });
-  if (type === 'text') Object.assign(base, { text: 'Your custom text', w: 220, h: 0, fontSize: 24, x: 10, y: 30 });
-  if (type === 'image') Object.assign(base, { w: 140, h: 0, radius: 16, fit: 'contain', x: 55, y: 40 });
+  if (type === 'text') Object.assign(base, { text: 'Your custom text', w: 220, h: 0, fontSize: 24, x: 50, y: 30 });
+  if (type === 'image') Object.assign(base, { w: 140, h: 0, radius: 16, fit: 'contain', x: 50, y: 45 });
   return { ...base, ...o };
+}
+
+/** The phone the editor's numbers are designed on. Sizes are in "design pixels" at this width and grow / shrink with the screen. */
+export const REF_W = 390, REF_H = 844;
+
+/** Old themes stored the top-left corner. Convert to the centre so the picture stays exactly where it was on a phone. */
+function cornerToCentre(x: number, y: number, w: number, h: number, type: ElementType, fontSize: number) {
+  const hh = h > 0 ? h : type === 'button' ? 48 : type === 'image' ? w : Math.round(fontSize * 1.5);
+  return {
+    x: Math.round((x + (w / 2 / REF_W) * 100) * 10) / 10,
+    y: Math.round((y + (hh / 2 / REF_H) * 100) * 10) / 10,
+  };
 }
 
 /** Accepts anything saved earlier (including the first generation of text/image elements). */
 export function normalizeElement(raw: any, index = 0): ThemeEl {
   const r = raw || {};
   const type: ElementType = r.type === 'button' ? 'button' : r.type === 'image' ? 'image' : 'text';
-  if (r.v === 2) {
+  if (r.v === 2 || r.v === 3) {
     const b = blankElement(type, {}, index + 1);
     const el: ThemeEl = { ...b, ...r, action: { ...b.action, ...(r.action || {}) }, anim: { ...b.anim, ...(r.anim || {}) }, pages: Array.isArray(r.pages) ? r.pages : [] };
     el.anim.speed = clamp(num(el.anim.speed, 5), 1, 10);
+    if (r.v === 2) { Object.assign(el, cornerToCentre(num(r.x, 30), num(r.y, 40), num(el.w, 150), num(el.h, 0), type, num(el.fontSize, 22))); el.v = 3; }
+    else el.v = 3;
     return el;
   }
   // legacy: x/y/w in %, h = min-height px, background = css colour
   const legacyW = num(r.w, 42);
   const hasBg = typeof r.background === 'string' && r.background && r.background !== 'transparent';
+  const wpx = Math.round((legacyW / 100) * REF_W);
+  const c = cornerToCentre(num(r.x, 8), num(r.y, 12), wpx, 0, type, num(r.fontSize, 22));
   return blankElement(type, {
     id: str(r.id, newId()), text: str(r.text, ''), image: str(r.image, ''),
-    x: num(r.x, 8), y: num(r.y, 12), w: Math.round((legacyW / 100) * 390), h: type === 'image' ? 0 : 0,
+    x: c.x, y: c.y, w: wpx, h: 0,
     color: str(r.color, '#241b35'), background: hasBg ? r.background : 'transparent', variant: hasBg ? 'solid' : 'plain',
     radius: num(r.radius, 12), fontSize: num(r.fontSize, 22), z: num(r.z, index + 1),
   }, index + 1);
+}
+
+/** Scale applied to every free element so it keeps the same proportions on a phone, tablet and computer. */
+export function screenScale(vw = typeof window !== 'undefined' ? window.innerWidth : REF_W): number {
+  return Math.round(clamp(vw / REF_W, 0.8, 1.6) * 100) / 100;
+}
+function useScreenScale(): number {
+  const [k, setK] = useState(() => screenScale());
+  useEffect(() => {
+    const on = () => setK(screenScale());
+    window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
+    return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
+  }, []);
+  return k;
 }
 
 /* ------------------------------ tiny helpers ------------------------------ */
@@ -231,7 +262,7 @@ const iconNode = (el: ThemeEl) => (
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
-function useMotion(ref: React.RefObject<HTMLDivElement | null>, type: AnimType, speedIn: number, enabled: boolean, sig: string) {
+function useMotion(ref: React.RefObject<HTMLDivElement | null>, type: AnimType, speedIn: number, enabled: boolean, sig: string, k: number) {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -251,7 +282,7 @@ function useMotion(ref: React.RefObject<HTMLDivElement | null>, type: AnimType, 
         const tx = rand(minX, maxX), ty = rand(minY, maxY), d = Math.hypot(tx - cx, ty - cy);
         const dur = clamp(d / (speed * 55), 1.2, 9);
         node.style.transition = `transform ${dur}s cubic-bezier(.45,.05,.55,.95)`;
-        node.style.transform = `translate3d(${tx}px,${ty}px,0) rotate(${rand(-14, 14)}deg)`;
+        node.style.transform = `translate3d(${tx / k}px,${ty / k}px,0) rotate(${rand(-14, 14)}deg)`;
         cx = tx; cy = ty;
         timer = window.setTimeout(go, dur * 1000);
       };
@@ -273,28 +304,28 @@ function useMotion(ref: React.RefObject<HTMLDivElement | null>, type: AnimType, 
         else if (type === 'crossBack') { x -= speed * 60 * dt; if (x < minX - m.w) x = maxX + m.w; ty = Math.sin(t * 2) * 8; }
         else if (type === 'fall') { y += speed * 55 * dt; if (y > maxY + m.h) y = minY - m.h; x = Math.sin(t * 1.6) * 22; rot = Math.sin(t * 2) * 18; }
         else if (type === 'orbit') { const a = t * (0.4 + speed * 0.25); x = R * (Math.cos(a) - 1); y = R * Math.sin(a); }
-        node.style.transform = `translate3d(${x}px,${y + ty}px,0) rotate(${rot}deg)`;
+        node.style.transform = `translate3d(${x / k}px,${(y + ty) / k}px,0) rotate(${rot}deg)`;
         raf = requestAnimationFrame(loop);
       };
       raf = requestAnimationFrame(loop);
     }
     return () => { alive = false; cancelAnimationFrame(raf); window.clearTimeout(timer); node.style.transition = ''; node.style.transform = ''; };
-  }, [ref, type, speedIn, enabled, sig]);
+  }, [ref, type, speedIn, enabled, sig, k]);
 }
 
 /* ------------------------------ one element ------------------------------ */
 
 type ViewProps = {
-  el: ThemeEl; edit: boolean; animate: boolean; selected: boolean; offPage: boolean;
+  k: number; el: ThemeEl; edit: boolean; animate: boolean; selected: boolean; offPage: boolean;
   onMoveStart: (e: React.PointerEvent, el: ThemeEl) => void;
   onResizeStart: (e: React.PointerEvent, el: ThemeEl) => void;
   onActivate: (e: React.MouseEvent, el: ThemeEl) => void;
 };
 
-function ElementView({ el, edit, animate, selected, offPage, onMoveStart, onResizeStart, onActivate }: ViewProps) {
+function ElementView({ k, el, edit, animate, selected, offPage, onMoveStart, onResizeStart, onActivate }: ViewProps) {
   const animRef = useRef<HTMLDivElement | null>(null);
   const sig = `${el.x}|${el.y}|${el.w}|${el.h}|${el.fontSize}|${el.text}`;
-  useMotion(animRef, el.anim.type, el.anim.speed, animate && !edit, sig);
+  useMotion(animRef, el.anim.type, el.anim.speed, animate && !edit, sig, k);
   const cssAnim = !edit && animate && CSS_ANIMS.has(el.anim.type) && (isPreviewFrame() || !reducedMotion());
   const interactive = el.action.type !== 'none';
   const fill = el.h > 0;
@@ -325,7 +356,8 @@ function ElementView({ el, edit, animate, selected, offPage, onMoveStart, onResi
 
   const outer: React.CSSProperties = {
     position: 'absolute', left: el.x + '%', top: el.y + '%', width: el.w, height: fill ? el.h : 'auto',
-    zIndex: el.z, transform: el.rotate ? `rotate(${el.rotate}deg)` : undefined, opacity: (offPage ? 0.35 : 1) * el.opacity / 100,
+    // x / y are the CENTRE of the element, so "50 / 50" is the middle of every screen; the whole thing grows with the screen
+    zIndex: el.z, transform: `translate(-50%,-50%)${el.rotate ? ` rotate(${el.rotate}deg)` : ''} scale(${k})`, transformOrigin: 'center center', opacity: (offPage ? 0.35 : 1) * el.opacity / 100,
     pointerEvents: edit ? 'auto' : 'none', touchAction: edit ? 'none' : undefined, cursor: edit ? 'move' : undefined,
   };
   return (
@@ -352,6 +384,7 @@ export function ThemeOverlay({ elements, pageKey, mode, selectedId, onSelect, on
   const navigate = useNavigate();
   const edit = mode === 'elements' || mode === 'edit';
   const animate = mode === 'live' || mode === 'try';
+  const k = useScreenScale();
   const [drag, setDrag] = useState<Record<string, Partial<ThemeEl>>>({});
   const pending = useRef<Record<string, Partial<ThemeEl>>>({});
   const raf = useRef(0);
@@ -374,11 +407,12 @@ export function ThemeOverlay({ elements, pageKey, mode, selectedId, onSelect, on
     const target = e.currentTarget as HTMLElement;
     try { target.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     const sx = e.clientX, sy = e.clientY, ox = el.x, oy = el.y, ow = el.w;
-    const oh = el.h > 0 ? el.h : ((document.querySelector(`[data-el="${el.id}"]`) as HTMLElement | null)?.getBoundingClientRect().height || 60);
+    const oh = el.h > 0 ? el.h : (((document.querySelector(`[data-el="${el.id}"]`) as HTMLElement | null)?.getBoundingClientRect().height || 60 * k) / k);
     const move = (ev: PointerEvent) => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (kind === 'move') queuePatch(el.id, { x: Math.round(clamp(ox + (dx / window.innerWidth) * 100, -30, 105) * 10) / 10, y: Math.round(clamp(oy + (dy / window.innerHeight) * 100, -20, 105) * 10) / 10 });
-      else queuePatch(el.id, { w: Math.round(clamp(ow + dx, 24, 900)), h: Math.round(clamp(oh + dy, 20, 900)) });
+      if (kind === 'move') queuePatch(el.id, { x: Math.round(clamp(ox + (dx / window.innerWidth) * 100, -10, 110) * 10) / 10, y: Math.round(clamp(oy + (dy / window.innerHeight) * 100, -10, 110) * 10) / 10 });
+      // the picture grows from its centre, so the corner follows the finger when the size changes by twice the drag
+      else queuePatch(el.id, { w: Math.round(clamp(ow + (2 * dx) / k, 24, 900)), h: Math.round(clamp(oh + (2 * dy) / k, 20, 900)) });
     };
     const up = () => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
@@ -401,7 +435,7 @@ export function ThemeOverlay({ elements, pageKey, mode, selectedId, onSelect, on
       {visible.map(raw => {
         const el = drag[raw.id] ? { ...raw, ...drag[raw.id] } : raw;
         return (
-          <ElementView key={raw.id} el={el} edit={edit} animate={animate} selected={raw.id === selectedId} offPage={raw.pages.length > 0 && !raw.pages.includes(pageKey)}
+          <ElementView key={raw.id} k={k} el={el} edit={edit} animate={animate} selected={raw.id === selectedId} offPage={raw.pages.length > 0 && !raw.pages.includes(pageKey)}
             onMoveStart={(e, x) => track(e, x, 'move')} onResizeStart={(e, x) => track(e, x, 'resize')} onActivate={activate} />
         );
       })}
