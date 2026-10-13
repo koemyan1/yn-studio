@@ -33,3 +33,7 @@ the redesign rules are switched off while a theme is on. Page transitions and th
 - Not verified here: `npm install` / `npm run build` and a visual check in a browser (no network / browser in this environment).
   Please run `npm run build` and look over each page once.
 - Home-screen installs cache assets – if the old look shows, reload twice or reinstall the app.
+
+## v5.1 fixes
+- Checkout button text was invisible: the fixed checkout bar sits outside the page container, so the gradient variable was undefined and the button had no background (white text on white). Tokens now live on `<html>`.
+- Banner no longer zooms out/in while sliding (removed the Ken-Burns loop).
