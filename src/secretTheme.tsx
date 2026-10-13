@@ -5,6 +5,7 @@ import { ThemeOverlay, normalizeElement, type OverlayMode, type ThemeEl } from '
 import { colorForProduct, gradientForProduct, processedImageUrl } from './imageTools';
 import { LIVE_EVT, getDarkPref, getLiveBg, getSeedOffset, isPreviewFrame, setDarkPref } from './themeLive';
 import { MascotHandles } from './MascotHandles';
+import { PartIcons, type PartIconSpec } from './PartIcons';
 import { setKhmerFont } from './lang';
 import { mascotVars, normalizeMascotImages, normalizeMascotPos, type MascotPos } from './chiikawaMascots';
 
@@ -23,6 +24,10 @@ export type StyleProps = {
   shadow?: 'none' | 'soft' | 'medium' | 'strong';
   fontSize?: number; fontWeight?: number; padding?: number; opacity?: number;
   hidden?: boolean; fit?: 'cover' | 'contain';
+  /** Move the part (px) without touching the page layout around it. */
+  moveX?: number; moveY?: number;
+  /** A picture used as the part's icon (replaces the little built-in icon of buttons / nav items). */
+  icon?: string; iconSize?: number; iconSide?: 'left' | 'right' | 'top'; iconKeep?: boolean;
 };
 export type PropName = keyof StyleProps;
 
@@ -32,7 +37,7 @@ const TEXT: PropName[] = ['color', 'fontSize', 'fontWeight', 'opacity', 'hidden'
 export type ComponentDef = { key: string; label: string; group: string; selector: string; props: PropName[] };
 
 /** Every restylable part of the real customer storefront. */
-export const COMPONENTS: ComponentDef[] = [
+const BASE_COMPONENTS: ComponentDef[] = [
   { key: 'header', label: 'Top bar (inner pages)', group: 'Header & search', selector: '.shop .top, .detail .top', props: BOX },
   { key: 'brandEyebrow', label: 'Small heading above store name', group: 'Header & search', selector: '.brandrow .eyebrow', props: TEXT },
   { key: 'brandTitle', label: 'Store name heading', group: 'Header & search', selector: '.brandrow h1', props: TEXT },
@@ -61,6 +66,29 @@ export const COMPONENTS: ComponentDef[] = [
   { key: 'bottomNavItem', label: 'Bottom navigation item', group: 'Navigation', selector: 'nav.bottom a', props: ['color', 'fontSize', 'fontWeight', 'radius'] },
   { key: 'bottomNavActive', label: 'Bottom navigation (current page)', group: 'Navigation', selector: 'nav.bottom a.active', props: BOX.concat(['fontWeight']) },
 ];
+
+/** Every part can be moved, get a background colour / picture, and (except plain pictures) an icon picture. */
+const UNIVERSAL: PropName[] = ['background', 'backgroundImage', 'moveX', 'moveY'];
+const ICON_PROPS: PropName[] = ['icon', 'iconSize', 'iconSide'];
+export const COMPONENTS: ComponentDef[] = BASE_COMPONENTS.map(d => {
+  const extra = [...UNIVERSAL, ...(d.key === 'productImage' ? [] : ICON_PROPS)].filter(x => !d.props.includes(x));
+  const hasHidden = d.props.includes('hidden');
+  const base = d.props.filter(x => x !== 'hidden');
+  return { ...d, props: [...base, ...extra, ...(hasHidden ? ['hidden' as PropName] : [])] };
+});
+
+/** Anything the admin taps in the preview that is not in the list above becomes a "tapped part" with every tool. */
+export const AUTO_PROPS: PropName[] = ['background', 'backgroundImage', 'color', 'borderColor', 'borderWidth', 'radius', 'shadow', 'fontSize', 'fontWeight', 'padding', 'opacity', 'fit', 'moveX', 'moveY', 'icon', 'iconSize', 'iconSide', 'hidden'];
+export type CustomPart = { selector: string; label: string };
+export function cleanSelector(v: any): string {
+  return typeof v === 'string' ? v.replace(/[{};<@\\\n\r]/g, '').trim().slice(0, 240) : '';
+}
+export function allComponents(c: any): ComponentDef[] {
+  const cp: Record<string, CustomPart> = (c && c.customParts) || {};
+  const extra: ComponentDef[] = Object.keys(cp).map(key => ({ key, label: String(cp[key].label || 'Tapped part').slice(0, 60), group: 'Tapped parts', selector: cleanSelector(cp[key].selector), props: AUTO_PROPS }))
+    .filter(d => d.selector);
+  return extra.length ? [...COMPONENTS, ...extra] : COMPONENTS;
+}
 
 export const PAGES: { key: string; label: string; path: string }[] = [
   { key: 'home', label: 'Home', path: '/' },
@@ -105,6 +133,7 @@ export const blankTheme = () => ({
   layout: { columns: 0, maxWidth: 0, navStyle: 'floating' as 'floating' | 'flat' | 'hidden' },
   texts: {} as Record<string, string>,
   components: {} as Record<string, StyleProps>,
+  customParts: {} as Record<string, CustomPart>,
   pageStyles: {} as Record<string, { background?: string; backgroundImage?: string }>,
   elements: [] as any[],
   mascotImages: {} as Record<string, string>,
@@ -133,6 +162,8 @@ export function normalizeTheme(raw: any) {
     layout: { ...b.layout, ...(c.layout || {}) },
     texts: { ...(c.texts || {}) },
     components: { ...(c.components || {}) },
+    customParts: Object.fromEntries(Object.entries((c.customParts && typeof c.customParts === 'object' ? c.customParts : {}) as Record<string, any>)
+      .map(([k, v]) => [k, { selector: cleanSelector(v?.selector), label: String(v?.label || 'Tapped part').slice(0, 60) }]).filter(([, v]) => (v as CustomPart).selector)) as Record<string, CustomPart>,
     pageStyles: { ...(c.pageStyles || {}) },
     elements: (Array.isArray(c.elements) ? c.elements : []).map((e: any, i: number) => normalizeElement(e, i)) as ThemeEl[],
     mascotImages: normalizeMascotImages(c.mascotImages),
@@ -193,6 +224,7 @@ function declarations(p: StyleProps): string {
   if (p.padding != null) d.push(`padding:${Number(p.padding)}px!important`);
   if (p.opacity != null) d.push(`opacity:${Number(p.opacity) / 100}!important`);
   if (p.fit) d.push(`object-fit:${p.fit}!important`);
+  if (p.moveX || p.moveY) d.push(`translate:${Number(p.moveX || 0)}px ${Number(p.moveY || 0)}px!important`);
   return d.join(';') + (d.length ? ';' : '');
 }
 
@@ -324,11 +356,13 @@ export function buildThemeCss(input: any, path = '/', opts: { dark?: boolean; li
   if (ps.background) css += scoped(PAGE_SELECTORS) + `{background-color:${safe(ps.background)}!important;}`;
   if (ps.backgroundImage) css += scoped(PAGE_SELECTORS) + `{background-image:${cssUrl(ps.backgroundImage)}!important;background-size:cover!important;background-position:center!important;}`;
 
-  for (const def of COMPONENTS) {
+  for (const def of allComponents(c)) {
     const p = c.components[def.key];
     if (!p) continue;
     const d = declarations(p);
     if (d) css += `${scoped(def.selector)}{${d}}`;
+    // an icon picture replaces the part's own little icon (unless "keep" is on); the picture itself is added by <PartIcons/>
+    if (p.icon && !p.hidden && !p.iconKeep) css += scoped(def.selector.split(',').map(x => `${x.trim()} > svg`).join(',')) + '{display:none!important;}';
   }
   if (c.customCss.trim()) css += scopeCustomCss(c.customCss);
   return css;
@@ -448,10 +482,10 @@ function applyTheme(raw: any, path: string) {
 }
 
 /** Finds which restylable part of the page was clicked (deepest match wins). */
-function componentAt(target: Element | null): ComponentDef | null {
+function componentAt(target: Element | null, defs: ComponentDef[] = COMPONENTS): ComponentDef | null {
   if (!target) return null;
   let best: ComponentDef | null = null, bestDepth = -1;
-  for (const def of COMPONENTS) {
+  for (const def of defs) {
     let hit: Element | null = null;
     try { hit = target.closest(def.selector); } catch { hit = null; }
     if (!hit) continue;
@@ -461,6 +495,43 @@ function componentAt(target: Element | null): ComponentDef | null {
   }
   return best;
 }
+
+/** True for the page itself / empty space (→ page background tools) rather than a thing on the page. */
+export function isPageLevel(t: Element): boolean {
+  if (t === document.documentElement || t === document.body || t.id === 'root') return true;
+  try { return t.matches(PAGE_SELECTORS); } catch { return false; }
+}
+
+/** Builds a CSS selector (class based, so it also matches its look-alikes) for something the admin tapped. */
+export function autoSelectorFor(rawTarget: Element): { selector: string; label: string } | null {
+  const target: Element = rawTarget.closest('svg') || rawTarget;        // tapping a stroke inside an icon means the icon
+  const SKIP = /^(on|active|selected|open|current|hover|focus|disabled|liked|show|yn.*|secretTheme.*)$/;
+  const ok = (c: string) => /^[A-Za-z_][\w-]*$/.test(c) && !SKIP.test(c);
+  const okId = (el: Element) => !!el.id && /^[A-Za-z_][\w-]*$/.test(el.id) && !/^(radix|r\d)/.test(el.id);
+  const seg = (el: Element) => el.tagName.toLowerCase() + (okId(el) ? '#' + el.id : Array.from(el.classList).filter(ok).slice(0, 2).map(c => '.' + c).join(''));
+  const hasCls = (el: Element) => okId(el) || Array.from(el.classList).some(ok);
+  const parts: string[] = [seg(target)];
+  let n: Element | null = target;
+  for (let i = 0; i < 3 && n && !hasCls(n); i++) { n = n.parentElement; if (!n || isPageLevel(n)) break; parts.unshift(seg(n)); }
+  let sel = parts.join(' > ');
+  const matches = (x: string) => { try { return Array.from(document.querySelectorAll(x)).includes(target); } catch { return false; } };
+  if (!matches(sel)) sel = parts.join(' ');
+  if (!matches(sel)) {
+    // last resort: this exact element, by its position
+    const path: string[] = []; let e: Element | null = target;
+    while (e && e !== document.body && path.length < 6) {
+      const par: Element | null = e.parentElement; const same: Element[] = par ? Array.from(par.children).filter(x => x.tagName === e!.tagName) : [];
+      path.unshift(e.tagName.toLowerCase() + (same.length > 1 ? `:nth-of-type(${same.indexOf(e) + 1})` : '')); e = par;
+    }
+    sel = path.join(' > ');
+    if (!matches(sel)) return null;
+  }
+  const text = (target.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 22);
+  const tag = target.tagName.toLowerCase();
+  const label = text ? `“${text}”` : tag === 'img' ? 'Picture' : tag === 'svg' || tag === 'path' ? 'Icon' : '<' + seg(target) + '>';
+  return { selector: cleanSelector(sel), label: 'Tapped: ' + label };
+}
+const hash36 = (str: string) => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h).toString(36); };
 
 export function SecretThemeRuntime() {
   const location = useLocation();
@@ -474,6 +545,8 @@ export function SecretThemeRuntime() {
   const tick = useLiveTick();
   const [osTick, setOsTick] = useState(0);
   const modeRef = useRef<OverlayMode>('edit');
+  const draftRef = useRef<any | null>(null);
+  draftRef.current = draft;
 
   // Customer mode: load the activated theme from the account.
   useEffect(() => {
@@ -510,21 +583,25 @@ export function SecretThemeRuntime() {
   useEffect(() => {
     if (!preview) return;
     let selectedKey = '', selKind = '', selElId = '', lastDark = '__', lastAnchor = '', clicked: Element | null = null;
+    const autoDefs: Record<string, ComponentDef> = {};          // tapped parts the editor has not echoed back yet
+    const defs = (): ComponentDef[] => { const base = allComponents(draftRef.current); return [...base, ...Object.values(autoDefs).filter(a => !base.some(b => b.key === a.key))]; };
+    let drag: { el: HTMLElement; def: ComponentDef; sx: number; sy: number; bx: number; by: number; moved: boolean; mx: number; my: number } | null = null;
+    let justDragged = false;
     const hl = styleEl('yn-theme-preview-style');
     const editing = () => modeRef.current !== 'try';
     const paint = () => {
       const m = modeRef.current;
-      const def = selKind === 'part' ? COMPONENTS.find(x => x.key === selectedKey) : undefined;
+      const def = selKind === 'part' ? defs().find(x => x.key === selectedKey) : undefined;
       // crosshair everywhere except on things that can be dragged (mascots, your own elements)
-      hl.textContent = (m !== 'try' ? 'html *:not(.ynMascotBox):not(.ynMascotBox *):not(.ynEl):not(.ynEl *){cursor:crosshair!important}' : '') +
-        (def && m !== 'try' ? `${def.selector}{outline:3px solid #ff3d8b!important;outline-offset:2px!important}` : '');
+      hl.textContent = (m !== 'try' ? 'html *{user-select:none!important;-webkit-user-select:none!important}html *:not(.ynMascotBox):not(.ynMascotBox *):not(.ynEl):not(.ynEl *){cursor:crosshair!important}' : '') +
+        (def && m !== 'try' ? `${def.selector}{outline:3px solid #ff3d8b!important;outline-offset:2px!important;cursor:move!important;touch-action:none!important}` : '');
     };
     const visible = (el: Element) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
     /** Where the selected thing is inside this frame (so the editor can float its toolbar above it). */
     const rectOf = (): { left: number; top: number; width: number; height: number } | null | undefined => {
       let el: Element | null = null;
       if (selKind === 'part') {
-        const def = COMPONENTS.find(x => x.key === selectedKey);
+        const def = defs().find(x => x.key === selectedKey);
         if (!def) return undefined;
         try {
           if (clicked && clicked.isConnected && clicked.matches(def.selector) && visible(clicked)) el = clicked;
@@ -565,11 +642,58 @@ export function SecretThemeRuntime() {
       if (!editing()) return;
       if (inOverlay(e.target)) { e.preventDefault(); return; }
       e.preventDefault(); e.stopPropagation();
-      const def = componentAt(e.target as Element);
+      if (justDragged) { justDragged = false; return; }          // the click that ends a drag is not a new selection
+      const target = e.target as Element;
+      let def = componentAt(target, defs());
+      // not one of the known parts → make it a "tapped part" so ANYTHING can be edited (blank space stays the page background)
+      if (!def && !isPageLevel(target)) {
+        const auto = autoSelectorFor(target);
+        if (auto) {
+          const key = 'auto-' + hash36(auto.selector);
+          def = { key, label: auto.label, group: 'Tapped parts', selector: auto.selector, props: AUTO_PROPS };
+          autoDefs[key] = def;
+          window.parent.postMessage({ type: 'yn-theme-auto-part', key, selector: auto.selector, label: auto.label }, window.location.origin);
+        }
+      }
       // a part → its own tools; blank space → the page background tools
-      selectedKey = def ? def.key : ''; selKind = def ? 'part' : 'page'; clicked = def ? (e.target as Element).closest(def.selector) : null;
+      selectedKey = def ? def.key : ''; selKind = def ? 'part' : 'page'; clicked = def ? target.closest(def.selector) : null;
       paint(); report();
       window.parent.postMessage({ type: 'yn-theme-select', key: def ? def.key : '__page' }, window.location.origin);
+    };
+    // Drag any part to move it (up / down / sideways). The picture follows the finger live; the position is saved on release.
+    const onDown = (e: PointerEvent) => {
+      if (!editing() || (e.pointerType === 'mouse' && e.button !== 0) || inOverlay(e.target)) return;
+      const target = e.target as Element;
+      let def = componentAt(target, defs());
+      if (!def && !isPageLevel(target)) { const a = autoSelectorFor(target); if (a) { const key = 'auto-' + hash36(a.selector); def = autoDefs[key] || { key, label: a.label, group: 'Tapped parts', selector: a.selector, props: AUTO_PROPS }; } }
+      if (!def || !def.props.includes('moveX')) return;
+      // on a touch screen only the part that is already selected can be dragged (otherwise the page could not be scrolled)
+      if (e.pointerType !== 'mouse' && !(selKind === 'part' && selectedKey === def.key)) return;
+      const el = target.closest(def.selector) as HTMLElement | null;
+      if (!el) return;
+      const cur = (draftRef.current?.components || {})[def.key] || {};
+      drag = { el, def, sx: e.clientX, sy: e.clientY, bx: Number(cur.moveX) || 0, by: Number(cur.moveY) || 0, moved: false, mx: 0, my: 0 };
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+      drag.moved = true; e.preventDefault();
+      drag.mx = Math.max(-600, Math.min(600, Math.round(drag.bx + dx))); drag.my = Math.max(-600, Math.min(600, Math.round(drag.by + dy)));
+      drag.el.style.setProperty('translate', `${drag.mx}px ${drag.my}px`, 'important');
+    };
+    const onUp = () => {
+      const d = drag; drag = null;
+      if (!d || !d.moved) return;
+      justDragged = true; window.setTimeout(() => { justDragged = false; }, 400);
+      if (selectedKey !== d.def.key) {
+        selectedKey = d.def.key; selKind = 'part'; clicked = d.el;
+        if (d.def.key.startsWith('auto-')) { autoDefs[d.def.key] = d.def; window.parent.postMessage({ type: 'yn-theme-auto-part', key: d.def.key, selector: d.def.selector, label: d.def.label }, window.location.origin); }
+        window.parent.postMessage({ type: 'yn-theme-select', key: d.def.key }, window.location.origin);
+      }
+      window.parent.postMessage({ type: 'yn-theme-part-move', key: d.def.key, x: d.mx, y: d.my }, window.location.origin);
+      paint(); report();
+      window.setTimeout(() => d.el.style.removeProperty('translate'), 300);   // the saved value (same position) takes over
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') window.parent.postMessage({ type: 'yn-theme-deselect' }, window.location.origin); };
     const block = (e: Event) => { if (editing()) { e.preventDefault(); e.stopPropagation(); } };
@@ -578,12 +702,18 @@ export function SecretThemeRuntime() {
     window.addEventListener('resize', report);
     window.addEventListener('message', onMessage);
     document.addEventListener('click', onClick, true);
+    document.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointermove', onMove, { passive: false, capture: true });
+    window.addEventListener('pointerup', onUp, true);
+    window.addEventListener('pointercancel', onUp, true);
     document.addEventListener('submit', block, true);
+    document.addEventListener('dragstart', block, true);
     document.addEventListener('keydown', onKey);
     window.parent.postMessage({ type: 'yn-theme-ready' }, window.location.origin);
     return () => {
       window.clearInterval(timer); window.removeEventListener('scroll', report, true); window.removeEventListener('resize', report);
-      window.removeEventListener('message', onMessage); document.removeEventListener('click', onClick, true); document.removeEventListener('submit', block, true); document.removeEventListener('keydown', onKey); hl.remove();
+      window.removeEventListener('message', onMessage); document.removeEventListener('click', onClick, true); document.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('pointermove', onMove, true); window.removeEventListener('pointerup', onUp, true); window.removeEventListener('pointercancel', onUp, true); document.removeEventListener('submit', block, true); document.removeEventListener('dragstart', block, true); document.removeEventListener('keydown', onKey); hl.remove();
     };
   }, [preview]);
 
@@ -597,8 +727,15 @@ export function SecretThemeRuntime() {
   const norm = active ? normalizeTheme(active) : null;
   const els: ThemeEl[] = norm ? norm.elements : [];
   const showHandles = preview && (mode === 'edit' || mode === 'mascots') && !!norm && norm.preset === 'chiikawa';
+  const iconParts: PartIconSpec[] = norm
+    ? allComponents(norm).filter(d => norm.components[d.key]?.icon && !norm.components[d.key]?.hidden).map(d => {
+        const p = norm.components[d.key] as StyleProps;
+        return { key: d.key, selector: scoped(d.selector), icon: p.icon as string, size: p.iconSize || 22, side: p.iconSide || 'left' };
+      })
+    : [];
   return (
     <>
+      <PartIcons parts={iconParts} />
       {els.length ? (
         <ThemeOverlay elements={els} pageKey={pageKeyFor(path)} mode={preview ? mode : 'live'} selectedId={selEl}
           onSelect={id => { setSelEl(id); if (preview) window.parent.postMessage({ type: 'yn-theme-element-select', id }, window.location.origin); }}

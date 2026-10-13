@@ -7,7 +7,7 @@ import { FloatingBar, QBtn, QColor, QPic, QRange, QSelect, QSep, type Anchor } f
 import { supabase } from './supabase';
 import {
   COMPONENTS, DEFAULT_TOKENS, PAGES, TEXT_KEYS, THEME_PRESETS,
-  blankTheme, normalizeTheme, type PropName, type StyleProps,
+  allComponents, blankTheme, normalizeTheme, type CustomPart, type PropName, type StyleProps,
 } from './secretTheme';
 import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, STORE_PAGES, blankElement, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
@@ -99,6 +99,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>('Theme & code');
   const [compKey, setCompKey] = useState('productCard');
+  // things tapped in the preview that are not one of the named parts; they are saved into the theme only once something is changed
+  const [tapped, setTapped] = useState<Record<string, CustomPart>>({});
+  const tappedRef = useRef<Record<string, CustomPart>>({});
+  useEffect(() => { tappedRef.current = {}; setTapped({}); }, [selected]);
   const [elementId, setElementId] = useState('');
   const [cats, setCats] = useState<any[]>([]);
   const [mapFlags, setMapFlags] = useState<Record<string, boolean>>({});
@@ -184,6 +188,17 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
       if (d.type === 'yn-theme-select') {
         if (d.key === '__page') setSelKind('page'); else { setCompKey(d.key); setSelKind('part'); }
       }
+      if (d.type === 'yn-theme-auto-part' && typeof d.key === 'string' && typeof d.selector === 'string') {
+        tappedRef.current = { ...tappedRef.current, [d.key]: { selector: d.selector, label: String(d.label || 'Tapped part') } };
+        setTapped(tappedRef.current);
+      }
+      if (d.type === 'yn-theme-part-move' && typeof d.key === 'string') {
+        setCfg((c: any) => {
+          const cur = { ...(c.components?.[d.key] || {}), moveX: Number(d.x) || 0, moveY: Number(d.y) || 0 };
+          const cps = d.key.startsWith('auto-') && !c.customParts?.[d.key] && tappedRef.current[d.key] ? { ...(c.customParts || {}), [d.key]: tappedRef.current[d.key] } : (c.customParts || {});
+          return { ...c, components: { ...(c.components || {}), [d.key]: cur }, customParts: cps };
+        });
+      }
       if (d.type === 'yn-theme-deselect') setSelKind('');
       if (d.type === 'yn-theme-anchor') setAnchor(d.rect && d.hasRect !== false ? d.rect : null);
       if (d.type === 'yn-theme-element-select') { setElementId(d.id); setSelKind('element'); }
@@ -202,7 +217,16 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (v === undefined || v === '' || v === false) delete (cur as any)[prop]; else (cur as any)[prop] = v;
     const components = { ...(c.components || {}) };
     if (Object.keys(cur).length) components[key] = cur; else delete components[key];
-    return { ...c, components };
+    const customParts = key.startsWith('auto-') && !c.customParts?.[key] && tappedRef.current[key] ? { ...(c.customParts || {}), [key]: tappedRef.current[key] } : (c.customParts || {});
+    return { ...c, components, customParts };
+  });
+  /** Move a part a little (arrow buttons in the toolbar). */
+  const nudge = (key: string, dx: number, dy: number) => setCfg((c: any) => {
+    const cur: any = { ...(c.components?.[key] || {}) };
+    cur.moveX = Math.max(-600, Math.min(600, (Number(cur.moveX) || 0) + dx));
+    cur.moveY = Math.max(-600, Math.min(600, (Number(cur.moveY) || 0) + dy));
+    const customParts = key.startsWith('auto-') && !c.customParts?.[key] && tappedRef.current[key] ? { ...(c.customParts || {}), [key]: tappedRef.current[key] } : (c.customParts || {});
+    return { ...c, components: { ...(c.components || {}), [key]: cur }, customParts };
   });
   const token = (k: string) => (
     <ColorField key={k} label={({ background: 'Page background', surface: 'Cards & surfaces', text: 'Main text', muted: 'Soft text', border: 'Borders', accent: 'Accent (buttons, highlights)', accent2: 'Accent 2 (button gradient end)' } as any)[k]}
@@ -304,9 +328,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
   const actionGroups = Array.from(new Set(ACTION_TYPES.map(a => a.group)));
 
   /* ---------------- parts ---------------- */
-  const def = COMPONENTS.find(x => x.key === compKey) || COMPONENTS[0];
+  const comps = allComponents({ customParts: { ...tapped, ...(cfg.customParts || {}) } });
+  const def = comps.find(x => x.key === compKey) || COMPONENTS[0];
   const cp: StyleProps = cfg.components?.[def.key] || {};
-  const groups = Array.from(new Set(COMPONENTS.map(x => x.group)));
+  const groups = Array.from(new Set(comps.map(x => x.group)));
   const field = (prop: PropName) => {
     const k = def.key;
     const clr = () => setProp(k, prop, '');
@@ -326,6 +351,14 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         <div key={prop} className="ynField"><span>Background picture</span>
           <PicButton label="picture" has={!!cp.backgroundImage} onPick={f => pick(f, u => setProp(k, prop, u))} onClear={() => setProp(k, prop, '')} />
         </div>);
+      case 'moveX': return <RangeField key={prop} label="Move left ↔ right" value={cp.moveX ?? 0} min={-600} max={600} onChange={v => setProp(k, prop, v)} onClear={clr} />;
+      case 'moveY': return <RangeField key={prop} label="Move up ↕ down" value={cp.moveY ?? 0} min={-600} max={600} onChange={v => setProp(k, prop, v)} onClear={clr} />;
+      case 'icon': return (
+        <div key={prop} className="ynField"><span>Icon picture (replaces the little icon)</span>
+          <PicButton label="icon" has={!!cp.icon} onPick={f => pick(f, u => setProp(k, prop, u), 400)} onClear={() => setProp(k, prop, '')} />
+        </div>);
+      case 'iconSize': return cp.icon ? <RangeField key={prop} label="Icon size" value={cp.iconSize ?? 22} min={10} max={96} onChange={v => setProp(k, prop, v)} onClear={clr} /> : null;
+      case 'iconSide': return cp.icon ? <label key={prop} className="ynField"><span>Icon position</span><select value={cp.iconSide || 'left'} onChange={e => setProp(k, prop, e.target.value)}><option value="left">Before the text</option><option value="right">After the text</option><option value="top">Above the text</option></select></label> : null;
       case 'hidden': return <Check key={prop} checked={!!cp.hidden} onChange={v => setProp(k, prop, v)}>Hide this part completely</Check>;
       default: return null;
     }
@@ -375,7 +408,7 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         case 'background': return <QColor key={pn} label="Fill" value={cp.background} fallback="#ffffff" onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
         case 'color': return <QColor key={pn} label="Text" value={cp.color} fallback="#241b35" onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
         case 'borderColor': return <QColor key={pn} label="Border" value={cp.borderColor} fallback="#e9e2f4" onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
-        case 'backgroundImage': return <QPic key={pn} label="Picture" has={!!cp.backgroundImage} onPick={f => pick(f, u => setProp(k, pn, u))} onClear={() => setProp(k, pn, '')} />;
+        case 'backgroundImage': return <QPic key={pn} label="Back picture" has={!!cp.backgroundImage} onPick={f => pick(f, u => setProp(k, pn, u))} onClear={() => setProp(k, pn, '')} />;
         case 'radius': return <QRange key={pn} label="Round" icon={glyph('◜')} value={cp.radius} min={0} max={60} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
         case 'fontSize': return <QRange key={pn} label="Text size" icon={glyph('Aa')} value={cp.fontSize} min={10} max={48} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
         case 'borderWidth': return <QRange key={pn} label="Line" icon={glyph('▭')} value={cp.borderWidth} min={0} max={8} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
@@ -384,12 +417,19 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         case 'fontWeight': return <QSelect key={pn} label="Bold" value={cp.fontWeight || ''} onChange={v => setProp(k, pn, v ? Number(v) : '')}><option value="">Auto</option>{[400, 500, 600, 700, 800, 900].map(w => <option key={w} value={w}>{w}</option>)}</QSelect>;
         case 'shadow': return <QSelect key={pn} label="Shadow" value={cp.shadow || ''} onChange={v => setProp(k, pn, v)}><option value="">Auto</option><option value="none">None</option><option value="soft">Soft</option><option value="medium">Medium</option><option value="strong">Strong</option></QSelect>;
         case 'fit': return <QSelect key={pn} label="Fit" value={cp.fit || ''} onChange={v => setProp(k, pn, v)}><option value="">Auto</option><option value="cover">Fill</option><option value="contain">Whole</option></QSelect>;
+        case 'moveX': return <QRange key={pn} label="Left-right" icon={glyph('↔')} value={cp.moveX ?? 0} min={-600} max={600} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'moveY': return <QRange key={pn} label="Up-down" icon={glyph('↕')} value={cp.moveY ?? 0} min={-600} max={600} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} />;
+        case 'icon': return <QPic key={pn} label="Icon" has={!!cp.icon} onPick={f => pick(f, u => setProp(k, pn, u), 400)} onClear={() => setProp(k, pn, '')} />;
+        case 'iconSize': return cp.icon ? <QRange key={pn} label="Icon size" icon={glyph('◉')} value={cp.iconSize ?? 22} min={10} max={96} {...qr(pn)} onChange={v => setProp(k, pn, v)} onClear={() => setProp(k, pn, '')} /> : null;
+        case 'iconSide': return cp.icon ? <QSelect key={pn} label="Icon spot" value={cp.iconSide || 'left'} onChange={v => setProp(k, pn, v)}><option value="left">Before</option><option value="right">After</option><option value="top">Above</option></QSelect> : null;
         default: return null;
       }
     });
     quickBar = (
       <FloatingBar title={def.label} anchor={anchor} stageRef={stage} frameRef={frame} deps={barDeps} onClose={closeBar} onMore={() => openMore('Parts')}>
         {tools}
+ {def.props.includes('moveY') ? <><QSep /><QBtn label="Up" icon={<ArrowUp size={16} />} onClick={() => nudge(k, 0, -8)} /><QBtn label="Down" icon={<ArrowDown size={16} />} onClick={() => nudge(k, 0, 8)} /></> : null}
+        {cp.icon ? <QBtn label={cp.iconKeep ? 'Old icon: on' : 'Old icon: off'} icon={glyph('☺')} on={!!cp.iconKeep} onClick={() => setProp(k, 'iconKeep', !cp.iconKeep)} /> : null}
         {k === 'banner' ? <QPic label="Banner picture" has={!!cfg.bannerImage} onPick={f => pick(f, u => patch('bannerImage', u), 1600)} onClear={() => patch('bannerImage', '')} /> : null}
         <QSep />
         {def.props.includes('hidden') ? <QBtn label={cp.hidden ? 'Show' : 'Hide'} icon={cp.hidden ? <Eye size={16} /> : <EyeOff size={16} />} on={!!cp.hidden} onClick={() => setProp(k, 'hidden', !cp.hidden)} /> : null}
@@ -779,8 +819,10 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
 
           {tab === 'Parts' && <div className="ynPane">
             <label className="ynField"><span>Part to restyle (or tap it in the preview)</span>
-              <select value={compKey} onChange={e => { setCompKey(e.target.value); setSelKind('part'); }}>{groups.map(g => <optgroup key={g} label={g}>{COMPONENTS.filter(x => x.group === g).map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</optgroup>)}</select></label>
+              <select value={compKey} onChange={e => { setCompKey(e.target.value); setSelKind('part'); }}>{groups.map(g => <optgroup key={g} label={g}>{comps.filter(x => x.group === g).map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</optgroup>)}</select></label>
+            <p className="ynHint">Tip: tap anything in the preview, then drag it to move it, or use the sliders. A change applies to every part of the same kind (for example all product cards).</p>
             <div className="ynGrid">{def.props.filter(p => p !== 'hidden').map(field)}</div>
+            {def.props.includes('icon') && cp.icon ? <Check checked={!!cp.iconKeep} onChange={v => setProp(def.key, 'iconKeep', v)}>Keep the old icon as well</Check> : null}
             {def.props.includes('hidden') && field('hidden')}
             <button type="button" className="secondary" onClick={() => setCfg((c: any) => { const components = { ...(c.components || {}) }; delete components[def.key]; return { ...c, components }; })}><Undo2 size={15} /> Reset “{def.label}”</button>
           </div>}
