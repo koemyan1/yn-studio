@@ -9,7 +9,7 @@ import{removeBackgroundFile,randomHex}from'./imageTools';
 import{takeHomeAction}from'./themeLive';
 import'./cool.css';import'./chiikawa.css';
 import AdminSecretCodeEditor from'./AdminSecretCode';import AdminThemesPage from'./AdminThemes';import AdminProductMascotsPage from'./AdminProductMascots';import{ProductMascots}from'./ProductMascots';import'./admin.css';
-import{initFx}from'./fx';import'./customer.css';
+import{initFx}from'./fx';import{initFit}from'./themeElements';import'./customer.css';import'./fit.css';
 import L from 'leaflet';import'leaflet/dist/leaflet.css';
 import{BackgroundGeolocation}from'@capgo/background-geolocation';import{Capacitor}from'@capacitor/core';import{MapDeliveryPanel,LiveTrackMap as DeliveryMap,calcFee}from'./mapCheckout';import{startWebTracking,stopWebTracking}from'./webTracking';
 /** Looks up the profile rows for a list of user ids and returns them keyed by user_id (used by the admin Orders / Deposits / Transactions / Customers pages). */
@@ -515,7 +515,7 @@ function PwaInstall(){const[deferred,setDeferred]=useState<any>(null),[visible,s
 
 /** Wraps the routes so pages animate in (slide forward on a new page, slide back on Back) and a new page starts at the top. */
 function RouteFx({children}:{children:React.ReactNode}){const loc=useLocation();const type=useNavigationType();useEffect(()=>{if(type!=='POP'&&!isPreviewFrame())window.scrollTo({top:0,left:0})},[loc.pathname,type]);return <div className={'routeFx'+(type==='POP'?' routeBack':'')}>{children}</div>}
-function App(){useLang();useEffect(()=>{initFx()},[]);return <>{!isPreviewFrame()&&<PwaInstall/>}<SecretThemeRuntime/><RouteFx><Routes>
+function App(){useLang();useEffect(()=>{initFx();initFit()},[]);return <>{!isPreviewFrame()&&<PwaInstall/>}<SecretThemeRuntime/><RouteFx><Routes>
   <Route path="/login" element={<Login/>}/>
   <Route path="/" element={<Protected><Shop/></Protected>}/>
   

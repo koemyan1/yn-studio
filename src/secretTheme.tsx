@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from './supabase';
-import { ThemeOverlay, normalizeElement, screenScale, type OverlayMode, type ThemeEl } from './themeElements';
+import { ThemeOverlay, designViewport, normalizeElement, screenScale, zoomK, type OverlayMode, type ThemeEl } from './themeElements';
 import { colorForProduct, gradientForProduct, processedImageUrl } from './imageTools';
 import { LIVE_EVT, getDarkPref, getLiveBg, getSeedOffset, isPreviewFrame, setDarkPref } from './themeLive';
 import { MascotHandles, measureMascotInfo } from './MascotHandles';
@@ -719,7 +719,7 @@ export function SecretThemeRuntime() {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'yn-mascot-measure') {
         const g = String(e.data.group || '');
-        window.parent.postMessage({ type: 'yn-mascot-measured', group: g, info: measureMascotInfo(g), vw: window.innerWidth, vh: window.innerHeight, k: screenScale(), path: window.location.pathname }, window.location.origin);
+        window.parent.postMessage({ type: 'yn-mascot-measured', group: g, info: measureMascotInfo(g), vw: designViewport().width, vh: designViewport().height, k: screenScale(), path: window.location.pathname }, window.location.origin);
         return;
       }
       if (e.data?.type !== 'yn-theme-draft') return;
@@ -776,7 +776,7 @@ export function SecretThemeRuntime() {
     };
     const onMove = (e: PointerEvent) => {
       if (!drag) return;
-      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      const kz = zoomK(), dx = (e.clientX - drag.sx) / kz, dy = (e.clientY - drag.sy) / kz; // drawn px -> CSS px
       if (!drag.moved && Math.hypot(dx, dy) < 6) return;
       drag.moved = true; e.preventDefault();
       drag.mx = Math.max(-600, Math.min(600, Math.round(drag.bx + dx))); drag.my = Math.max(-600, Math.min(600, Math.round(drag.by + dy)));

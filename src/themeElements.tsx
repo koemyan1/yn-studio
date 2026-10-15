@@ -157,7 +157,50 @@ export function normalizeElement(raw: any, index = 0): ThemeEl {
 
 /** Scale applied to every free element so it keeps the same proportions on a phone, tablet and computer. */
 export function screenScale(vw = typeof window !== 'undefined' ? window.innerWidth : REF_W): number {
+  // on a tablet / computer the whole page is zoomed as one piece (see fit.css), so pictures need no extra scaling of their own
+  if (vw > FIT_AT) return 1;
   return Math.round(clamp(vw / REF_W, 0.8, 1.6) * 100) / 100;
+}
+
+/* ------------------------------ "same look on every device" (fit mode, see fit.css) ------------------------------ */
+/** Screens wider than this show the phone page scaled up instead of a different layout. */
+export const FIT_AT = 700;
+export function fitScale(vw = typeof window !== 'undefined' ? window.innerWidth : REF_W): number {
+  return Math.round(clamp(vw / REF_W, 1, 2) * 100) / 100;
+}
+/** Puts data-yn-fit / --yn-k on <html>. Only the customer storefront with the theme on, never admin pages. */
+export function applyFit() {
+  if (typeof document === 'undefined') return;
+  const de = document.documentElement;
+  const on = de.getAttribute('data-secret-theme') === 'on' && window.innerWidth > FIT_AT && !/^\/admin/.test(window.location.pathname);
+  if (on) {
+    const k = String(fitScale());
+    if (!de.hasAttribute('data-yn-fit')) de.setAttribute('data-yn-fit', '1');
+    if (de.style.getPropertyValue('--yn-k') !== k) de.style.setProperty('--yn-k', k);
+  } else if (de.hasAttribute('data-yn-fit')) { de.removeAttribute('data-yn-fit'); de.style.removeProperty('--yn-k'); }
+}
+let fitStarted = false;
+export function initFit() {
+  if (fitStarted || typeof window === 'undefined') return;
+  fitStarted = true;
+  applyFit();
+  window.addEventListener('resize', applyFit); window.addEventListener('orientationchange', applyFit);
+  new MutationObserver(applyFit).observe(document.documentElement, { attributes: true, attributeFilter: ['data-secret-theme'] });
+  window.setInterval(applyFit, 700); // route changes (e.g. into /admin) do not fire any event
+}
+/** How much bigger than its CSS pixels the page is drawn right now (1 on phones). getBoundingClientRect / pointer positions are in drawn pixels. */
+export function zoomK(win: Window = window): number {
+  const de = win.document.documentElement;
+  if (!de.hasAttribute('data-yn-fit')) return 1;
+  const v = parseFloat(de.style.getPropertyValue('--yn-k'));
+  return v > 0 ? v : 1;
+}
+/** The "glass" the editor's numbers refer to, in design pixels: a phone-shaped column in fit mode, the whole window otherwise. */
+export function designViewport(win: Window = window): { left: number; width: number; height: number; kz: number } {
+  const kz = zoomK(win);
+  if (kz === 1) return { left: 0, width: win.innerWidth, height: win.innerHeight, kz };
+  const cw = win.document.documentElement.clientWidth || win.innerWidth / kz;
+  return { left: Math.max(0, (cw - REF_W) / 2), width: REF_W, height: win.innerHeight / kz, kz };
 }
 function useScreenScale(): number {
   const [k, setK] = useState(() => screenScale());
@@ -174,8 +217,9 @@ export type PageBox = { left: number; width: number; height: number };
 function measurePageBox(): PageBox {
   const col = document.querySelector('.shop, .detail') as HTMLElement | null;
   const r = col ? col.getBoundingClientRect() : null;
+  const kz = zoomK(); // rects are in drawn pixels, the layer is placed in CSS pixels
   const vw = document.documentElement.clientWidth || window.innerWidth;
-  const left = r && r.width > 40 ? r.left + window.scrollX : 0, width = r && r.width > 40 ? r.width : vw;
+  const left = r && r.width > 40 ? (r.left + window.scrollX) / kz : 0, width = r && r.width > 40 ? r.width / kz : vw;
   const height = Math.max(document.documentElement.scrollHeight, window.innerHeight);
   return { left: Math.round(left), width: Math.round(width), height };
 }
@@ -329,9 +373,10 @@ function useMotion(ref: React.RefObject<HTMLDivElement | null>, type: AnimType, 
     const speed = clamp(speedIn, 1, 10);
     let alive = true, raf = 0, timer = 0;
     const r = node.getBoundingClientRect();
-    const m = { left: r.left, top: r.top, w: r.width, h: r.height, vw: window.innerWidth, vh: window.innerHeight };
+    const dv = designViewport(), kz = dv.kz; // in fit mode the "glass" is the phone-shaped column, measured in design pixels
+    const m = { left: r.left / kz - dv.left, top: r.top / kz, w: r.width / kz, h: r.height / kz, vw: dv.width, vh: dv.height };
     // screen-pinned pictures roam the glass of the phone; page-pinned ones roam the whole page (they scroll with it)
-    const topDoc = page ? m.top + window.scrollY : m.top, docH = page ? Math.max(document.documentElement.scrollHeight, m.vh) : m.vh;
+    const topDoc = page ? m.top + window.scrollY / kz : m.top, docH = page ? Math.max(document.documentElement.scrollHeight, m.vh) : m.vh;
     const minX = -m.left, maxX = Math.max(minX, m.vw - m.left - m.w), minY = -topDoc, maxY = Math.max(minY, docH - topDoc - m.h);
 
     if (type === 'wander') {
@@ -480,13 +525,14 @@ export function ThemeOverlay({ elements, pageKey, mode, selectedId, paused, onSe
     if (el.locked) return;
     const page = el.pin === 'page', k = page ? 1 : kScreen;
     const sx = e.clientX, sy = e.clientY, ox = el.x, oy = el.y, ow = el.w;
-    const oh = el.h > 0 ? el.h : (((document.querySelector(`[data-el="${el.id}"]`) as HTMLElement | null)?.getBoundingClientRect().height || 60 * k) / k);
+    const dv = designViewport(), kz = dv.kz; // pointer positions are in drawn pixels; fit mode draws the page kz times bigger
+    const oh = el.h > 0 ? el.h : (((document.querySelector(`[data-el="${el.id}"]`) as HTMLElement | null)?.getBoundingClientRect().height || 60 * k * kz) / kz / k);
     const move = (ev: PointerEvent) => {
-      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      const dx = (ev.clientX - sx) / kz, dy = (ev.clientY - sy) / kz;
       // screen pictures: % of the screen. page pictures: x = % of the store column, y = design pixels from the top of the page
       if (kind === 'move') queuePatch(el.id, page
         ? { x: Math.round(clamp(ox + (dx / box.width) * 100, -10, 110) * 10) / 10, y: Math.round(clamp(oy + (dy / REF_H) * 100, -10, 700) * 10) / 10 }
-        : { x: Math.round(clamp(ox + (dx / window.innerWidth) * 100, -10, 110) * 10) / 10, y: Math.round(clamp(oy + (dy / window.innerHeight) * 100, -10, 110) * 10) / 10 });
+        : { x: Math.round(clamp(ox + (dx / dv.width) * 100, -10, 110) * 10) / 10, y: Math.round(clamp(oy + (dy / dv.height) * 100, -10, 110) * 10) / 10 });
       // the picture grows from its centre, so the corner follows the finger when the size changes by twice the drag
       else queuePatch(el.id, { w: Math.round(clamp(ow + (2 * dx) / k, 24, 900)), h: Math.round(clamp(oh + (2 * dy) / k, 20, 900)) });
     };

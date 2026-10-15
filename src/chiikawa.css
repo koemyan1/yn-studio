@@ -570,3 +570,20 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"] .snacksLocked .butto
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .snacksLocked > svg { display: block; margin: 0 auto 8px; width: 56px; height: 56px; color: #ffb06a; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .snacksLocked::before { display: none; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .ynVid { border: 3px solid #fffdf7; box-sizing: border-box; box-shadow: var(--ck-sticker); }
+
+/* ------------------------------ v14: quantity pill always stays inside the card ------------------------------ */
+/* The pill never shrinks or squashes its buttons, and when the row is too narrow it drops under the price but stays right-aligned inside the card. */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qtyControl, html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qty > div { flex: 0 0 auto; max-width: 100%; box-sizing: border-box; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qtyControl button, html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qty button { flex: 0 0 auto; aspect-ratio: 1 / 1; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qtyControl span, html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qty span { flex: 0 0 auto; line-height: 1; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfo { min-width: 0; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfoBottom { flex-wrap: wrap; row-gap: 6px; min-width: 0; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfoBottom > strong { min-width: 0; overflow-wrap: anywhere; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfoBottom > .qtyControl { margin-left: auto; }
+@media (max-width: 700px) {
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qtyControl { gap: 4px; padding: 3px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .qtyControl button { width: 32px; height: 32px; border-width: 2px !important; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qtyControl button svg { width: 16px; height: 16px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qtyControl span { min-width: 22px; font-size: 18px; }
+  html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfoBottom strong { font-size: 22px; }
+}

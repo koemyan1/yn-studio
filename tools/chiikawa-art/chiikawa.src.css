@@ -569,3 +569,20 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme][data-
 @R .snacksLocked > svg { display: block; margin: 0 auto 8px; width: 56px; height: 56px; color: #ffb06a; }
 @R .snacksLocked::before { display: none; }
 @R .ynVid { border: 3px solid #fffdf7; box-sizing: border-box; box-shadow: var(--ck-sticker); }
+
+/* ------------------------------ v14: quantity pill always stays inside the card ------------------------------ */
+/* The pill never shrinks or squashes its buttons, and when the row is too narrow it drops under the price but stays right-aligned inside the card. */
+@RT .qtyControl, @RT .qty > div { flex: 0 0 auto; max-width: 100%; box-sizing: border-box; }
+@RT .qtyControl button, @RT .qty button { flex: 0 0 auto; aspect-ratio: 1 / 1; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; }
+@R .qtyControl span, @R .qty span { flex: 0 0 auto; line-height: 1; }
+@R .cartInfo { min-width: 0; }
+@R .cartInfoBottom { flex-wrap: wrap; row-gap: 6px; min-width: 0; }
+@R .cartInfoBottom > strong { min-width: 0; overflow-wrap: anywhere; }
+@R .cartInfoBottom > .qtyControl { margin-left: auto; }
+@media (max-width: 700px) {
+  @RT .qtyControl { gap: 4px; padding: 3px; }
+  @RT .qtyControl button { width: 32px; height: 32px; border-width: 2px !important; }
+  @R .qtyControl button svg { width: 16px; height: 16px; }
+  @R .qtyControl span { min-width: 22px; font-size: 18px; }
+  @R .cartInfoBottom strong { font-size: 22px; }
+}

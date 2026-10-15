@@ -10,7 +10,7 @@ import {
   COMPONENTS, DEFAULT_TOKENS, PAGES, PAGE_OVERRIDE_FIELDS, TEXT_KEYS, THEME_PRESETS,
   allComponents, blankTheme, effectiveTheme, normalizeTheme, pageKeyFor, pageOverrideCount, type CustomPart, type PropName, type StyleProps,
 } from './secretTheme';
-import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, REF_H, REF_W, STORE_PAGES, blankElement, screenScale, type ThemeEl } from './themeElements';
+import { ACTION_TYPES, ANIM_TYPES, ELEMENT_PAGES, REF_H, REF_W, STORE_PAGES, blankElement, designViewport, screenScale, type ThemeEl } from './themeElements';
 import { hslToHex, shrinkImage } from './imageTools';
 import { KHMER_FONTS } from './lang';
 import { DEFAULT_CLOUD_SECONDS, MASCOT_GROUPS, MASCOT_NATIVE_MOTION, MASCOT_SLOTS } from './chiikawaMascots';
@@ -419,10 +419,12 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
     if (x.pin === to) return;
     try {
       const win = frame.current?.contentWindow;
-      const vw = win?.innerWidth || REF_W, vh = win?.innerHeight || REF_H, sy = win?.scrollY || 0;
+      // everything in design pixels (a tablet / computer preview shows the phone page zoomed, see fit.css)
+      const dv = win ? designViewport(win) : { left: 0, width: REF_W, height: REF_H, kz: 1 };
+      const vw = dv.width || REF_W, vh = dv.height || REF_H, sy = (win?.scrollY || 0) / dv.kz;
       const ce = win?.document.querySelector('.shop, .detail') as HTMLElement | null, cr = ce ? ce.getBoundingClientRect() : null;
-      const cl = cr && cr.width > 40 ? cr.left : 0, cw = cr && cr.width > 40 ? cr.width : vw;
-      const k = screenScale(vw), r1 = (n: number) => Math.round(n * 10) / 10, cl100 = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+      const cl = cr && cr.width > 40 ? cr.left / dv.kz - dv.left : 0, cw = cr && cr.width > 40 ? cr.width / dv.kz : vw;
+      const k = screenScale(win?.innerWidth || REF_W), r1 = (n: number) => Math.round(n * 10) / 10, cl100 = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
       if (to === 'page') patchEl(x.id, { pin: 'page', x: cl100(r1((((x.x / 100) * vw - cl) / cw) * 100), -10, 110), y: cl100(r1((((x.y / 100) * vh + sy) / REF_H) * 100), -10, 700), w: cl100(Math.round(x.w * k), 24, 900), h: x.h > 0 ? Math.round(x.h * k) : 0 });
       else patchEl(x.id, { pin: 'screen', x: cl100(r1(((cl + (x.x / 100) * cw) / vw) * 100), -10, 110), y: cl100(r1((((x.y / 100) * REF_H - sy) / vh) * 100), -10, 110), w: cl100(Math.round(x.w / k), 24, 900), h: x.h > 0 ? Math.round(x.h / k) : 0 });
     } catch { patchEl(x.id, { pin: to }); }

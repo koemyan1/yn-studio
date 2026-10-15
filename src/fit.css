@@ -1,0 +1,23 @@
+/* ---------------------------------------------------------------------------------------------------------
+   v14 "same look on every device" (tablet + computer).
+   On a screen wider than 700px the store is the PHONE page (390 design px wide, centred) scaled up with `zoom`.
+   <html data-yn-fit> and --yn-k (the scale, 1 … 2) are set by applyFit() in themeElements.tsx – only when the
+   Chiikawa / secret theme is on and the page is not an admin page. Phones never get this, so they are untouched.
+   Every phone rule (@media max-width …) is switched on for this mode by tools/postcss-yn-fit.mjs at build time.
+   --------------------------------------------------------------------------------------------------------- */
+html[data-yn-fit] { zoom: var(--yn-k, 1); }
+html[data-yn-fit] #root { width: 390px; max-width: 390px; margin: 0 auto; }
+
+/* bars glued to the bottom of the glass: same width as the phone page */
+html[data-yn-fit] .bottom, html[data-yn-fit] .miniCheckout { width: calc(390px - 24px); }
+
+/* the editor's pictures use "% of the screen": the screen is the phone-shaped column */
+html[data-yn-fit] .ynOverlay { inset: 0 auto 0 calc(50% - 195px); width: 390px; }
+
+/* vh / svh are NOT shrunk by zoom, so divide them by the scale */
+html[data-yn-fit] body { min-height: calc(100vh / var(--yn-k, 1)) !important; }
+html[data-yn-fit] .auth, html[data-yn-fit] .loader { min-height: calc(100svh / var(--yn-k, 1)); }
+html[data-yn-fit] .galleryViewport > img { height: calc(62svh / var(--yn-k, 1)); }
+html[data-yn-fit] .chatMessages { max-height: calc(52vh / var(--yn-k, 1)) !important; }
+html[data-yn-fit] .payModalCard { max-height: calc(92vh / var(--yn-k, 1)); }
+html[data-yn-fit] .ynToast { max-width: 342px; }

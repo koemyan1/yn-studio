@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MASCOT_GROUPS, type MascotGroup, type MascotPos } from './chiikawaMascots';
+import { designViewport, zoomK } from './themeElements';
 
 /* ------------------------------------------------------------------ *
  *  Preview-only layer: draws a dashed, draggable box over every Chiikawa mascot
@@ -26,7 +27,9 @@ function visibleHost(selector: string): HTMLElement | null {
 function measure(g: MascotGroup): Box | null {
   const host = visibleHost(g.host);
   if (!host) return null;
-  const hr = host.getBoundingClientRect();
+  const kz = zoomK(); // rects are in drawn pixels; the handles are placed in CSS pixels (they differ in fit mode)
+  const r0 = host.getBoundingClientRect();
+  const hr = { left: r0.left / kz, top: r0.top / kz, width: r0.width / kz, height: r0.height / kz, right: r0.right / kz };
   if (!g.pseudo) return { left: hr.left, top: hr.top, width: hr.width, height: hr.height };
 
   const cs = getComputedStyle(host, g.pseudo);
@@ -55,9 +58,9 @@ function measure(g: MascotGroup): Box | null {
     // inline picture after some text (the one next to the store name): sit after the last line of text
     const rg = document.createRange(); rg.selectNodeContents(host);
     const rects = rg.getClientRects();
-    const last = rects.length ? rects[rects.length - 1] : hr;
-    left = last.right + (px(cs.marginLeft) || 0);
-    top = last.top + (last.height - h) / 2;
+    const lr = rects.length ? rects[rects.length - 1] : r0;
+    left = lr.right / kz + (px(cs.marginLeft) || 0);
+    top = lr.top / kz + (lr.height / kz - h) / 2;
   }
   left += ex + dx - (w * sc - w) / 2;
   top += ey + dy - (h * sc - h) / 2;
@@ -69,10 +72,12 @@ export type MascotInfo = { box: Box | null; image: string; /** the mascot is glu
 export function measureMascotInfo(groupKey: string): MascotInfo {
   const col = document.querySelector('.shop, .detail') as HTMLElement | null;
   const cr = col ? col.getBoundingClientRect() : null;
-  const column = cr && cr.width > 40 ? { left: cr.left, width: cr.width } : null;
+  const dv = designViewport();
+  const column = cr && cr.width > 40 ? { left: cr.left / dv.kz - dv.left, width: cr.width / dv.kz } : null;
   const g = MASCOT_GROUPS.find(x => x.key === groupKey);
-  if (!g) return { box: null, image: '', fixed: false, scrollY: window.scrollY, column };
-  const box = measure(g);
+  if (!g) return { box: null, image: '', fixed: false, scrollY: window.scrollY / dv.kz, column };
+  const box0 = measure(g);
+  const box = box0 ? { ...box0, left: box0.left - dv.left } : null;
   let image = '';
   const host = visibleHost(g.host);
   // fixed bars (the bottom navigation…) do not scroll, so a copy of their mascot must not scroll either
@@ -85,7 +90,7 @@ export function measureMascotInfo(groupKey: string): MascotInfo {
     if (m) image = m[1];
   }
   if (image.startsWith(window.location.origin)) image = image.slice(window.location.origin.length);
-  return { box, image, fixed, scrollY: window.scrollY, column };
+  return { box, image, fixed, scrollY: window.scrollY / dv.kz, column };
 }
 
 type Props = {
@@ -133,11 +138,11 @@ export function MascotHandles({ pos, selected, path, onSelect, onPatch }: Props)
     onSelect(g.key);
     const target = e.currentTarget as HTMLElement;
     try { target.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-    const sx = e.clientX, sy = e.clientY;
+    const sx = e.clientX, sy = e.clientY, kz = zoomK();
     const ox = posRef.current[g.key]?.dx || 0, oy = posRef.current[g.key]?.dy || 0;
     dragging.current = true;
     const move = (ev: PointerEvent) => {
-      const dx = Math.round(ox + ev.clientX - sx), dy = Math.round(oy + ev.clientY - sy);
+      const dx = Math.round(ox + (ev.clientX - sx) / kz), dy = Math.round(oy + (ev.clientY - sy) / kz);
       setLive(l => ({ ...l, [g.key]: { dx, dy } }));
       pending.current = { g: g.key, dx, dy };
       if (!raf.current) raf.current = requestAnimationFrame(flush);
