@@ -430,7 +430,7 @@ app.post('/api/bakong/pay/create', jsonBody, async (req, res) => {
       if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) return res.status(400).json({ error: 'Enter a valid amount.' });
       if (bakongAmount(amount) <= 0) return res.status(400).json({ error: 'Amount is too small.' });
       if (kind === 'debt') {
-        const d = (await sb(`debt_accounts?user_id=eq.${user.id}&enabled=eq.true&select=current_balance&limit=1`))?.[0];
+        const d = (await sb(`debt_accounts?user_id=eq.${user.id}&enabled=eq.true&currency=eq.USD&select=current_balance&limit=1`))?.[0];
         if (!d || !(Number(d.current_balance) > 0)) return res.status(409).json({ error: 'You have no outstanding debt.' });
         if (amount > Number(d.current_balance) + 0.001) return res.status(400).json({ error: 'Payment cannot be greater than your current debt.' });
       }

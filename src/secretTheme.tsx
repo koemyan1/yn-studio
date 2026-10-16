@@ -283,6 +283,16 @@ export const THEME_PRESETS: { id: string; label: string; swatch: string[]; cfg: 
       bannerImage: '/chiikawa/banner-delivery.png',
     },
   },
+  {
+    id: 'spidey', label: 'Spidey web-slinger', swatch: ['#060b1d', '#d6182b', '#ffc83d'],
+    // Full look lives in spidey.css and turns on through `preset`. Tokens keep the engine and admin previews in agreement with it.
+    cfg: {
+      preset: 'spidey', background: '#060b1d', surface: '#101a3a', text: '#eef2ff', muted: '#9aa8d6', border: '#0c2d78', accent: '#d6182b', accent2: '#ffc83d', radius: 8,
+      font: "'Outfit', system-ui, sans-serif",
+      headingFont: "'Bangers', Impact, sans-serif",
+      fontUrl: 'https://fonts.googleapis.com/css2?family=Bangers&family=Outfit:wght@400;600;700&display=swap',
+    },
+  },
 ];
 
 /* ------------------------------ CSS generation ------------------------------ */
