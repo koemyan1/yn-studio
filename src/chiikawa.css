@@ -336,12 +336,12 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root 
   display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; text-align: left; text-shadow: none; box-sizing: border-box;
   background: #fffdf7 !important; color: var(--ck-ink) !important; border: 3px solid #c9dcf0 !important; border-bottom-width: 5px !important; border-radius: 28px !important;
 }
-html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .abaPaymentButton.paywayButton { border-color: #ffc0d2 !important; background: #fff6f9 !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .abaPaymentButton.paywayButton { border-color: #f4a1a8 !important; background: #fff5f5 !important; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaPaymentButton > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 2px; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaPaymentButton b { font-size: 21px; color: var(--ck-ink); }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaPaymentButton small { font-size: 16px; color: var(--ck-ink2); font-weight: 400; }
-html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaPaymentButton > svg { color: #ff8db1; }
-html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaBadge { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 40px; padding: 0 8px; border-radius: 14px; background: #3b5aa8; color: #fff; font-weight: 700; font-size: 18px; letter-spacing: .04em; text-shadow: none; flex: 0 0 auto; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaPaymentButton > svg { color: #e11d2e; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaBadge { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 40px; padding: 0 8px; border-radius: 14px; background: #e11d2e; color: #fff; font-weight: 700; font-size: 18px; letter-spacing: .04em; text-shadow: none; flex: 0 0 auto; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root label.upload, html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root label.receiptUpload {
   display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fffefb; border: 3px dashed #f1b5c9; border-radius: 26px; cursor: pointer; color: var(--ck-ink);
 }
@@ -424,7 +424,7 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root 
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .debtPayRow { display: grid; gap: 10px; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .debtQrPayment { display: grid; gap: 14px; justify-items: center; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .debtQrForm { display: grid; gap: 12px; width: 100%; }
-html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qrFrame { padding: 10px; background: #fff; border: 3px solid #c9dcf0; border-radius: 26px; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qrFrame { padding: 10px; background: #fff; border: 3px solid #f4a1a8; border-radius: 26px; }
 html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qrFrame img { max-width: 220px; width: 100%; display: block; }
 
 /* ------------------------------ messages / support chat ------------------------------ */

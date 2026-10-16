@@ -87,7 +87,7 @@
 html[data-secret-theme="on"] .langButton{background-color:var(--secret-surface)!important;color:var(--secret-text)!important}
 
 /* ---------- 5. ABA PayWay + admin helpers ---------- */
-.paywayButton{margin-top:-4px;border-color:#0b5fff55;background:linear-gradient(135deg,#f2f7ff,var(--card,#fff))}
+.paywayButton{margin-top:-4px;border-color:#e11d2e55;background:linear-gradient(135deg,#fff1f2,var(--card,#fff))}
 .paywayButton b{display:block}.paywayButton small{color:var(--muted,#776f86)}
 .paywayButton:disabled{opacity:.6;cursor:wait}
 .bgRemoveOptions{display:grid;gap:10px;margin:10px 0;padding:12px;border-radius:14px;background:var(--soft,#f4efff)}

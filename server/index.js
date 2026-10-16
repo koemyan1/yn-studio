@@ -363,7 +363,16 @@ async function ownOrder(req, res) {
   return order;
 }
 
-app.get('/api/bakong/config', (_req, res) => res.json({ enabled: bakongEnabled(), currency: BK.currency, merchant: BK.name }));
+app.get('/api/bakong/config', (_req, res) => {
+  // `missing` only lists the NAMES of unset variables (never values) so you can see why KHQR is off.
+  const missing = [];
+  if (!BK.token) missing.push('BAKONG_API_TOKEN');
+  if (!BK.account) missing.push('BAKONG_ACCOUNT_ID');
+  if (!SB.url) missing.push('SUPABASE_URL');
+  if (!SB.service) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  if (!SB.anon) missing.push('SUPABASE_ANON_KEY');
+  res.json({ enabled: bakongEnabled(), currency: BK.currency, merchant: BK.name, missing });
+});
 
 app.post('/api/bakong/create', jsonBody, async (req, res) => {
   try {
