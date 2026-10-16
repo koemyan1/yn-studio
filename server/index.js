@@ -291,36 +291,62 @@ async function bakongCheck(md5) {
   }
 }
 
-/** Check the order's newest QR codes with Bakong, verify the payment, and (once) mark the order paid. */
-async function verifyBakong(order, md5s) {
-  if (order.payment_status === 'paid') return true;
+/** Look through a QR's newest md5s for a confirmed Bakong payment of `total` (store currency, USD).
+ *  Returns { hash } when confirmed, { mismatch: true } when money arrived but does not match, else null. */
+async function findBakongPayment(md5s, total, label) {
+  let mismatch = false;
   for (const md5 of [...(md5s || [])].reverse().slice(0, 5)) {
     const c = await bakongCheck(md5);
     if (c.state !== 'paid') continue;
     const d = c.data;
-    const expected = bakongAmount(order.total);
+    const expected = bakongAmount(total);
     const paid = Number(d.amount);
     const toOk = String(d.toAccountId || '').toLowerCase() === BK.account.toLowerCase();
     const curOk = String(d.currency || '').toUpperCase() === BK.currency;
     const amtOk = Number.isFinite(paid) && Math.abs(paid - expected) <= (BK.currency === 'KHR' ? 0.5 : 0.009);
-    if (!toOk || !curOk || !amtOk) {
-      console.warn(`Bakong mismatch for order ${order.id}: got ${paid} ${d.currency} to ${d.toAccountId}, expected ${expected} ${BK.currency} to ${BK.account}`);
-      await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_status: 'MISMATCH' }) }).catch(() => {});
-      continue;
-    }
-    const updated = await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, {
-      method: 'PATCH', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ payment_status: 'paid', status: 'paid', bakong_status: 'PAID', bakong_hash: String(d.hash || ''), bakong_paid_at: new Date().toISOString() }),
-    });
-    if (Array.isArray(updated) && updated.length) {
-      await sb('notifications', {
-        method: 'POST', headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({ title: 'Order paid with Bakong KHQR', message: `Order ${order.order_number || order.id} was paid with Bakong KHQR.`, target_role: 'admin', link: '/admin/orders' }),
-      }).catch(() => {});
-    }
-    return true;
+    if (toOk && curOk && amtOk) return { hash: String(d.hash || '') };
+    console.warn(`Bakong mismatch for ${label}: got ${paid} ${d.currency} to ${d.toAccountId}, expected ${expected} ${BK.currency} to ${BK.account}`);
+    mismatch = true;
   }
-  return false;
+  return mismatch ? { mismatch: true } : null;
+}
+const notifyAdmin = (title, message, link) => sb('notifications', {
+  method: 'POST', headers: { Prefer: 'return=minimal' },
+  body: JSON.stringify({ title, message, target_role: 'admin', link }),
+}).catch(() => {});
+
+/** Orders: verify with Bakong, then (once) mark the order as paid. */
+async function verifyBakong(order, md5s) {
+  if (order.payment_status === 'paid') return true;
+  const f = await findBakongPayment(md5s, order.total, `order ${order.id}`);
+  if (!f) return false;
+  if (f.mismatch) {
+    await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_status: 'MISMATCH' }) }).catch(() => {});
+    return false;
+  }
+  const updated = await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, {
+    method: 'PATCH', headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({ payment_status: 'paid', status: 'paid', bakong_status: 'PAID', bakong_hash: f.hash, bakong_paid_at: new Date().toISOString() }),
+  });
+  if (Array.isArray(updated) && updated.length) await notifyAdmin('Order paid with Bakong KHQR', `Order ${order.order_number || order.id} was paid with Bakong KHQR.`, '/admin/orders');
+  return true;
+}
+
+/** Wallet top-ups and debt payments: verify with Bakong, then let the database apply it exactly once. */
+async function verifyBakongPayment(pay) {
+  if (pay.status === 'paid') return true;
+  const f = await findBakongPayment(pay.bakong_md5s, pay.amount, `payment ${pay.id}`);
+  if (!f) return false;
+  if (f.mismatch) {
+    await sb(`bakong_payments?id=eq.${pay.id}&status=eq.pending`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'mismatch' }) }).catch(() => {});
+    return false;
+  }
+  const applied = await sb('rpc/bakong_apply_payment', { method: 'POST', body: JSON.stringify({ p_payment_id: pay.id, p_hash: f.hash }) });
+  if (applied === true) {
+    const what = pay.kind === 'debt' ? 'a debt payment' : 'a wallet top-up';
+    await notifyAdmin('Bakong KHQR payment received', `A customer paid $${Number(pay.amount).toFixed(2)} as ${what} with Bakong KHQR.`, pay.kind === 'debt' ? '/admin/debt' : '/admin/transactions');
+  }
+  return true;
 }
 
 const ORDER_FIELDS = 'id,order_number,user_id,total,payment_status,status,bakong_md5s,created_at';
@@ -368,6 +394,63 @@ app.post('/api/bakong/status', jsonBody, async (req, res) => {
   }
 });
 
+const PAY_FIELDS = 'id,user_id,kind,amount,status,bakong_md5s';
+async function payUser(req, res) {
+  if (!bakongEnabled()) { res.status(503).json({ error: 'Bakong KHQR is not configured on the server yet.' }); return null; }
+  if (limited(req, 120)) { res.status(429).json({ error: 'Too many requests. Please wait a moment.' }); return null; }
+  const user = await userFromToken(req);
+  if (!user) { res.status(401).json({ error: 'Please sign in again.' }); return null; }
+  return user;
+}
+
+// New QR for a wallet top-up or a debt payment (or a fresh QR for an existing unpaid one).
+app.post('/api/bakong/pay/create', jsonBody, async (req, res) => {
+  try {
+    const user = await payUser(req, res); if (!user) return;
+    let pay = null;
+    if (req.body?.payment_id) {
+      const id = String(req.body.payment_id);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Invalid payment.' });
+      pay = (await sb(`bakong_payments?id=eq.${id}&select=${PAY_FIELDS}&limit=1`))?.[0];
+      if (!pay || pay.user_id !== user.id) return res.status(404).json({ error: 'Payment not found.' });
+      if (pay.status === 'paid') return res.json({ paid: true, payment_id: pay.id });
+    } else {
+      const kind = String(req.body?.kind || '');
+      if (!['wallet', 'debt'].includes(kind)) return res.status(400).json({ error: 'Invalid payment type.' });
+      const amount = Math.round(Number(req.body?.amount) * 100) / 100;
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) return res.status(400).json({ error: 'Enter a valid amount.' });
+      if (bakongAmount(amount) <= 0) return res.status(400).json({ error: 'Amount is too small.' });
+      if (kind === 'debt') {
+        const d = (await sb(`debt_accounts?user_id=eq.${user.id}&enabled=eq.true&select=current_balance&limit=1`))?.[0];
+        if (!d || !(Number(d.current_balance) > 0)) return res.status(409).json({ error: 'You have no outstanding debt.' });
+        if (amount > Number(d.current_balance) + 0.001) return res.status(400).json({ error: 'Payment cannot be greater than your current debt.' });
+      }
+      pay = (await sb('bakong_payments', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ user_id: user.id, kind, amount }) }))?.[0];
+      if (!pay) throw new Error('Could not create payment row');
+    }
+    const q = await makeBakongQr({ id: pay.id, total: pay.amount, order_number: (pay.kind === 'debt' ? 'DEBT-' : 'TOPUP-') + pay.id.replace(/-/g, '').slice(0, 8).toUpperCase() });
+    await sb(`bakong_payments?id=eq.${pay.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_md5s: [...(pay.bakong_md5s || []), q.md5].slice(-10) }) });
+    res.json({ payment_id: pay.id, image: q.image, amount: q.amount, currency: BK.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: pay.kind === 'debt' ? 'debt' : 'wallet' });
+  } catch (e) {
+    console.error('bakong pay create', e);
+    res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });
+  }
+});
+
+app.post('/api/bakong/pay/status', jsonBody, async (req, res) => {
+  try {
+    const user = await payUser(req, res); if (!user) return;
+    const id = String(req.body?.payment_id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Invalid payment.' });
+    const pay = (await sb(`bakong_payments?id=eq.${id}&select=${PAY_FIELDS}&limit=1`))?.[0];
+    if (!pay || pay.user_id !== user.id) return res.status(404).json({ error: 'Payment not found.' });
+    res.json({ paid: await verifyBakongPayment(pay) });
+  } catch (e) {
+    console.error('bakong pay status', e);
+    res.json({ paid: false });
+  }
+});
+
 // Safety net: customer opened the Orders page; re-check their recent unpaid Bakong orders.
 app.post('/api/bakong/sync', jsonBody, async (req, res) => {
   try {
@@ -379,6 +462,8 @@ app.post('/api/bakong/sync', jsonBody, async (req, res) => {
     const rows = await sb(`orders?user_id=eq.${user.id}&payment_method=eq.Bakong%20KHQR&payment_status=neq.paid&created_at=gte.${since}&select=${ORDER_FIELDS}&order=created_at.desc&limit=5`);
     let updated = 0;
     for (const o of rows || []) if (await verifyBakong(o, o.bakong_md5s)) updated++;
+    const pays = await sb(`bakong_payments?user_id=eq.${user.id}&status=eq.pending&created_at=gte.${since}&select=${PAY_FIELDS}&order=created_at.desc&limit=5`);
+    for (const p of pays || []) if (await verifyBakongPayment(p)) updated++;
     res.json({ updated });
   } catch (e) {
     console.error('bakong sync', e);

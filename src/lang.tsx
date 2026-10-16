@@ -138,7 +138,7 @@ export const KM: Record<string, string> = {
   'Add': 'បន្ថែម',
   'Add YN Studio to home screen': 'បន្ថែម YN Studio ទៅអេក្រង់ដើម',
   /* strings used by the new features */
-  'Pay now with ABA PayWay': 'ទូទាត់ភ្លាមៗតាម ABA PayWay',
+  'Pay now with KHQR': 'ទូទាត់ភ្លាមៗតាម KHQR',
   'Orders': 'ការបញ្ជាទិញ',
   'Home': 'ទំព័រដើម',
 };
