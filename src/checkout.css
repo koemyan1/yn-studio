@@ -1,0 +1,112 @@
+/* ==========================================================================
+   Checkout page restyle.
+   Idea: the page is a short sequence (1 delivery, 2 coupon, 3 payment) that ends in a paper receipt.
+   Everything is scoped to the default storefront theme; the secret / Chiikawa themes keep their own look.
+   ========================================================================== */
+
+/* ---------- base pieces that every theme can use ---------- */
+.receiptHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.receiptRule{border-top:2px dashed rgba(36,27,53,.22);margin:10px 0}
+.payOption{position:relative}
+.payOption .payRadio{margin-left:auto;flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #c9bfdc;display:grid;place-items:center}
+.payOption.selected .payRadio{border-color:currentColor}
+.payOption.selected .payRadio::after{content:"";width:10px;height:10px;border-radius:50%;background:currentColor}
+.payHint{margin:10px 2px 0;font-size:13px;opacity:.75}
+
+/* ---------- default storefront theme ---------- */
+html:not([data-secret-theme="on"]) .shop.checkoutPage{--co-ink:#241b35;--co-muted:#6f6780;--co-line:#e4dcf1;--co-paper:#fffdf8;--co-red:#e11d2e;--co-purple:#7c3aed;--co-radius:16px}
+
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutLayout{grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:44px;align-items:start}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutMain{counter-reset:co;display:block;min-width:0}
+
+/* heading */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutIntro{margin:8px 0 28px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutIntro h1{font-size:clamp(30px,4.6vw,44px);line-height:1.04;letter-spacing:-.035em;margin:0 0 10px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutIntro p{margin:0;max-width:46ch;color:var(--co-muted);line-height:1.5}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .eyebrow{display:none}
+
+/* the three steps: a numbered rail, no card chrome */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep{position:relative;counter-increment:co;padding:0 0 32px 58px;min-width:0}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep:last-child{padding-bottom:8px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep::before{content:counter(co);position:absolute;left:0;top:0;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--co-ink);color:#fff;font:700 16px/1 var(--yn-display,inherit)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep::after{content:"";position:absolute;left:18px;top:50px;bottom:12px;width:2px;background:repeating-linear-gradient(to bottom,var(--co-line) 0 6px,transparent 6px 11px)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep:last-child::after{display:none}
+
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .panel,html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .panel:hover{background:none;border:0;box-shadow:none;border-radius:0;padding:0;margin:0;-webkit-backdrop-filter:none;backdrop-filter:none;transform:none}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep h2{margin:6px 0 4px;font-size:21px;line-height:1.2;letter-spacing:-.025em}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .paymentHeader>svg,html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .line>svg{display:none}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .paymentHeader p,html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .line p,html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .muted{margin:0;color:var(--co-muted);font-size:14px;line-height:1.45}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep .line{align-items:flex-start}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutDelivery{display:grid;gap:14px}
+
+/* fields */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep input:not([type=checkbox]),html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep textarea{border:1.5px solid var(--co-line);border-radius:12px;background:#fff;padding:12px 14px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep input:focus-visible,html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep textarea:focus-visible{border-color:var(--co-purple);outline:3px solid rgba(124,58,237,.22);outline-offset:0}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .manualDeliveryForm{display:grid;gap:12px;margin-top:4px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .manualDeliveryForm label{display:grid;gap:6px;font-size:13px;font-weight:700;color:var(--co-ink)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .defaultDeliveryChoice{display:flex!important;align-items:center;gap:10px;font-weight:500!important;color:var(--co-muted)!important}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .defaultDeliveryChoice input{width:auto}
+
+/* saved address reads like an address label */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .savedDelivery{display:grid;gap:2px;padding:14px 16px;border:1.5px solid var(--co-line);border-left:5px solid var(--co-purple);border-radius:12px;background:#fff;font-size:14px;line-height:1.45}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .savedDelivery b{font-size:15px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .savedDelivery span,html:not([data-secret-theme="on"]) .shop.checkoutPage .savedDelivery small{color:var(--co-muted)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .locationActions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* coupon */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .couponCheckout{display:grid;gap:12px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplyRow{display:flex;gap:8px;align-items:stretch}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplyRow input{flex:1;min-width:0;text-transform:uppercase;letter-spacing:.04em}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplied{display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;border:1.5px dashed #7cc796;border-radius:12px;background:#f0faf3;color:#1f6b3d}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplied span{flex:1;display:grid}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplied small{color:#2f7d4d}
+
+/* payment method: two selectable options */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption{display:flex;align-items:center;gap:14px;width:100%;margin:12px 0 0;padding:14px 16px;border:1.5px solid var(--co-line);border-radius:var(--co-radius);background:#fff;box-shadow:none;text-align:left;color:var(--co-muted);transition:border-color .15s,background-color .15s}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption b{display:block;font-size:16px;color:var(--co-ink)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption small{display:block;margin-top:2px;color:var(--co-muted)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption:hover:not(:disabled){transform:none;box-shadow:none;border-color:#cdc1e6}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption:focus-visible{outline:3px solid rgba(124,58,237,.4);outline-offset:2px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption:disabled{opacity:.55}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption.paywayButton.selected{border-color:var(--co-red);background:#fff6f6;color:var(--co-red)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption.walletPayButton.selected{border-color:var(--co-purple);background:#faf6ff;color:var(--co-purple)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOption .abaBadge{flex:none}
+
+/* summary: a paper receipt with a torn bottom edge */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutAside{min-width:0}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .orderSummary{position:sticky;top:84px;padding:0;margin:0;border:0;border-radius:0;background:none;box-shadow:none}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receiptWrap{filter:drop-shadow(0 14px 20px rgba(76,29,149,.13)) drop-shadow(0 1px 2px rgba(76,29,149,.10))}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt,html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt:hover{margin:0;padding:22px 22px 38px;border:0;border-radius:16px 16px 0 0;background:var(--co-paper);box-shadow:none;
+  -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/16px 100%;
+  mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/16px 100%}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receiptHead{margin-bottom:12px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receiptHead h2{margin:0;font-size:21px;letter-spacing:-.025em}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receiptHead span{font-size:13px;color:var(--co-muted)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine{display:flex;align-items:baseline;gap:10px;padding:6px 0;font-size:14.5px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine>span{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine>span::after{content:"";flex:1;min-width:14px;border-bottom:1.5px dotted rgba(36,27,53,.3);transform:translateY(-3px)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine>b{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .discountLine{color:#1f7a45}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine.grand{margin-top:10px;padding-top:14px;border-top:2px solid var(--co-ink)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine.grand>span{font-size:16px;font-weight:700}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine.grand>span::after{display:none}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .receipt .summaryLine.grand>b{font-family:var(--yn-display,inherit);font-size:32px;line-height:1;letter-spacing:-.03em}
+
+/* the one pay button */
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payNow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:16px 18px;border:0;border-radius:14px;background:var(--co-ink);color:#fff;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payNow.khqr{background:var(--co-red)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payNow.wallet{background:var(--co-purple)}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payNow:focus-visible{outline:3px solid rgba(36,27,53,.5);outline-offset:3px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payNow svg{width:20px;height:20px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payHint{text-align:center}
+
+/* phones and small screens: one column, receipt last */
+@media(max-width:860px){
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .checkoutLayout{grid-template-columns:minmax(0,1fr);gap:20px}
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .orderSummary{position:static}
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep{padding-left:48px}
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep::before{width:34px;height:34px;font-size:15px}
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .coStep::after{left:16px;top:46px}
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplyRow{flex-wrap:wrap}
+  html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplyRow input{flex-basis:100%}
+}

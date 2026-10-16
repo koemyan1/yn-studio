@@ -579,3 +579,11 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;col
 .admin.admin-dark .catSwitch{background:#3b2f4a}
 .admin.admin-dark .catSwitch.on{background:linear-gradient(135deg,#7c3aed,#a855f7)}
 @media(max-width:700px){.catStats{gap:8px}.catStats>div{padding:12px}.catStats b{font-size:20px}.catAdd{flex-wrap:wrap;padding:12px}.catAdd input{flex:1 1 60%}.catAdd button{flex:1 1 100%;justify-content:center}.catGrid{grid-template-columns:1fr}}
+
+/* ---- Pay with Wallet (orders only; top-ups stay KHQR) ---- */
+.abaBadge.walletBadge{background:#7c3aed}
+.abaBadge.walletBadge svg{width:20px;height:20px}
+.walletPayButton{margin-top:-6px}
+.walletPayButton:disabled{opacity:.6}
+.walletPaySummary{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;background:#7c3aed}
+.walletPaySummary:disabled{opacity:.55}

@@ -587,3 +587,8 @@ html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfoBottom > .q
   html[data-secret-theme="on"][data-secret-preset="chiikawa"] .qtyControl span { min-width: 22px; font-size: 18px; }
   html[data-secret-theme="on"][data-secret-preset="chiikawa"] .cartInfoBottom strong { font-size: 22px; }
 }
+
+/* ---- Pay with Wallet in the Chiikawa theme ---- */
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaBadge.walletBadge { background: #8b6fd6; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"][data-yn-theme]:root .abaPaymentButton.walletPayButton { border-color: #d8c7f5 !important; background: #faf6ff !important; }
+html[data-secret-theme="on"][data-secret-preset="chiikawa"] .abaPaymentButton.walletPayButton > svg { color: #8b6fd6; }
