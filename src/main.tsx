@@ -32,6 +32,7 @@ type P={id:string,name:string,description?:string,price:number,display_price?:nu
 type CartItem={id:string,quantity:number,price:number,selected_options:any,product_id:string,products?:P};
 const money=(n:any)=>'$'+Number(n||0).toFixed(2); const uid=async()=> (await supabase.auth.getUser()).data.user?.id;
 initLang();
+const API_BASE:string=((import.meta as any).env?.VITE_API_BASE_URL||'').replace(/\/$/,'');
 /* ---- Bakong KHQR (one-time QR per order; the server confirms the payment, see BAKONG-SETUP.md) ---- */
 let bakongCache:boolean|null=null;
 function useBakongEnabled(){const[on,setOn]=useState<boolean|null>(bakongCache);useEffect(()=>{if(bakongCache!==null){setOn(bakongCache);return}let live=true;fetch(API_BASE+'/api/bakong/config').then(r=>r.json()).then(j=>{bakongCache=!!j?.enabled;if(live)setOn(bakongCache)}).catch(()=>{bakongCache=false});return()=>{live=false}},[]);return on}
