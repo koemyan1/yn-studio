@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Doodle avatar">
+  <defs>
+    <filter id="wob" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2"/></filter>
+    <clipPath id="frame"><rect width="400" height="400" rx="56"/></clipPath>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="400" height="400" fill="#2f8cff"/>
+    <g fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M44 70 l7 -16 l7 16 l16 7 l-16 7 l-7 16 l-7 -16 l-16 -7z"/>
+      <path d="M338 96 l5 -11 l5 11 l11 5 l-11 5 l-5 11 l-5 -11 l-11 -5z"/>
+      <path d="M300 30 q10 -12 20 0 t20 0"/><path d="M40 190 q9 -10 18 0 t18 0"/>
+      <circle cx="352" cy="214" r="8"/><circle cx="62" cy="262" r="5"/><path d="M330 300 l16 0 m-8 -8 l0 16"/>
+    </g>
+    <g filter="url(#wob)" stroke="#111" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M26 410 C36 336 108 304 200 304 C292 304 364 336 374 410 Z" fill="#1d1d27"/>
+      <path d="M170 262 L170 312 Q200 334 230 312 L230 262 Z" fill="#e9bb97"/>
+      <path d="M156 298 L244 298 L222 410 L178 410 Z" fill="#9cc2f5"/>
+      <path d="M156 298 L200 352 L154 340 Z" fill="#b9d3f8"/><path d="M244 298 L200 352 L246 340 Z" fill="#b9d3f8"/>
+      <path d="M156 300 L186 380 L164 410 M244 300 L214 380 L236 410" fill="none"/>
+      <path d="M191 348 L209 348 L206 366 L194 366 Z" fill="#2b4fb8"/>
+      <path d="M194 366 L206 366 L216 410 L184 410 Z" fill="#2b4fb8"/>
+      <path d="M193 378 L207 372 M190 392 L211 384 M188 404 L214 396" stroke="#dbe8ff" stroke-width="3.5" fill="none"/>
+      <circle cx="116" cy="188" r="15" fill="#f1c6a3"/><circle cx="284" cy="188" r="15" fill="#f1c6a3"/>
+      <path d="M112 172 C112 102 150 80 200 80 C250 80 288 102 288 172 C288 242 252 282 200 282 C148 282 112 242 112 172 Z" fill="#f4cfae"/>
+      <path d="M106 168 C94 94 140 50 202 48 C266 50 306 94 294 168 C288 128 264 110 238 105 C216 101 184 101 162 105 C136 110 112 128 106 168 Z" fill="#17171d"/>
+      <path d="M142 92 C170 72 232 70 262 92 M132 112 C160 92 240 90 270 112" fill="none" stroke="#6d6d7a" stroke-width="3"/>
+      <path d="M146 152 Q166 142 188 151 M212 151 Q234 142 254 152" fill="none" stroke="#17171d" stroke-width="7"/>
+      <path d="M150 174 Q168 164 188 173 Q169 183 150 174 Z" fill="#fff" stroke-width="3.5"/><path d="M212 173 Q232 164 250 174 Q231 183 212 173 Z" fill="#fff" stroke-width="3.5"/>
+      <circle cx="169" cy="174" r="5.5" fill="#2a1a14" stroke="none"/><circle cx="231" cy="174" r="5.5" fill="#2a1a14" stroke="none"/>
+      <path d="M200 180 Q193 206 199 214 Q207 217 212 210" fill="none" stroke-width="3.5"/>
+      <path d="M180 240 Q200 252 220 240" fill="none" stroke="#a4453f" stroke-width="5"/>
+      <circle cx="148" cy="218" r="14" fill="#ff8f8f" fill-opacity=".38" stroke="none"/><circle cx="252" cy="218" r="14" fill="#ff8f8f" fill-opacity=".38" stroke="none"/>
+      <circle cx="266" cy="206" r="3" fill="#3a2418" stroke="none"/><circle cx="256" cy="130" r="2.6" fill="#3a2418" stroke="none"/>
+    </g>
+  </g>
+</svg>
