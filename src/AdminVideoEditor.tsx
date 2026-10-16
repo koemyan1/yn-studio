@@ -19,7 +19,7 @@ function wrap(x:CanvasRenderingContext2D,text:string,maxW:number){const out:stri
 let KC:HTMLCanvasElement|null=null;
 function keyFrame(v:HTMLVideoElement,w:number,h:number,k:{color:string;tol:number}){
   const kw=Math.min(w,640),kh=Math.round(h*kw/w);if(!KC)KC=document.createElement('canvas');if(KC.width!==kw||KC.height!==kh){KC.width=kw;KC.height=kh}
-  const x=KC.getContext('2d',{willReadFrequently:true} as any)!;x.clearRect(0,0,kw,kh);const sc=Math.max(kw/v.videoWidth,kh/v.videoHeight);x.drawImage(v,(kw-v.videoWidth*sc)/2,(kh-v.videoHeight*sc)/2,v.videoWidth*sc,v.videoHeight*sc);
+  const x=KC.getContext('2d',{willReadFrequently:true}) as CanvasRenderingContext2D;x.clearRect(0,0,kw,kh);const sc=Math.max(kw/v.videoWidth,kh/v.videoHeight);x.drawImage(v,(kw-v.videoWidth*sc)/2,(kh-v.videoHeight*sc)/2,v.videoWidth*sc,v.videoHeight*sc);
   const im=x.getImageData(0,0,kw,kh),d=im.data,kr=parseInt(k.color.slice(1,3),16),kg=parseInt(k.color.slice(3,5),16),kb=parseInt(k.color.slice(5,7),16),t0=k.tol*300,t1=t0+60,green=kg>kr&&kg>kb;
   for(let i=0;i<d.length;i+=4){const dr=d[i]-kr,dg=d[i+1]-kg,db=d[i+2]-kb,dist=Math.sqrt(dr*dr+dg*dg+db*db),m=Math.max(d[i],d[i+2]);
     if(dist<t0)d[i+3]=0;else{if(dist<t1)d[i+3]=((dist-t0)/60)*255;if(green&&d[i+1]>m)d[i+1]=m+(d[i+1]-m)*0.4}}
