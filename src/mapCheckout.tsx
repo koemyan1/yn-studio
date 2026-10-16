@@ -66,9 +66,11 @@ type PanelProps = {
   onConfirm: (pin: Pin, delivery: any) => void;
   onEdit: () => void;
   setMsg: (m: string) => void;
+  /** Applies the per-category delivery rules (free / fixed amount) to the distance-based fee. */
+  adjustFee?: (distanceFee: number) => number;
 };
 
-export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefault, setMakeDefault, pin, onConfirm, onEdit, setMsg }: PanelProps) {
+export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefault, setMakeDefault, pin, onConfirm, onEdit, setMsg, adjustFee }: PanelProps) {
   const el = useRef<HTMLDivElement | null>(null);
   const map = useRef<L.Map | null>(null);
   const timer = useRef<number>(0);
@@ -120,6 +122,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
   }
 
   const quote = store ? calcFee(cfg, store, center) : null;
+  const feeOf = (f: number) => (adjustFee ? adjustFee(f) : f);
 
   async function confirm() {
     if (!form.phone.trim()) { setMsg(tr('Please enter your phone number so the driver can call you.', 'សូមបញ្ចូលលេខទូរស័ព្ទ ដើម្បីឱ្យអ្នកដឹកទាក់ទងអ្នក។')); return; }
@@ -143,7 +146,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
           <div><span className="eyebrow">{tr('DELIVER TO', 'ដឹកជញ្ជូនទៅ')}</span><h2>{pin.label}</h2><p className="muted">{form.name || tr('Customer', 'អតិថិជន')} · {form.phone}</p></div>
           <MapPin />
         </div>
-        {store && <p className="ynMapMeta">{calcFee(cfg, store, pin).km.toFixed(1)} km · ${calcFee(cfg, store, pin).fee.toFixed(2)} {tr('delivery', 'ដឹកជញ្ជូន')}</p>}
+        {store && <p className="ynMapMeta">{calcFee(cfg, store, pin).km.toFixed(1)} km · ${feeOf(calcFee(cfg, store, pin).fee).toFixed(2)} {tr('delivery', 'ដឹកជញ្ជូន')}</p>}
         <p className="muted ynMapNote">{tr('After you order, you can watch the driver arrive live on the map in Orders.', 'បន្ទាប់ពីបញ្ជាទិញ អ្នកអាចតាមដានអ្នកដឹកផ្ទាល់នៅលើផែនទីក្នុងការបញ្ជាទិញ។')}</p>
         <button type="button" className="secondary" onClick={onEdit}><Pencil />{tr('Change location', 'ផ្លាស់ប្តូរទីតាំង')}</button>
       </div>
@@ -175,7 +178,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
       </div>
       <div className="ynPickInfo">
         <b>{moving ? tr('Moving…', 'កំពុងរំកិល…') : (label || tr('Finding address…', 'កំពុងរកអាសយដ្ឋាន…'))}</b>
-        {quote && <small>{quote.km.toFixed(1)} km · ${quote.fee.toFixed(2)} {tr('delivery', 'ដឹកជញ្ជូន')}</small>}
+        {quote && <small>{quote.km.toFixed(1)} km · ${feeOf(quote.fee).toFixed(2)} {tr('delivery', 'ដឹកជញ្ជូន')}</small>}
       </div>
       <div className="manualDeliveryForm">
         <label>{tr('Full name', 'ឈ្មោះពេញ')}<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={tr('Your name', 'ឈ្មោះរបស់អ្នក')} /></label>
