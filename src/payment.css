@@ -57,3 +57,20 @@
 @keyframes pdBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes pdBurst{0%{opacity:1;transform:rotate(var(--a)) translateY(-30px)}100%{opacity:0;transform:rotate(var(--a)) translateY(-118px) scale(.5)}}
 @media(prefers-reduced-motion:reduce){.khqrBeam,.payWait i,.payDone *,.payDoneBadge::before,.payDoneBadge::after{animation:none!important}.payDoneBadge path{stroke-dashoffset:0}.payDoneBurst,.payDoneBadge::before,.payDoneBadge::after{display:none}.payDoneBar::after{transform:scaleX(.5)}}
+
+/* Centered message box (blocking messages such as "choose your delivery location") */
+.msgBox{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:20px;background:rgba(24,16,38,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:mbFade .2s ease both}
+.msgBoxCard{--c:#f59e0b;position:relative;width:min(360px,100%);padding:30px 24px 22px;border-radius:30px;background:var(--card,#fff);color:var(--ink,#241b35);text-align:center;overflow:hidden;box-shadow:0 40px 100px rgba(20,10,40,.4);animation:mbPop .5s cubic-bezier(.2,1.4,.4,1) both}
+.msgBoxCard::before{content:"";position:absolute;inset:0 0 auto;height:120px;background:radial-gradient(120% 100% at 50% 0,color-mix(in srgb,var(--c) 30%,transparent),transparent 72%);pointer-events:none}
+.msgBoxCard.ok{--c:#16a34a}.msgBoxCard.loc{--c:#ef4444}.msgBoxCard.wallet{--c:#7c3aed}.msgBoxCard.cart{--c:#0ea5e9}
+.msgBoxIcon{position:relative;width:74px;height:74px;margin:0 auto;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;box-shadow:0 14px 30px color-mix(in srgb,var(--c) 45%,transparent);animation:mbWobble .7s .3s ease both}
+.msgBoxIcon::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid var(--c);opacity:0;animation:mbRing 1.6s .3s ease-out 2}
+.msgBoxIcon svg{width:34px;height:34px}
+.msgBoxCard h3{position:relative;margin:18px 0 6px;font-size:22px;letter-spacing:-.02em}
+.msgBoxCard p{position:relative;margin:0 0 20px;line-height:1.5;color:var(--muted,#776f86)}
+.msgBoxCard button{position:relative}
+@keyframes mbFade{from{opacity:0}to{opacity:1}}
+@keyframes mbPop{from{opacity:0;transform:translateY(24px) scale(.88)}to{opacity:1;transform:none}}
+@keyframes mbWobble{0%{transform:rotate(0)}25%{transform:rotate(-14deg)}50%{transform:rotate(11deg)}75%{transform:rotate(-5deg)}100%{transform:rotate(0)}}
+@keyframes mbRing{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(1.8)}}
+@media(prefers-reduced-motion:reduce){.msgBox,.msgBoxCard,.msgBoxIcon,.msgBoxIcon::after{animation:none!important}}
