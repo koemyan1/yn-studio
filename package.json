@@ -23,7 +23,9 @@
     "@zxing/browser": "^0.1.5",
     "@capacitor/core": "^8.0.0",
     "@capgo/background-geolocation": "^8.0.0",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "bakong-khqr": "^1.0.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/react": "^19.1.10",

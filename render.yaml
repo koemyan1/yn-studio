@@ -20,3 +20,12 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # Bakong KHQR (see BAKONG-SETUP.md)
+      - key: BAKONG_API_TOKEN
+        sync: false
+      - key: BAKONG_ACCOUNT_ID
+        value: korn_koemyan@bkrt
+      - key: BAKONG_MERCHANT_NAME
+        value: YN Studio
+      - key: BAKONG_CURRENCY
+        value: USD

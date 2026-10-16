@@ -155,6 +155,7 @@ const PATTERNS: [RegExp, (...m: string[]) => string][] = [
   [/^(\$[\d.,]+) gift$/, (_m, a) => `អំណោយ ${a}`],
   [/^Used (\d+)(?: \/ (\d+))?$/, (_m, a, b) => `បានប្រើ ${a}${b ? ' / ' + b : ''}`],
   [/^Order ([A-Z0-9-]+) was paid with ABA PayWay\.$/, (_m, a) => `ការបញ្ជាទិញ ${a} ត្រូវបានទូទាត់តាម ABA PayWay។`],
+  [/^Order ([A-Z0-9-]+) was paid with Bakong KHQR\.$/, (_m, a) => `ការបញ្ជាទិញ ${a} ត្រូវបានទូទាត់តាម Bakong KHQR។`],
 ];
 
 const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();

@@ -1,8 +1,10 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
+const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -212,6 +214,178 @@ app.post('/api/aba/sync', jsonBody, async (req, res) => {
   }
 });
 
+/* ------------------------------------------------------------------ *
+ *  Bakong KHQR (dynamic QR per order, any Bakong-connected banking app)
+ *  Setup guide: BAKONG-SETUP.md
+ *
+ *  1. POST /api/bakong/create  -> builds a one-time KHQR for one of the customer's own
+ *     unpaid orders (amount comes from the database) and returns the QR image.
+ *  2. The browser shows the QR and polls POST /api/bakong/status every few seconds.
+ *  3. The server asks Bakong "check_transaction_by_md5" with YOUR API token and only then
+ *     marks the order paid (amount, currency and receiving account are all verified).
+ *  4. POST /api/bakong/sync re-checks the customer's recent pending orders (safety net).
+ *  The API token never leaves the server.
+ * ------------------------------------------------------------------ */
+const BK = {
+  account: (env.BAKONG_ACCOUNT_ID || 'korn_koemyan@bkrt').trim(),
+  name: (env.BAKONG_MERCHANT_NAME || 'YN Studio').trim().slice(0, 25),
+  city: (env.BAKONG_MERCHANT_CITY || 'Phnom Penh').trim().slice(0, 15),
+  token: (env.BAKONG_API_TOKEN || '').trim(),
+  base: (env.BAKONG_API_BASE_URL || 'https://api-bakong.nbc.gov.kh').replace(/\/$/, ''),
+  currency: (env.BAKONG_CURRENCY || 'USD').toUpperCase() === 'KHR' ? 'KHR' : 'USD',
+  khrRate: Number(env.BAKONG_KHR_RATE || 4100),
+  minutes: Math.min(Math.max(Number(env.BAKONG_QR_MINUTES || 10), 2), 60),
+};
+const bakongEnabled = () => !!(BK.token && BK.account && SB.url && SB.service && SB.anon);
+const bakongAmount = total => {
+  const n = Number(total || 0);
+  return BK.currency === 'KHR' ? Math.round(n * BK.khrRate) : Number(n.toFixed(2));
+};
+// Loaded on first use so the server still starts if the packages are not installed yet.
+let khqrLib = null, qrImageLib = null;
+const loadKhqr = () => (khqrLib ||= require('bakong-khqr'));
+const loadQrImage = () => (qrImageLib ||= require('qrcode'));
+
+/** Build a one-time KHQR for an order. */
+async function makeBakongQr(order) {
+  const { BakongKHQR, khqrData, IndividualInfo } = loadKhqr();
+  const amount = bakongAmount(order.total);
+  const expiresAt = Date.now() + BK.minutes * 60000;
+  const info = new IndividualInfo(BK.account, BK.name, BK.city, {
+    currency: BK.currency === 'KHR' ? khqrData.currency.khr : khqrData.currency.usd,
+    amount,
+    billNumber: String(order.order_number || order.id).replace(/[^\w-]/g, '').slice(0, 25),
+    expirationTimestamp: expiresAt,
+  });
+  const r = new BakongKHQR().generateIndividual(info);
+  if (!r || r.status?.code !== 0 || !r.data?.qr || !r.data?.md5) {
+    throw new Error(`KHQR generation failed: ${r?.status?.message || 'unknown error'}`);
+  }
+  const image = await loadQrImage().toDataURL(r.data.qr, { errorCorrectionLevel: 'M', margin: 1, width: 360 });
+  return { md5: r.data.md5, image, amount, expiresAt };
+}
+
+/** Ask Bakong about one QR. Returns { state: 'paid' | 'pending' | 'error', data? }. */
+async function bakongCheck(md5) {
+  try {
+    const r = await fetch(`${BK.base}/v1/check_transaction_by_md5`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${BK.token}` },
+      body: JSON.stringify({ md5 }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const text = await r.text();
+    let j = null; try { j = JSON.parse(text); } catch { j = null; }
+    if (r.status === 401 || r.status === 403 && !j) {
+      console.error(`Bakong API HTTP ${r.status}: token rejected/expired, or this server's IP is blocked (the API is often restricted to Cambodian IPs). See BAKONG-SETUP.md.`);
+      return { state: 'error' };
+    }
+    if (!j) { console.error(`Bakong API HTTP ${r.status} returned a non-JSON body. See BAKONG-SETUP.md (IP restriction).`); return { state: 'error' }; }
+    if (j.responseCode === 0 && j.data) return { state: 'paid', data: j.data };
+    if (j.responseCode === 1) return { state: 'pending' }; // "transaction could not be found" = not paid yet
+    console.error('Bakong API unexpected response:', text.slice(0, 200));
+    return { state: 'error' };
+  } catch (e) {
+    console.error('Bakong API request failed:', e?.message || e);
+    return { state: 'error' };
+  }
+}
+
+/** Check the order's newest QR codes with Bakong, verify the payment, and (once) mark the order paid. */
+async function verifyBakong(order, md5s) {
+  if (order.payment_status === 'paid') return true;
+  for (const md5 of [...(md5s || [])].reverse().slice(0, 5)) {
+    const c = await bakongCheck(md5);
+    if (c.state !== 'paid') continue;
+    const d = c.data;
+    const expected = bakongAmount(order.total);
+    const paid = Number(d.amount);
+    const toOk = String(d.toAccountId || '').toLowerCase() === BK.account.toLowerCase();
+    const curOk = String(d.currency || '').toUpperCase() === BK.currency;
+    const amtOk = Number.isFinite(paid) && Math.abs(paid - expected) <= (BK.currency === 'KHR' ? 0.5 : 0.009);
+    if (!toOk || !curOk || !amtOk) {
+      console.warn(`Bakong mismatch for order ${order.id}: got ${paid} ${d.currency} to ${d.toAccountId}, expected ${expected} ${BK.currency} to ${BK.account}`);
+      await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_status: 'MISMATCH' }) }).catch(() => {});
+      continue;
+    }
+    const updated = await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ payment_status: 'paid', status: 'paid', bakong_status: 'PAID', bakong_hash: String(d.hash || ''), bakong_paid_at: new Date().toISOString() }),
+    });
+    if (Array.isArray(updated) && updated.length) {
+      await sb('notifications', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ title: 'Order paid with Bakong KHQR', message: `Order ${order.order_number || order.id} was paid with Bakong KHQR.`, target_role: 'admin', link: '/admin/orders' }),
+      }).catch(() => {});
+    }
+    return true;
+  }
+  return false;
+}
+
+const ORDER_FIELDS = 'id,order_number,user_id,total,payment_status,status,bakong_md5s,created_at';
+async function ownOrder(req, res) {
+  if (!bakongEnabled()) { res.status(503).json({ error: 'Bakong KHQR is not configured on the server yet.' }); return null; }
+  if (limited(req, 120)) { res.status(429).json({ error: 'Too many requests. Please wait a moment.' }); return null; }
+  const user = await userFromToken(req);
+  if (!user) { res.status(401).json({ error: 'Please sign in again.' }); return null; }
+  const orderId = String(req.body?.order_id || '');
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) { res.status(400).json({ error: 'Invalid order.' }); return null; }
+  const rows = await sb(`orders?id=eq.${orderId}&select=${ORDER_FIELDS}&limit=1`);
+  const order = rows?.[0];
+  if (!order || order.user_id !== user.id) { res.status(404).json({ error: 'Order not found.' }); return null; }
+  return order;
+}
+
+app.get('/api/bakong/config', (_req, res) => res.json({ enabled: bakongEnabled(), currency: BK.currency, merchant: BK.name }));
+
+app.post('/api/bakong/create', jsonBody, async (req, res) => {
+  try {
+    const order = await ownOrder(req, res); if (!order) return;
+    if (order.payment_status === 'paid') return res.json({ paid: true });
+    if (['cancelled', 'rejected'].includes(order.status)) return res.status(409).json({ error: 'This order was cancelled.' });
+    if (!(Number(order.total) > 0)) return res.status(400).json({ error: 'This order has no amount to pay.' });
+    const q = await makeBakongQr(order);
+    await sb(`orders?id=eq.${order.id}`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ bakong_md5: q.md5, bakong_md5s: [...(order.bakong_md5s || []), q.md5].slice(-10), bakong_status: 'PENDING', payment_method: 'Bakong KHQR' }),
+    });
+    res.json({ image: q.image, amount: q.amount, currency: BK.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: order.order_number });
+  } catch (e) {
+    console.error('bakong create', e);
+    res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });
+  }
+});
+
+app.post('/api/bakong/status', jsonBody, async (req, res) => {
+  try {
+    const order = await ownOrder(req, res); if (!order) return;
+    if (order.payment_status === 'paid') return res.json({ paid: true });
+    res.json({ paid: await verifyBakong(order, order.bakong_md5s) });
+  } catch (e) {
+    console.error('bakong status', e);
+    res.json({ paid: false });
+  }
+});
+
+// Safety net: customer opened the Orders page; re-check their recent unpaid Bakong orders.
+app.post('/api/bakong/sync', jsonBody, async (req, res) => {
+  try {
+    if (!bakongEnabled()) return res.json({ updated: 0 });
+    if (limited(req, 120)) return res.status(429).json({ error: 'Too many requests.' });
+    const user = await userFromToken(req);
+    if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const rows = await sb(`orders?user_id=eq.${user.id}&payment_method=eq.Bakong%20KHQR&payment_status=neq.paid&created_at=gte.${since}&select=${ORDER_FIELDS}&order=created_at.desc&limit=5`);
+    let updated = 0;
+    for (const o of rows || []) if (await verifyBakong(o, o.bakong_md5s)) updated++;
+    res.json({ updated });
+  } catch (e) {
+    console.error('bakong sync', e);
+    res.json({ updated: 0 });
+  }
+});
+
 app.use(express.static(distPath));
 app.get('/{*splat}', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
@@ -219,4 +393,4 @@ app.get('/{*splat}', (req, res) => {
 });
 
 const port = Number(process.env.PORT || 3000);
-app.listen(port, () => console.log(`YN Studio server listening on ${port}${abaEnabled() ? ' (ABA PayWay ' + (ABA.base.includes('sandbox') ? 'sandbox' : 'production') + ')' : ''}`));
+app.listen(port, () => console.log(`YN Studio server listening on ${port}${abaEnabled() ? ' (ABA PayWay ' + (ABA.base.includes('sandbox') ? 'sandbox' : 'production') + ')' : ''}${bakongEnabled() ? ' (Bakong KHQR ' + BK.account + ')' : ''}`));
