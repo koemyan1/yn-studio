@@ -94,7 +94,8 @@ declare
   r record;
   v_total integer := 0;
 begin
-  if v_uid is distinct from auth.uid()
+  if auth.uid() is not null          -- null = the server confirming a KHQR payment (service role) or the SQL editor
+     and v_uid is distinct from auth.uid()
      and not exists (select 1 from public.profiles where user_id = auth.uid() and role = 'admin') then
     raise exception 'Not allowed';
   end if;

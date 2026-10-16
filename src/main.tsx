@@ -9,7 +9,7 @@ import{removeBackgroundFile,randomHex}from'./imageTools';
 import{takeHomeAction}from'./themeLive';
 import'./cool.css';import'./chiikawa.css';import'./spidey.css';
 import AdminAssistantTeachPage from'./AdminAssistantTeach';import AdminAssistantHost from'./AdminAssistant';import AdminSecretCodeEditor from'./AdminSecretCode';import AdminThemesPage from'./AdminThemes';import AdminProductMascotsPage from'./AdminProductMascots';import{ProductMascots}from'./ProductMascots';import'./admin.css';
-import{initFx}from'./fx';import{initFit}from'./themeElements';import'./customer.css';import'./fit.css';import'./checkout.css';
+import{initFx}from'./fx';import{initFit}from'./themeElements';import'./customer.css';import'./fit.css';import'./checkout.css';import'./payment.css';
 import L from 'leaflet';import'leaflet/dist/leaflet.css';
 import{BackgroundGeolocation}from'@capgo/background-geolocation';import{Capacitor}from'@capacitor/core';import{MapDeliveryPanel,LiveTrackMap as DeliveryMap,calcFee}from'./mapCheckout';import{startWebTracking,stopWebTracking}from'./webTracking';
 /** Looks up the profile rows for a list of user ids and returns them keyed by user_id (used by the admin Orders / Deposits / Transactions / Customers pages). */
@@ -43,27 +43,59 @@ async function payOrderWithWallet(orderId:string){const r=await supabase.rpc('pa
 let bakongCache:boolean|null=null;
 function useBakongEnabled(){const[on,setOn]=useState<boolean|null>(bakongCache);useEffect(()=>{if(bakongCache!==null){setOn(bakongCache);return}let live=true;fetch(API_BASE+'/api/bakong/config').then(r=>r.json()).then(j=>{bakongCache=!!j?.enabled;if(live)setOn(bakongCache)}).catch(()=>{if(live)setOn(false)});return()=>{live=false}},[]);return on}
 async function bakongCall(path:string,body?:any):Promise<any>{const{data}=await supabase.auth.getSession();const tok=data.session?.access_token;const r=await fetch(API_BASE+path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(tok||'')},body:JSON.stringify(body||{})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j?.error||'KHQR payment is unavailable right now.');return j}
+async function saveKhqr(image:string,label:string,amountText:string):Promise<'shared'|'saved'|'opened'>{
+  /* Phones ignore <a download> on data: images, so: draw a clean copy (big white border + amount), share it as a file
+     (the share sheet has "Save Image"), else download it as a normal file, else open it so it can be pressed and held. */
+  try{
+    const img=new Image();img.src=image;await img.decode();
+    const W=720,pad=70,qs=W-pad*2,H=W+200,c=document.createElement('canvas');c.width=W;c.height=H;
+    const x=c.getContext('2d')!;x.fillStyle='#fff';x.fillRect(0,0,W,H);x.imageSmoothingEnabled=false;x.drawImage(img,pad,pad,qs,qs);
+    x.fillStyle='#111';x.textAlign='center';x.font='700 38px system-ui,sans-serif';x.fillText(label,W/2,pad+qs+70);x.font='700 56px system-ui,sans-serif';x.fillText(amountText,W/2,pad+qs+145);
+    const blob:Blob=await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('png')),'image/png'));
+    const file=new File([blob],'yn-studio-khqr.png',{type:'image/png'});const nv:any=navigator;
+    if(nv.canShare&&nv.canShare({files:[file]})){try{await nv.share({files:[file],title:'YN Studio KHQR'});return 'shared'}catch(e:any){if(e?.name==='AbortError')return 'shared'}}
+    const url=URL.createObjectURL(blob),el=document.createElement('a');el.href=url;el.download=file.name;document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);return 'saved'
+  }catch{try{window.open(image,'_blank')}catch{}return 'opened'}
+}
 function BakongPayModal({orderId,pay,onClose,onPaid}:{orderId?:string,pay?:{kind:'wallet'|'debt',amount:number},onClose:()=>void,onPaid:()=>void}){
-  const[qr,setQr]=useState<any>(null),[err,setErr]=useState(''),[paid,setPaid]=useState(false),[left,setLeft]=useState(0),[again,setAgain]=useState(0);
+  const[qr,setQr]=useState<any>(null),[err,setErr]=useState(''),[paid,setPaid]=useState(false),[left,setLeft]=useState(0),[again,setAgain]=useState(0),[saveNote,setSaveNote]=useState('');const tot=React.useRef(1),paidAt=React.useMemo(()=>new Date(),[paid]);
   useEffect(()=>{let live=true;setQr(null);setErr('');(orderId?bakongCall('/api/bakong/create',{order_id:orderId}):bakongCall('/api/bakong/pay/create',{kind:pay?.kind,amount:pay?.amount,payment_id:qr?.payment_id})).then(j=>{if(!live)return;if(j.paid)setPaid(true);else setQr(j)}).catch(e=>{if(live)setErr(e?.message||'Could not create the KHQR.')});return()=>{live=false}},[orderId,pay?.kind,pay?.amount,again]);
-  useEffect(()=>{if(!qr)return;const tick=()=>setLeft(Math.max(0,Math.ceil((qr.expiresAt-Date.now())/1000)));tick();const t=window.setInterval(tick,1000);return()=>window.clearInterval(t)},[qr]);
+  useEffect(()=>{if(!qr)return;tot.current=Math.max(1,Math.ceil((qr.expiresAt-Date.now())/1000));const tick=()=>setLeft(Math.max(0,Math.ceil((qr.expiresAt-Date.now())/1000)));tick();const t=window.setInterval(tick,1000);return()=>window.clearInterval(t)},[qr]);
   const active=!!qr&&left>0&&!paid;
-  useEffect(()=>{if(!active)return;let live=true;const run=async()=>{try{const j=orderId?await bakongCall('/api/bakong/status',{order_id:orderId}):await bakongCall('/api/bakong/pay/status',{payment_id:qr.payment_id});if(live&&j.paid)setPaid(true)}catch{}};const t=window.setInterval(run,3000);return()=>{live=false;window.clearInterval(t)}},[active,orderId,qr]);
-  useEffect(()=>{if(!paid)return;const t=window.setTimeout(onPaid,1800);return()=>window.clearTimeout(t)},[paid]);
+  useEffect(()=>{if(!active)return;let live=true;const run=async()=>{try{const j=orderId?await bakongCall('/api/bakong/status',{order_id:orderId}):await bakongCall('/api/bakong/pay/status',{payment_id:qr.payment_id});if(live&&j.paid)setPaid(true)}catch{}};const t=window.setInterval(run,3000);const vis=()=>{if(document.visibilityState==='visible')run()};document.addEventListener('visibilitychange',vis);window.addEventListener('focus',run);window.addEventListener('pageshow',run);return()=>{live=false;window.clearInterval(t);document.removeEventListener('visibilitychange',vis);window.removeEventListener('focus',run);window.removeEventListener('pageshow',run)}},[active,orderId,qr]);
+  useEffect(()=>{if(!paid)return;const t=window.setTimeout(onPaid,4200);return()=>window.clearTimeout(t)},[paid]);
   const amount=qr?(qr.currency==='KHR'?Number(qr.amount).toLocaleString()+' ៛':'$'+Number(qr.amount).toFixed(2)):'';
   const mm=Math.floor(left/60),ss=String(left%60).padStart(2,'0');
   return <div className="payModal" onClick={onClose}><div className="payModalCard" onClick={e=>e.stopPropagation()}>
     <button className="icon payClose" onClick={onClose} aria-label="Close"><X/></button>
-    <span className="eyebrow">KHQR · BAKONG</span>
-    <h2>{tr('Pay YN Studio','ទូទាត់ទៅ YN Studio')}</h2>
-    {paid?<><p className="payLead"><b>{tr('Payment received! Thank you.','បានទទួលការទូទាត់! សូមអរគុណ។')}</b></p><div className="qrFrame" style={{display:'grid',placeItems:'center',minHeight:160}}><CheckCircle2 size={96}/></div></>
+    {!paid&&<><span className="eyebrow">KHQR · BAKONG</span>
+    <h2>{tr('Pay YN Studio','ទូទាត់ទៅ YN Studio')}</h2></>}
+    {paid?<div className="payDone" role="status" aria-live="polite">
+      <div className="payDoneBurst" aria-hidden="true">{Array.from({length:14},(_,k)=><i key={k} style={{'--a':(k*360/14)+'deg','--h':[142,48,330,200,12][k%5],'--d':(k%3)*40+'ms'} as any}/>)}</div>
+      <div className="payDoneBadge"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="26"/><path d="M15 27l7 7 15-16"/></svg></div>
+      <h3>{tr('Payment received','បានទទួលការទូទាត់')}</h3>
+      <p className="payDoneSub">{orderId?tr('Your order is confirmed. We are getting it ready.','ការបញ្ជាទិញរបស់អ្នកត្រូវបានបញ្ជាក់។ យើងកំពុងរៀបចំវា។'):pay?.kind==='debt'?tr('Your debt balance has been updated.','សមតុល្យបំណុលរបស់អ្នកត្រូវបានធ្វើបច្ចុប្បន្នភាព។'):tr('The money is now in your wallet.','ប្រាក់ត្រូវបានបញ្ចូលក្នុងកាបូបរបស់អ្នកហើយ។')}</p>
+      {amount&&<div className="payDoneAmt">{amount}</div>}
+      <dl className="payDoneRows">
+        {qr&&<div><dt>{tr('Paid to','បង់ទៅ')}</dt><dd>{qr.merchant||'YN Studio'}</dd></div>}
+        <div><dt>{tr('For','សម្រាប់')}</dt><dd>{orderId?(qr?.order_number?tr('Order','ការបញ្ជាទិញ')+' #'+qr.order_number:tr('Your order','ការបញ្ជាទិញរបស់អ្នក')):pay?.kind==='debt'?tr('Debt payment','ទូទាត់បំណុល'):tr('Wallet top-up','បញ្ចូលកាបូប')}</dd></div>
+        <div><dt>{tr('Date','កាលបរិច្ឆេទ')}</dt><dd>{paidAt.toLocaleString(undefined,{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</dd></div>
+      </dl>
+      <button className="wide" onClick={onPaid}>{tr('Done','រួចរាល់')}</button>
+      <i className="payDoneBar" aria-hidden="true"/>
+    </div>
     :err?<><p className="notice">{err}</p><button className="wide" onClick={()=>setAgain(n=>n+1)}>{tr('Try again','សាកល្បងម្តងទៀត')}</button></>
     :!qr?<p className="payLead">{tr('Creating your KHQR…','កំពុងបង្កើត KHQR…')}</p>
     :<>
       <p className="payLead">{left>0?tr('Scan with any Bakong banking app (ABA, ACLEDA, Wing…).','ស្កេនជាមួយកម្មវិធីធនាគារ Bakong ណាមួយ (ABA, ACLEDA, Wing…)។'):tr('This QR has expired.','QR នេះបានផុតកំណត់។')}</p>
-      <div className="qrFrame" style={left>0?undefined:{opacity:.25}}><img src={qr.image} alt="KHQR payment code"/></div>
-      <div className="payMeta"><div><small>{tr('MERCHANT','អ្នកទទួលប្រាក់')}</small><b>{qr.merchant||'YN Studio'}</b></div><div><small>{tr('AMOUNT','ចំនួនទឹកប្រាក់')}</small><b>{amount}</b></div>{left>0&&<div><small>{tr('TIME LEFT','ពេលវេលានៅសល់')}</small><b>{mm}:{ss}</b></div>}</div>
-      {left>0?<><p className="payLead"><small>{tr('Waiting for payment… this page updates by itself.','កំពុងរង់ចាំការទូទាត់… ទំព័រនេះនឹងធ្វើបច្ចុប្បន្នភាពដោយខ្លួនឯង។')}</small></p><a className="secondary button" href={qr.image} download={'yn-studio-khqr-'+(qr.order_number||'order')+'.png'}>{tr('Save QR image','រក្សាទុករូបភាព QR')}</a></>
+      <div className="khqrWrap"><div className={'khqrCard'+(left>0?'':' expired')}>
+        <div className="khqrHead"><span className="khqrMark">KHQR</span><span className="khqrTo">{qr.merchant||'YN Studio'}</span></div>
+        <div className="khqrAmt"><small>{tr('Amount to pay','ចំនួនត្រូវបង់')}</small><b>{amount}</b></div>
+        <div className="khqrTear" aria-hidden="true"/>
+        <div className="khqrScan"><i className="c1"/><i className="c2"/><i className="c3"/><i className="c4"/><img src={qr.image} alt="KHQR payment code"/>{left>0?<span className="khqrBeam" aria-hidden="true"/>:<span className="khqrGone">{tr('Expired','ផុតកំណត់')}</span>}</div>
+        <div className="khqrTime"><span><Clock3/>{mm}:{ss}</span><i><u style={{transform:`scaleX(${Math.min(1,left/tot.current)})`}}/></i></div>
+      </div></div>
+      {left>0?<><p className="payWait"><i/>{tr('Waiting for payment… this page updates by itself.','កំពុងរង់ចាំការទូទាត់… ទំព័រនេះនឹងធ្វើបច្ចុប្បន្នភាពដោយខ្លួនឯង។')}</p><button className="secondary wide" onClick={async()=>{const r=await saveKhqr(qr.image,qr.merchant||'YN Studio',amount);setSaveNote(r==='saved'?tr('QR saved to your downloads.','បានរក្សាទុក QR ក្នុងការទាញយករបស់អ្នក។'):r==='opened'?tr('Press and hold the picture to save it.','ចុចរូបភាពឱ្យជាប់ដើម្បីរក្សាទុក។'):'')}}>{tr('Save QR image','រក្សាទុករូបភាព QR')}</button>{saveNote&&<p className="payLead"><small>{saveNote}</small></p>}</>
       :<button className="wide" onClick={()=>setAgain(n=>n+1)}>{tr('Get a new QR','យក QR ថ្មី')}</button>}
       <p className="payLead"><small>{tr('You can close this and pay later from My orders.','អ្នកអាចបិទវា ហើយទូទាត់ពេលក្រោយពីការបញ្ជាទិញរបស់ខ្ញុំ។')}</small></p>
     </>}
@@ -459,7 +491,7 @@ function AdminOrderStatuses(){
 function DebtPage(){
  const nav=useNavigate(),[d,setD]=useState<any>(null),[tx,setTx]=useState<any[]>([]),[pay,setPay]=useState(''),[method,setMethod]=useState<'wallet'|'qr'>('wallet'),[qrAmount,setQrAmount]=useState(''),[bkPay,setBkPay]=useState<any>(null),bkOn=useBakongEnabled(),[requests,setRequests]=useState<any[]>([]),[accts,setAccts]=useState<any[]>([]),[curTab,setCurTab]=useState('USD'),[busy,setBusy]=useState(false),[msg,setMsg]=useState('');
  async function load(want?:string){const u=await uid();if(!u)return;const interestResult=await supabase.rpc('accrue_customer_debt_interest',{p_user_id:u});if(interestResult.error)console.warn('Debt interest update:',interestResult.error.message);const daResult=await supabase.from('debt_accounts').select('*').eq('user_id',u).eq('enabled',true).gt('current_balance',0).order('currency',{ascending:false});if(daResult.error){setD(null);setMsg(daResult.error.message);return}const list=daResult.data||[];if(!list.length){setD(null);nav('/',{replace:true});return}setAccts(list);const da=list.find((x:any)=>x.currency===(want||curTab))||list[0];setCurTab(da.currency||'USD');setD(da);const txResult=await supabase.from('debt_transactions').select('*').eq('debt_account_id',da.id).order('created_at',{ascending:false}).limit(500);if(txResult.error)console.warn('Debt history:',txResult.error.message);setTx(txResult.data||[]);const rr=await supabase.from('debt_payment_requests').select('*').eq('debt_account_id',da.id).order('submitted_at',{ascending:false}).limit(20);if(!rr.error)setRequests(rr.data||[])}
- useEffect(()=>{load()},[]);
+ useEffect(()=>{load()},[]);useEffect(()=>{if(!bkOn)return;let live=true;const run=async()=>{try{const j=await bakongCall('/api/bakong/sync');if(live&&j?.updated>0)load()}catch{}};run();const t=window.setInterval(run,8000);const vis=()=>{if(document.visibilityState==='visible')run()};document.addEventListener('visibilitychange',vis);return()=>{live=false;window.clearInterval(t);document.removeEventListener('visibilitychange',vis)}},[bkOn]);
  async function makeWalletPayment(){const n=Number(pay);if(!n||n<=0)return setMsg('Enter a valid payment amount.');if(n>Number(d.current_balance))return setMsg('Payment cannot be greater than your current debt.');setBusy(true);const r=await supabase.rpc('customer_pay_debt',{p_amount:n});setBusy(false);if(r.error)return setMsg(r.error.message);setPay('');setMsg('Wallet payment recorded successfully.');await load()}
  function startKhqr(){const n=Math.round(Number(qrAmount)*100)/100;if(!n||n<=0)return setMsg('Enter a valid payment amount.');if(n>Number(d.current_balance))return setMsg('Payment cannot be greater than your current debt.');setMsg('');setBkPay({kind:'debt',amount:n})}
  if(!d)return <><main className="shop"><Top title="Debt" back/><section className="debtEmptyCard"><div className="debtEmptyIcon"><CreditCard/></div><h2>No debt account</h2><p>You currently have no enabled outstanding debt.</p></section></main><Nav/></>;

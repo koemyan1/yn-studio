@@ -1,0 +1,59 @@
+/* KHQR payment box + payment-received screen (shared by checkout, orders, wallet top-up and debt) */
+.khqrWrap{filter:drop-shadow(0 16px 30px rgba(20,10,40,.22));margin:16px auto 10px;width:min(290px,100%)}
+.khqrCard{--k:#e1232e;background:#fff;color:#1d1d1f;text-align:left;overflow:hidden;border-radius:20px;clip-path:polygon(0 0,calc(100% - 26px) 0,100% 26px,100% 100%,0 100%)}
+.khqrHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 38px 14px 18px;background:var(--k);color:#fff}
+.khqrMark{font-size:21px;font-weight:950;font-style:italic;letter-spacing:.01em}
+.khqrTo{font-size:13px;font-weight:700;opacity:.95;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.khqrAmt{padding:14px 18px 0;display:grid;gap:2px}
+.khqrAmt small{color:#7a7585;font-weight:600}
+.khqrAmt b{font-size:32px;font-weight:950;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.khqrTear{position:relative;margin:16px 0 0;border-top:2px dashed #e4dfec}
+.khqrTear::before,.khqrTear::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:50%;background:var(--card,#fff)}
+.khqrTear::before{left:-10px}.khqrTear::after{right:-10px}
+.khqrScan{position:relative;width:min(214px,calc(100% - 64px));aspect-ratio:1;margin:22px auto 14px}
+.khqrScan img{display:block;width:100%;height:100%;object-fit:contain;border-radius:6px;transition:opacity .3s,filter .3s}
+.khqrScan i{position:absolute;width:26px;height:26px;border:4px solid var(--k)}
+.khqrScan .c1{top:-11px;left:-11px;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+.khqrScan .c2{top:-11px;right:-11px;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+.khqrScan .c3{bottom:-11px;left:-11px;border-right:0;border-top:0;border-radius:0 0 0 10px}
+.khqrScan .c4{bottom:-11px;right:-11px;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.khqrBeam{position:absolute;left:-8px;right:-8px;top:0;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--k),transparent);box-shadow:0 0 14px var(--k);animation:khqrBeam 2.6s ease-in-out infinite}
+.khqrGone{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:20px;color:var(--k)}
+.khqrCard.expired .khqrScan img{opacity:.15;filter:grayscale(1)}
+.khqrTime{display:flex;align-items:center;gap:12px;padding:2px 18px 16px;font-weight:800;font-variant-numeric:tabular-nums}
+.khqrTime span{display:flex;align-items:center;gap:6px}
+.khqrTime svg{width:17px;height:17px;color:var(--k)}
+.khqrTime i{flex:1;height:6px;border-radius:6px;background:#eee9f3;overflow:hidden}
+.khqrTime u{display:block;height:100%;background:var(--k);transform-origin:left;transition:transform 1s linear}
+.payWait{display:flex;align-items:center;justify-content:center;gap:9px;margin:8px 0 14px;font-size:13px;color:var(--muted,#776f86)}
+.payWait i{width:9px;height:9px;border-radius:50%;background:#16a34a;animation:pdPulse 1.4s ease-out infinite}
+
+.payDone{position:relative;display:grid;justify-items:center;gap:6px;padding-top:6px}
+.payDone h3{margin:6px 0 0;font-size:26px;letter-spacing:-.02em;animation:pdUp .5s .3s both}
+.payDoneSub{margin:0;max-width:280px;line-height:1.45;color:var(--muted,#776f86);animation:pdUp .5s .38s both}
+.payDoneBadge{position:relative;width:96px;height:96px;margin:8px 0 4px}
+.payDoneBadge svg{width:96px;height:96px;overflow:visible}
+.payDoneBadge circle{fill:#16a34a;transform-box:fill-box;transform-origin:center;animation:pdPop .55s cubic-bezier(.2,1.5,.4,1) both}
+.payDoneBadge path{fill:none;stroke:#fff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:pdDraw .45s .3s ease-out forwards}
+.payDoneBadge::before,.payDoneBadge::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid #16a34a;opacity:0;animation:pdRing 1.5s .2s ease-out 1}
+.payDoneBadge::after{animation-delay:.5s}
+.payDoneBurst{position:absolute;left:50%;top:56px;width:0;height:0;pointer-events:none}
+.payDoneBurst i{position:absolute;left:-4px;top:-7px;width:8px;height:14px;border-radius:2px;background:hsl(var(--h) 85% 58%);opacity:0;animation:pdBurst 1.2s var(--d) cubic-bezier(.1,.8,.3,1) both}
+.payDoneAmt{font-size:42px;font-weight:950;letter-spacing:-.035em;font-variant-numeric:tabular-nums;animation:pdUp .5s .45s both}
+.payDoneRows{width:100%;margin:12px 0 8px;padding:2px 16px;border-radius:18px;background:rgba(127,127,127,.1);text-align:left;animation:pdUp .5s .55s both}
+.payDoneRows div{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px dashed rgba(127,127,127,.32)}
+.payDoneRows div:first-child{border-top:0}
+.payDoneRows dt{color:var(--muted,#776f86)}
+.payDoneRows dd{margin:0;font-weight:800;text-align:right}
+.payDoneBar{display:block;width:100%;height:4px;margin-top:8px;border-radius:4px;background:rgba(127,127,127,.18);overflow:hidden}
+.payDoneBar::after{content:"";display:block;height:100%;background:#16a34a;transform-origin:left;animation:pdBar 4.2s linear forwards}
+
+@keyframes khqrBeam{0%,100%{top:0;opacity:.2}12%,88%{opacity:1}50%{top:calc(100% - 3px)}}
+@keyframes pdPulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}100%{box-shadow:0 0 0 10px rgba(22,163,74,0)}}
+@keyframes pdPop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes pdDraw{to{stroke-dashoffset:0}}
+@keyframes pdRing{from{opacity:.6;transform:scale(1)}to{opacity:0;transform:scale(1.9)}}
+@keyframes pdUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pdBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes pdBurst{0%{opacity:1;transform:rotate(var(--a)) translateY(-30px)}100%{opacity:0;transform:rotate(var(--a)) translateY(-118px) scale(.5)}}
+@media(prefers-reduced-motion:reduce){.khqrBeam,.payWait i,.payDone *,.payDoneBadge::before,.payDoneBadge::after{animation:none!important}.payDoneBadge path{stroke-dashoffset:0}.payDoneBurst,.payDoneBadge::before,.payDoneBadge::after{display:none}.payDoneBar::after{transform:scaleX(.5)}}
