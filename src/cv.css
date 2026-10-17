@@ -1,0 +1,129 @@
+/* CV maker UI (templates themselves live in cvTemplates.css) */
+.cvmPage{padding-bottom:140px}
+.cvmPage h1,.cvmPage h2{margin:0}
+.cvmSteps{list-style:none;display:flex;justify-content:space-between;gap:4px;margin:0 0 18px;padding:0}
+.cvmSteps li{flex:1;display:grid;justify-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--muted);position:relative}
+.cvmSteps li:not(:last-child)::after{content:'';position:absolute;top:13px;left:calc(50% + 17px);right:calc(-50% + 17px);height:2px;background:var(--line)}
+.cvmSteps li.done:not(:last-child)::after{background:var(--purple)}
+.cvmSteps i{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--line);font-style:normal;font-size:12px;transition:.3s}
+.cvmSteps i svg{width:14px;height:14px}
+.cvmSteps li.on i{border-color:var(--purple);color:var(--purple);box-shadow:0 0 0 4px #7c3aed1f}
+.cvmSteps li.done i{background:var(--purple);border-color:var(--purple);color:#fff}
+.cvmSteps li.on{color:var(--purple)}
+.cvmHero{position:relative;padding:22px;border-radius:24px;background:linear-gradient(135deg,#f1e9ff,#fff);border:1px solid var(--line);margin-bottom:18px;animation:cvmUp .5s both}
+.cvmHero h1{font-size:clamp(22px,4vw,30px);line-height:1.15}
+.cvmHero p{margin:8px 0 0;color:var(--muted);max-width:560px}
+.cvmPrice{position:absolute;right:16px;top:16px;background:var(--purple);color:#fff;font-weight:900;padding:6px 14px;border-radius:99px;font-size:18px;box-shadow:0 8px 20px #7c3aed44;animation:cvmPop .6s .2s both cubic-bezier(.2,1.6,.4,1)}
+@keyframes cvmUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes cvmPop{from{transform:scale(0) rotate(-10deg)}to{transform:none}}
+.cvmGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.cvmCard{position:relative;display:grid;gap:8px;padding:8px 8px 10px;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:18px;box-shadow:0 8px 24px #48237810;transition:transform .2s,border-color .2s,box-shadow .2s;animation:cvmUp .5s calc(var(--i) * 60ms) both}
+.cvmCard:hover{transform:translateY(-4px);box-shadow:0 16px 36px #48237822}
+.cvmCard.on{border-color:var(--purple);box-shadow:0 0 0 4px #7c3aed22,0 16px 36px #48237822}
+.cvmCardName{font-weight:800;font-size:13px;text-align:center}
+.cvmScaled{position:relative;width:100%;aspect-ratio:794/1123;overflow:hidden;border-radius:10px;background:#fff;border:1px solid #0001}
+.cvmScaledIn{position:absolute;left:0;top:0;width:794px;height:1123px;transform-origin:0 0;pointer-events:none}
+.cvmTick{position:absolute;right:10px;top:10px;width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;display:grid;place-items:center;animation:cvmPop .35s both cubic-bezier(.2,1.6,.4,1)}
+.cvmTick svg{width:16px;height:16px}
+.cvmMine{margin-top:26px}
+.cvmMine ul{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:8px}
+.cvmMine li{display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--line);border-radius:16px}
+.cvmMineIcon{width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--purple);display:grid;place-items:center;flex:none}
+.cvmMineText{flex:1;min-width:0}.cvmMineText b,.cvmMineText small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cvmSmall{padding:8px 14px;border-radius:12px;font-size:13px}
+.cvmBar{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:25;width:min(680px,calc(100% - 24px));display:flex;gap:10px;padding:10px;background:#fffffff0;border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 36px #48237825;backdrop-filter:blur(14px)}
+.cvmGo{flex:1;padding:14px 18px;border-radius:15px}
+.cvmGo.pay{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.cvmBack{background:#fff;color:var(--purple);border:1px solid #dfd2f4;padding:14px 16px;border-radius:15px}
+.cvmBar.two .cvmBack{flex:0 0 auto}
+.cvmErr{color:#bd3552;font-weight:700;margin:10px 0}
+.cvmWarn{padding:12px 14px;border-radius:14px;background:#fff4dc;color:#a66a00;font-weight:700;margin:0 0 12px}
+.cvmHint{color:var(--muted);font-size:13px;margin:4px 0}.cvmHint.center{text-align:center;margin:14px 0}
+.cvmLangs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cvmLang{position:relative;display:grid;justify-items:center;gap:4px;padding:22px 12px;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:20px;transition:.2s}
+.cvmLang.on{border-color:var(--purple);box-shadow:0 0 0 4px #7c3aed22}
+.cvmLang b{font-size:20px}.cvmLang small{color:var(--muted)}
+.cvmLangGlyph{width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,var(--purple),#c3a3ff);color:#fff;display:grid;place-items:center;font-size:26px;font-weight:900}
+.cvmPrevOne{width:min(300px,70%);margin:20px auto 0;box-shadow:0 18px 40px #48237822;border-radius:12px;overflow:hidden}
+/* form */
+.cvmForm{display:grid;gap:14px}
+.cvmSet{border:1px solid var(--line);background:#fff;border-radius:20px;padding:16px;display:grid;gap:12px;margin:0;min-width:0}
+.cvmSet legend{font-weight:900;color:var(--purple);padding:0 8px;font-size:14px}
+.cvmF{display:grid;gap:6px;font-size:13px}
+.cvmTwo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cvmRow{display:flex;gap:8px;align-items:flex-start;padding:12px;background:#faf8ff;border-radius:14px}
+.cvmRowBody{flex:1;display:grid;gap:10px;min-width:0}
+.cvmRm{width:38px;height:38px;padding:0;background:#fff;color:#bd3552;border:1px solid var(--line);flex:none}
+.cvmAdd{background:#fff;color:var(--purple);border:2px dashed #cdb8f0;padding:11px}
+.cvmPhoto{display:flex;gap:14px;align-items:center}
+.cvmPhotoBox{width:84px;height:84px;border-radius:50%;overflow:hidden;background:var(--soft);display:grid;place-items:center;color:var(--purple);flex:none}
+.cvmPhotoBox img{width:100%;height:100%;object-fit:cover}
+.cvmBtn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:var(--soft);color:var(--purple);font-weight:800;cursor:pointer}
+.cvmLink{background:none;color:#bd3552;padding:8px}
+/* pay */
+.cvmSummary{display:flex;gap:16px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:22px;align-items:center}
+.cvmSumPrev{width:110px;flex:none;border-radius:8px;overflow:hidden;box-shadow:0 8px 22px #48237822}
+.cvmSummary dl{flex:1;margin:0;display:grid;gap:8px}
+.cvmSummary dl div{display:flex;justify-content:space-between;gap:10px}
+.cvmSummary dt{color:var(--muted)}.cvmSummary dd{margin:0;font-weight:800;text-align:right}
+.cvmSummary .tot{border-top:1px dashed var(--line);padding-top:8px;font-size:20px}.cvmSummary .tot dd{color:var(--purple)}
+.cvmPayOpts{display:grid;gap:10px;margin-top:16px}
+.cvmPayOpt{display:flex;align-items:center;gap:12px;text-align:left;justify-content:flex-start;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:18px;padding:14px}
+.cvmPayOpt.on{border-color:var(--purple);box-shadow:0 0 0 4px #7c3aed1f}
+.cvmPayOpt>span:nth-child(2){flex:1}.cvmPayOpt b,.cvmPayOpt small{display:block}
+.cvmPayBadge{width:46px;height:36px;border-radius:10px;background:#e1232e;color:#fff;display:grid;place-items:center;font-weight:900;font-size:12px}
+.cvmPayBadge.w{background:var(--purple)}
+.cvmRadio{width:20px;height:20px;border-radius:50%;border:2px solid #cdb8f0;flex:none}
+.cvmPayOpt.on .cvmRadio{border:6px solid var(--purple)}
+/* editor */
+.cvmEdHead{display:flex;gap:14px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.cvmEdHead h1{font-size:26px;margin-top:6px}
+.cvmEdHead .cvmGo{flex:none}
+.cvmBadgeOk{display:inline-flex;gap:6px;align-items:center;background:#e7f8ef;color:#16834e;font-weight:900;font-size:12px;padding:4px 10px;border-radius:99px;animation:cvmPop .5s both}
+.cvmBadgeOk svg{width:14px;height:14px}
+.cvmSave{margin:4px 0 0;color:var(--muted);font-size:13px}.cvmSave[data-s=saved]{color:#16834e}.cvmSave[data-s=error]{color:#bd3552}
+.cvmTabs{display:none;gap:8px;margin-bottom:12px}
+.cvmTabs button{flex:1;background:#fff;color:var(--ink);border:1px solid var(--line)}.cvmTabs button.on{background:var(--purple);color:#fff}
+.cvmEd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.cvmEdPrev{position:sticky;top:12px}
+.cvmPaper{border-radius:6px;overflow:hidden;box-shadow:0 22px 50px #24184033;animation:cvmUp .6s both}
+@media(max-width:860px){.cvmTabs{display:flex}.cvmEd{grid-template-columns:1fr}.cvmEd.t-preview .cvmEdForm,.cvmEd.t-edit .cvmEdPrev{display:none}.cvmEdPrev{position:static}}
+@media(max-width:520px){.cvmTwo{grid-template-columns:1fr}.cvmSumPrev{width:84px}}
+/* generating animation */
+.cvmGen{display:grid;justify-items:center;gap:12px;padding:10px 0 30px;text-align:center}
+.cvmGenStage{position:relative;width:min(300px,78vw);margin:10px auto 6px}
+.cvmGenGlow{position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,#a78bfa66,transparent 65%);animation:cvmGlow 1.6s ease-in-out infinite}
+@keyframes cvmGlow{50%{transform:scale(1.12);opacity:.6}}
+.cvmGenFrame{position:relative;border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 26px 60px #4c1d9540;animation:cvmGenIn .7s cubic-bezier(.2,1.3,.4,1) both,cvmFloat 3s 1s ease-in-out infinite}
+@keyframes cvmGenIn{from{opacity:0;transform:translateY(40px) rotate(-5deg) scale(.9)}to{opacity:1;transform:none}}
+@keyframes cvmFloat{50%{transform:translateY(-6px)}}
+.cvmGenLayer{border-radius:0;border:0}
+.cvmGenFill{position:absolute;inset:0;clip-path:inset(0 0 100% 0);animation:cvmReveal var(--gt) .5s cubic-bezier(.45,.05,.3,1) forwards}
+@keyframes cvmReveal{to{clip-path:inset(0 0 0 0)}}
+.cvmGenScan{position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,transparent,#8b5cf6,#d946ef,#8b5cf6,transparent);box-shadow:0 0 18px 6px #a855f799;animation:cvmScan var(--gt) .5s cubic-bezier(.45,.05,.3,1) forwards}
+@keyframes cvmScan{0%{top:0;opacity:1}96%{top:calc(100% - 3px);opacity:1}100%{top:calc(100% - 3px);opacity:0}}
+.cvmGenSpark{position:absolute;left:50%;top:50%;width:9px;height:9px;border-radius:50%;background:#facc15;opacity:0;animation:cvmSpark 2.2s calc(var(--k) * .28s + .8s) ease-out infinite}
+.cvmGenSpark:nth-of-type(even){background:#e879f9}
+@keyframes cvmSpark{0%{opacity:0;transform:translate(-50%,-50%) rotate(calc(var(--k) * 45deg)) translateY(0) scale(.4)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(calc(var(--k) * 45deg)) translateY(-190px) scale(1.2)}}
+.cvmGen h2{font-size:22px}
+.cvmGenStep{margin:0;color:var(--purple);font-weight:800;animation:cvmUp .4s both;min-height:24px}
+.cvmGenBar{width:min(260px,70vw);height:8px;border-radius:9px;background:#e9e2f4;overflow:hidden}
+.cvmGenBar i{display:block;height:100%;width:100%;border-radius:9px;background:linear-gradient(90deg,#8b5cf6,#d946ef);transform-origin:0 50%;transform:scaleX(0);animation:cvmBar var(--gt) .3s cubic-bezier(.45,.05,.3,1) forwards}
+@keyframes cvmBar{to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.cvmGen *,.cvmCard,.cvmHero,.cvmPaper{animation:none!important}.cvmGenFill{clip-path:none}.cvmGenScan{display:none}.cvmGenBar i{transform:none}}
+/* services page card */
+.svcCvCard{position:relative;display:flex;gap:16px;align-items:center;margin:0 0 22px;padding:18px;border-radius:24px;background:linear-gradient(135deg,#5d24b8,#a46cff);color:#fff;overflow:hidden;box-shadow:0 18px 44px #5d24b855}
+.svcCvCard h3{margin:0;font-size:22px}.svcCvCard p{margin:6px 0 12px;opacity:.9;font-size:14px}
+.svcCvCard .svcCvIcon{width:64px;height:84px;border-radius:10px;background:#fff;color:var(--purple);display:grid;place-items:center;flex:none;transform:rotate(-6deg);box-shadow:0 12px 24px #0003;animation:cvmFloat 3s ease-in-out infinite}
+.svcCvCard .svcCvIcon svg{width:30px;height:30px}
+.svcCvCard .svcCvPrice{position:absolute;right:14px;top:12px;background:#facc15;color:#241b35;font-weight:900;padding:4px 12px;border-radius:99px}
+.svcCvCard button{background:#fff;color:var(--purple)}
+/* printing: only the CV is printed, at full A4 size */
+#cvPrintHost{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff!important;margin:0!important;padding:0!important}
+  body>*:not(#cvPrintHost){display:none!important}
+  #cvPrintHost{display:block!important;width:794px;height:1123px;overflow:hidden}
+  #cvPrintHost .cvSheetRoot{box-shadow:none}
+}

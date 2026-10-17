@@ -103,6 +103,15 @@
 .pdScrap{opacity:0;animation:pdsScrap 1s 1.23s ease-out both}
 @keyframes pdsScrap{0%{opacity:0;transform:translate(0,0) rotate(0)}8%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r))}}
 
+
+/* ---------- 5. CV paid: the sheet slides in, its lines write themselves, a tick stamps it ---------- */
+.pdSvg .pdCvHop{transform-origin:50% 100%;animation:pdsHop .55s 2.1s ease-in-out both}
+.pdSvg .pdCvSheet{animation:pdsCvUp .7s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes pdsCvUp{from{opacity:0;transform:translateY(60px) rotate(-8deg) scale(.85)}to{opacity:1;transform:none}}
+.pdSvg .pdCvPhoto{animation:pdsPop .45s .7s cubic-bezier(.2,1.6,.4,1) both}
+.pdSvg .pdCvLine{transform-origin:0 50%;animation:pdsCvLine .4s calc(.85s + var(--i,0) * .13s) ease-out both}
+@keyframes pdsCvLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
 /* ---------- text under the scene waits for the scene (--tx is set per scene in the modal) ---------- */
 .payDone h3{animation-delay:var(--tx,.3s)}
 .payDoneSub{animation-delay:calc(var(--tx,.3s) + .08s)}

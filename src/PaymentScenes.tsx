@@ -7,10 +7,11 @@ import { tr } from './lang';
    - wallet     : a banknote showing the amount (plus coins) flies into a wallet.
    - debt       : a jar fills with the debt, then a chunk is scooped out (what the customer paid).
    - debtClear  : a paper that says DEBT shakes and is ripped in two, then a big tick.
+   - cv         : a CV sheet slides in, its photo pops, the text lines write themselves, then a PAID tick stamps it.
    All motion lives in paymentScenes.css (switched off by prefers-reduced-motion).
    --------------------------------------------------------------------------------------------- */
 
-export type SceneKind = 'order' | 'wallet' | 'debt' | 'debtClear';
+export type SceneKind = 'order' | 'wallet' | 'debt' | 'debtClear' | 'cv';
 
 const css = (o: Record<string, string | number>) => o as React.CSSProperties;
 
@@ -200,9 +201,38 @@ function RipScene() {
   );
 }
 
+/* ---------- 5. CV paid: the CV sheet writes itself, then a PAID tick stamps it ---------- */
+function CvScene() {
+  const lines = [[88, 54, 56], [88, 64, 64], [88, 74, 44], [88, 90, 64], [88, 100, 58], [88, 110, 36]];
+  return (
+    <svg className="pdSvg pdCv" viewBox="0 0 240 170" aria-hidden="true">
+      <defs>
+        <linearGradient id="pdCvHead" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#8b5cf6" /><stop offset="1" stopColor="#d946ef" /></linearGradient>
+      </defs>
+      <ellipse className="pdShadow" cx="120" cy="156" rx="54" ry="6" />
+      <g className="pdCvHop"><g className="pdCvSheet">
+        <rect x="74" y="14" width="92" height="132" rx="7" fill="#fff" stroke="#e5e7eb" strokeWidth="1.5" />
+        <path d="M74 44V21a7 7 0 0 1 7-7h78a7 7 0 0 1 7 7v23Z" fill="url(#pdCvHead)" />
+        <circle className="pdCvPhoto" cx="94" cy="29" r="9.5" fill="#fff" />
+        <circle className="pdCvPhoto" cx="94" cy="26.6" r="3.2" fill="#c4b5fd" />
+        <path className="pdCvPhoto" d="M87.6 35.4c.8-3.6 3.2-5 6.4-5s5.6 1.4 6.4 5Z" fill="#c4b5fd" />
+        <rect className="pdCvLine" x="110" y="23" width="44" height="5" rx="2.5" fill="#fff" style={css({ '--i': 0 })} />
+        <rect className="pdCvLine" x="110" y="32" width="30" height="4" rx="2" fill="#fff" fillOpacity=".7" style={css({ '--i': 1 })} />
+        {lines.map(([x, y, w], i) => (
+          <rect key={i} className="pdCvLine" x={x} y={y} width={w} height="5" rx="2.5" fill={i < 3 ? '#d1d5db' : '#e5e7eb'} style={css({ '--i': i + 2 })} />
+        ))}
+        <rect className="pdCvLine" x="88" y="126" width="20" height="5" rx="2.5" fill="#a78bfa" style={css({ '--i': 8 })} />
+      </g></g>
+      <Sparks cx={120} cy={80} delay="1.95s" />
+      <Tick x={172} y={124} r={19} delay="2.05s" />
+    </svg>
+  );
+}
+
 export default function PaymentScene({ kind, amountText, frac }: { kind: SceneKind; amountText: string; frac?: number }) {
   if (kind === 'order') return <OrderScene />;
   if (kind === 'wallet') return <WalletScene amountText={amountText} />;
   if (kind === 'debtClear') return <RipScene />;
+  if (kind === 'cv') return <CvScene />;
   return <JarScene amountText={amountText} frac={frac ?? 0.5} />;
 }

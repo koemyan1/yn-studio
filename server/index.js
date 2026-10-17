@@ -265,7 +265,13 @@ async function makeBakongQr(order) {
   return { md5: r.data.md5, image, amount, expiresAt };
 }
 
-/** Ask Bakong about one QR. Returns { state: 'paid' | 'pending' | 'error', data? }. */
+let lastBakongErrorAt = 0; // lets the status routes tell the browser "the bank check is not answering"
+const bakongDelayed = () => Date.now() - lastBakongErrorAt < 20000;
+const bakongFail = (...args) => { lastBakongErrorAt = Date.now(); console.error(...args); return { state: 'error' }; };
+
+/** Ask Bakong about one QR. Returns { state: 'paid' | 'pending' | 'error', data? }.
+ *  "pending" is returned ONLY when Bakong clearly says "transaction not found". Any other answer (expired token,
+ *  blocked IP, wrong account, HTML page...) is an error and is logged, so it can never look like "just not paid yet". */
 async function bakongCheck(md5) {
   try {
     const r = await fetch(`${BK.base}/v1/check_transaction_by_md5`, {
@@ -276,18 +282,15 @@ async function bakongCheck(md5) {
     });
     const text = await r.text();
     let j = null; try { j = JSON.parse(text); } catch { j = null; }
-    if (r.status === 401 || r.status === 403 && !j) {
-      console.error(`Bakong API HTTP ${r.status}: token rejected/expired, or this server's IP is blocked (the API is often restricted to Cambodian IPs). See BAKONG-SETUP.md.`);
-      return { state: 'error' };
-    }
-    if (!j) { console.error(`Bakong API HTTP ${r.status} returned a non-JSON body. See BAKONG-SETUP.md (IP restriction).`); return { state: 'error' }; }
+    if (r.status === 401) return bakongFail('Bakong API HTTP 401: the token is invalid or expired. Renew it at https://api-bakong.nbc.gov.kh and update BAKONG_API_TOKEN.');
+    if (!j) return bakongFail(`Bakong API HTTP ${r.status} returned a non-JSON body. The API is usually restricted to Cambodian IPs and this server is probably blocked. See BAKONG-SETUP.md.`);
     if (j.responseCode === 0 && j.data) return { state: 'paid', data: j.data };
-    if (j.responseCode === 1) return { state: 'pending' }; // "transaction could not be found" = not paid yet
-    console.error('Bakong API unexpected response:', text.slice(0, 200));
-    return { state: 'error' };
+    const msg = String(j.responseMessage || j.message || '');
+    const notFound = j.errorCode === 3 || /could not be found|not found|no transaction/i.test(msg);
+    if (j.responseCode === 1 && notFound) return { state: 'pending' };
+    return bakongFail(`Bakong API HTTP ${r.status} unexpected answer (responseCode ${j.responseCode}, errorCode ${j.errorCode}): ${msg || text.slice(0, 160)}`);
   } catch (e) {
-    console.error('Bakong API request failed:', e?.message || e);
-    return { state: 'error' };
+    return bakongFail('Bakong API request failed (timeout / unreachable / blocked):', e?.message || e);
   }
 }
 
@@ -301,8 +304,9 @@ async function findBakongPayment(md5s, total, label) {
     const d = c.data;
     const expected = bakongAmount(total);
     const paid = Number(d.amount);
-    const toOk = String(d.toAccountId || '').toLowerCase() === BK.account.toLowerCase();
-    const curOk = String(d.currency || '').toUpperCase() === BK.currency;
+    const local = v => String(v || '').toLowerCase().split('@')[0];
+    const toOk = !d.toAccountId || local(d.toAccountId) === local(BK.account);   // field can be missing on some responses
+    const curOk = !d.currency || String(d.currency).toUpperCase() === BK.currency;
     const amtOk = Number.isFinite(paid) && Math.abs(paid - expected) <= (BK.currency === 'KHR' ? 0.5 : 0.009);
     if (toOk && curOk && amtOk) return { hash: String(d.hash || '') };
     console.warn(`Bakong mismatch for ${label}: got ${paid} ${d.currency} to ${d.toAccountId}, expected ${expected} ${BK.currency} to ${BK.account}`);
@@ -396,7 +400,8 @@ app.post('/api/bakong/status', jsonBody, async (req, res) => {
   try {
     const order = await ownOrder(req, res); if (!order) return;
     if (order.payment_status === 'paid') return res.json({ paid: true });
-    res.json({ paid: await verifyBakong(order, order.bakong_md5s) });
+    const paid = await verifyBakong(order, order.bakong_md5s);
+    res.json({ paid, delayed: !paid && bakongDelayed() });
   } catch (e) {
     console.error('bakong status', e);
     res.json({ paid: false });
@@ -453,7 +458,8 @@ app.post('/api/bakong/pay/status', jsonBody, async (req, res) => {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Invalid payment.' });
     const pay = (await sb(`bakong_payments?id=eq.${id}&select=${PAY_FIELDS}&limit=1`))?.[0];
     if (!pay || pay.user_id !== user.id) return res.status(404).json({ error: 'Payment not found.' });
-    res.json({ paid: await verifyBakongPayment(pay) });
+    const paid = await verifyBakongPayment(pay);
+    res.json({ paid, delayed: !paid && bakongDelayed() });
   } catch (e) {
     console.error('bakong pay status', e);
     res.json({ paid: false });
@@ -473,10 +479,93 @@ app.post('/api/bakong/sync', jsonBody, async (req, res) => {
     for (const o of rows || []) if (await verifyBakong(o, o.bakong_md5s)) updated++;
     const pays = await sb(`bakong_payments?user_id=eq.${user.id}&status=eq.pending&created_at=gte.${since}&select=${PAY_FIELDS}&order=created_at.desc&limit=5`);
     for (const p of pays || []) if (await verifyBakongPayment(p)) updated++;
+    const cvs = await sb(`cv_orders?user_id=eq.${user.id}&status=eq.pending&created_at=gte.${since}&select=${CV_FIELDS}&order=created_at.desc&limit=5`).catch(() => []);
+    for (const c of cvs || []) if (await verifyBakongCv(c)) updated++;
     res.json({ updated });
   } catch (e) {
     console.error('bakong sync', e);
     res.json({ updated: 0 });
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ *  CV maker ($3, table cv_orders, see supabase-cv-maker.sql)
+ *  Same Bakong flow as orders: the price is read from the database row, never from the browser.
+ * ------------------------------------------------------------------ */
+const CV_FIELDS = 'id,user_id,price,status,bakong_md5s,created_at';
+const cvNo = cv => 'CV-' + String(cv.id).replace(/-/g, '').slice(0, 8).toUpperCase();
+
+async function ownCv(req, res) {
+  if (!bakongEnabled()) { res.status(503).json({ error: 'Bakong KHQR is not configured on the server yet.' }); return null; }
+  if (limited(req, 120)) { res.status(429).json({ error: 'Too many requests. Please wait a moment.' }); return null; }
+  const user = await userFromToken(req);
+  if (!user) { res.status(401).json({ error: 'Please sign in again.' }); return null; }
+  const id = String(req.body?.cv_id || '');
+  if (!/^[0-9a-f-]{36}$/i.test(id)) { res.status(400).json({ error: 'Invalid CV order.' }); return null; }
+  const cv = (await sb(`cv_orders?id=eq.${id}&select=${CV_FIELDS}&limit=1`))?.[0];
+  if (!cv || cv.user_id !== user.id) { res.status(404).json({ error: 'CV order not found.' }); return null; }
+  return cv;
+}
+
+async function verifyBakongCv(cv) {
+  if (cv.status === 'paid') return true;
+  const f = await findBakongPayment(cv.bakong_md5s, cv.price, `cv ${cv.id}`);
+  if (!f || f.mismatch) return false;
+  const updated = await sb(`cv_orders?id=eq.${cv.id}&status=neq.paid`, {
+    method: 'PATCH', headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({ status: 'paid', payment_method: 'Bakong KHQR', bakong_hash: f.hash, paid_at: new Date().toISOString() }),
+  });
+  if (Array.isArray(updated) && updated.length) await notifyAdmin('CV paid with Bakong KHQR', `${cvNo(cv)} was paid with Bakong KHQR.`, '/admin/requests');
+  return true;
+}
+
+app.post('/api/bakong/cv/create', jsonBody, async (req, res) => {
+  try {
+    const cv = await ownCv(req, res); if (!cv) return;
+    if (cv.status === 'paid') return res.json({ paid: true });
+    if (!(Number(cv.price) > 0)) return res.status(400).json({ error: 'This CV has no amount to pay.' });
+    const q = await makeBakongQr({ id: cv.id, total: cv.price, order_number: cvNo(cv) });
+    await sb(`cv_orders?id=eq.${cv.id}`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ bakong_md5s: [...(cv.bakong_md5s || []), q.md5].slice(-10), payment_method: 'Bakong KHQR' }),
+    });
+    res.json({ image: q.image, amount: q.amount, currency: BK.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: cvNo(cv) });
+  } catch (e) {
+    console.error('bakong cv create', e);
+    res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });
+  }
+});
+
+app.post('/api/bakong/cv/status', jsonBody, async (req, res) => {
+  try {
+    const cv = await ownCv(req, res); if (!cv) return;
+    const paid = await verifyBakongCv(cv);
+    res.json({ paid, delayed: !paid && bakongDelayed() });
+  } catch (e) {
+    console.error('bakong cv status', e);
+    res.json({ paid: false });
+  }
+});
+
+/* Diagnose "the QR shows but never gets approved": open /api/bakong/health in the browser.
+   It asks Bakong about a made-up MD5 and tells you whether the token, the IP or the network is the problem. */
+app.get('/api/bakong/health', async (_req, res) => {
+  const out = { tokenSet: !!BK.token, account: BK.account, base: BK.base, currency: BK.currency };
+  if (!BK.token) return res.json({ ...out, ok: false, verdict: 'BAKONG_API_TOKEN is not set on the server.' });
+  try {
+    const r = await fetch(`${BK.base}/v1/check_transaction_by_md5`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${BK.token}` },
+      body: JSON.stringify({ md5: '0'.repeat(32) }), signal: AbortSignal.timeout(10000),
+    });
+    const text = await r.text(); let j = null; try { j = JSON.parse(text); } catch { j = null; }
+    out.httpStatus = r.status;
+    if (r.status === 401) return res.json({ ...out, ok: false, verdict: 'TOKEN_REJECTED', hint: 'The Bakong token is invalid or expired. Renew it and update BAKONG_API_TOKEN.' });
+    if (!j) return res.json({ ...out, ok: false, verdict: 'BLOCKED_OR_NOT_API', hint: 'Bakong answered with a non-JSON page (HTTP ' + r.status + '). The API is restricted to Cambodian IPs, so this server is blocked. Host the server in Cambodia or set BAKONG_API_BASE_URL to a proxy in Cambodia.' });
+    const notFound = j.errorCode === 3 || /could not be found|not found/i.test(String(j.responseMessage || ''));
+    if (j.responseCode === 1 && notFound) return res.json({ ...out, ok: true, verdict: 'OK', hint: 'Token and network are fine. If payments still stay pending, check the server log for "Bakong mismatch".' });
+    return res.json({ ...out, ok: false, verdict: 'UNEXPECTED', responseCode: j.responseCode, errorCode: j.errorCode, message: j.responseMessage || null, hint: 'Bakong answered, but not with "transaction not found". Usually a token problem.' });
+  } catch (e) {
+    return res.json({ ...out, ok: false, verdict: 'UNREACHABLE', hint: 'This server cannot reach Bakong (' + (e?.message || e) + '). Usually the IP is blocked outside Cambodia.' });
   }
 });
 

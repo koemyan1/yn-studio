@@ -11,7 +11,7 @@ import{removeBackgroundFile,randomHex}from'./imageTools';
 import{takeHomeAction}from'./themeLive';
 import'./cool.css';import'./chiikawa.css';import'./spidey.css';
 import AdminAssistantTeachPage from'./AdminAssistantTeach';import AdminAssistantHost from'./AdminAssistant';import AdminSecretCodeEditor from'./AdminSecretCode';import AdminThemesPage from'./AdminThemes';import AdminProductMascotsPage from'./AdminProductMascots';import{ProductMascots}from'./ProductMascots';import'./admin.css';
-import ServicesPage,{AdminServiceRequests}from'./Services';import PushToggle from'./PushToggle';import{initFx}from'./fx';import{initFit}from'./themeElements';import'./customer.css';import'./fit.css';import'./checkout.css';import'./payment.css';import'./paymentScenes.css';import PaymentScene from'./PaymentScenes';import type{SceneKind}from'./PaymentScenes';import'./orders.css';
+import ServicesPage,{AdminServiceRequests}from'./Services';import CvMaker from'./CvMaker';import PushToggle from'./PushToggle';import{initFx}from'./fx';import{initFit}from'./themeElements';import'./customer.css';import'./fit.css';import'./checkout.css';import'./payment.css';import'./paymentScenes.css';import PaymentScene from'./PaymentScenes';import type{SceneKind}from'./PaymentScenes';import'./orders.css';
 import L from 'leaflet';import'leaflet/dist/leaflet.css';
 import{BackgroundGeolocation}from'@capgo/background-geolocation';import{Capacitor}from'@capacitor/core';import{MapDeliveryPanel,LiveTrackMap as DeliveryMap,calcFee}from'./mapCheckout';import{startWebTracking,stopWebTracking}from'./webTracking';
 /** Looks up the profile rows for a list of user ids and returns them keyed by user_id (used by the admin Orders / Deposits / Transactions / Customers pages). */
@@ -60,14 +60,14 @@ async function saveKhqr(image:string,label:string,amountText:string):Promise<'sh
   }catch{try{window.open(image,'_blank')}catch{}return 'opened'}
 }
 function PayCount({to,cur}:{to:number,cur:string}){const[v,setV]=useState(0);useEffect(()=>{if(!Number.isFinite(to))return;if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setV(to);return}let raf=0;const t0=performance.now();const step=(now:number)=>{const p=Math.min(1,(now-t0)/1100);setV(to*(1-Math.pow(1-p,3)));if(p<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);return()=>cancelAnimationFrame(raf)},[to]);return <>{cur==='KHR'?Math.round(v).toLocaleString()+' ៛':'$'+v.toFixed(2)}</>}
-function BakongPayModal({orderId,pay,onClose,onPaid}:{orderId?:string,pay?:{kind:'wallet'|'debt',amount:number,balance?:number},onClose:()=>void,onPaid:(cleared?:boolean)=>void}){
-  const[qr,setQr]=useState<any>(null),[err,setErr]=useState(''),[paid,setPaid]=useState(false),[left,setLeft]=useState(0),[again,setAgain]=useState(0),[saveNote,setSaveNote]=useState('');const tot=React.useRef(1),paidAt=React.useMemo(()=>new Date(),[paid]);
-  useEffect(()=>{let live=true;setQr(null);setErr('');(orderId?bakongCall('/api/bakong/create',{order_id:orderId}):bakongCall('/api/bakong/pay/create',{kind:pay?.kind,amount:pay?.amount,payment_id:qr?.payment_id})).then(j=>{if(!live)return;if(j.paid)setPaid(true);else setQr(j)}).catch(e=>{if(live)setErr(e?.message||'Could not create the KHQR.')});return()=>{live=false}},[orderId,pay?.kind,pay?.amount,again]);
+function BakongPayModal({orderId,cvId,pay,onClose,onPaid}:{orderId?:string,cvId?:string,pay?:{kind:'wallet'|'debt',amount:number,balance?:number},onClose:()=>void,onPaid:(cleared?:boolean)=>void}){
+  const[qr,setQr]=useState<any>(null),[err,setErr]=useState(''),[paid,setPaid]=useState(false),[left,setLeft]=useState(0),[again,setAgain]=useState(0),[saveNote,setSaveNote]=useState(''),[delayed,setDelayed]=useState(false);const tot=React.useRef(1),paidAt=React.useMemo(()=>new Date(),[paid]);
+  useEffect(()=>{let live=true;setQr(null);setErr('');(cvId?bakongCall('/api/bakong/cv/create',{cv_id:cvId}):orderId?bakongCall('/api/bakong/create',{order_id:orderId}):bakongCall('/api/bakong/pay/create',{kind:pay?.kind,amount:pay?.amount,payment_id:qr?.payment_id})).then(j=>{if(!live)return;if(j.paid)setPaid(true);else setQr(j)}).catch(e=>{if(live)setErr(e?.message||'Could not create the KHQR.')});return()=>{live=false}},[orderId,cvId,pay?.kind,pay?.amount,again]);
   useEffect(()=>{if(!qr)return;tot.current=Math.max(1,Math.ceil((qr.expiresAt-Date.now())/1000));const tick=()=>setLeft(Math.max(0,Math.ceil((qr.expiresAt-Date.now())/1000)));tick();const t=window.setInterval(tick,1000);return()=>window.clearInterval(t)},[qr]);
   const active=!!qr&&left>0&&!paid;
-  const kind:SceneKind=orderId?'order':pay?.kind==='wallet'?'wallet':(pay?.balance!=null&&pay.amount>=pay.balance-0.005)?'debtClear':'debt',cleared=kind==='debtClear',owe=pay?.balance!=null?Math.max(0,pay.balance-pay.amount):0,hold:number=({order:1700,wallet:1650,debt:2450,debtClear:2300} as any)[kind];
+  const kind:SceneKind=cvId?'cv':orderId?'order':pay?.kind==='wallet'?'wallet':(pay?.balance!=null&&pay.amount>=pay.balance-0.005)?'debtClear':'debt',cleared=kind==='debtClear',owe=pay?.balance!=null?Math.max(0,pay.balance-pay.amount):0,hold:number=({order:1700,wallet:1650,debt:2450,debtClear:2300,cv:2300} as any)[kind];
   const dismiss=()=>paid?onPaid(cleared):onClose();
-  useEffect(()=>{if(!active)return;let live=true;const run=async()=>{try{const j=orderId?await bakongCall('/api/bakong/status',{order_id:orderId}):await bakongCall('/api/bakong/pay/status',{payment_id:qr.payment_id});if(live&&j.paid)setPaid(true)}catch{}};const t=window.setInterval(run,3000);const vis=()=>{if(document.visibilityState==='visible')run()};document.addEventListener('visibilitychange',vis);window.addEventListener('focus',run);window.addEventListener('pageshow',run);return()=>{live=false;window.clearInterval(t);document.removeEventListener('visibilitychange',vis);window.removeEventListener('focus',run);window.removeEventListener('pageshow',run)}},[active,orderId,qr]);
+  useEffect(()=>{if(!active)return;let live=true;const run=async()=>{try{const j=cvId?await bakongCall('/api/bakong/cv/status',{cv_id:cvId}):orderId?await bakongCall('/api/bakong/status',{order_id:orderId}):await bakongCall('/api/bakong/pay/status',{payment_id:qr.payment_id});if(live){setDelayed(!!j.delayed&&!j.paid);if(j.paid)setPaid(true)}}catch{}};const t=window.setInterval(run,3000);const vis=()=>{if(document.visibilityState==='visible')run()};document.addEventListener('visibilitychange',vis);window.addEventListener('focus',run);window.addEventListener('pageshow',run);return()=>{live=false;window.clearInterval(t);document.removeEventListener('visibilitychange',vis);window.removeEventListener('focus',run);window.removeEventListener('pageshow',run)}},[active,orderId,cvId,qr]);
   useEffect(()=>{if(!paid)return;try{navigator.vibrate?.([40,70,110])}catch{}const t=window.setTimeout(()=>onPaid(cleared),hold+5200);return()=>window.clearTimeout(t)},[paid]);
   const amount=qr?(qr.currency==='KHR'?Number(qr.amount).toLocaleString()+' ៛':'$'+Number(qr.amount).toFixed(2)):'';
   const mm=Math.floor(left/60),ss=String(left%60).padStart(2,'0');
@@ -78,11 +78,11 @@ function BakongPayModal({orderId,pay,onClose,onPaid}:{orderId?:string,pay?:{kind
     {paid?<div className={'payDone k-'+kind} style={{'--tx':hold+'ms'} as any} role="status" aria-live="polite">
       <PaymentScene kind={kind} amountText={amount} frac={pay?.balance?owe/pay.balance:0.5}/>
       <h3>{cleared?tr('Debt cleared!','បំណុលត្រូវបានបង់ផ្តាច់!'):tr('Payment received','បានទទួលការទូទាត់')}</h3>
-      <p className="payDoneSub">{orderId?tr('Your order is confirmed. We are getting it ready.','ការបញ្ជាទិញរបស់អ្នកត្រូវបានបញ្ជាក់។ យើងកំពុងរៀបចំវា។'):cleared?tr('Your debt is fully paid. You are debt-free!','បំណុលរបស់អ្នកត្រូវបានបង់ទាំងស្រុងហើយ។ អ្នកគ្មានបំណុលទៀតទេ!'):pay?.kind==='debt'?tr('Your debt balance has been updated.','សមតុល្យបំណុលរបស់អ្នកត្រូវបានធ្វើបច្ចុប្បន្នភាព។'):tr('The money is now in your wallet.','ប្រាក់ត្រូវបានបញ្ចូលក្នុងកាបូបរបស់អ្នកហើយ។')}</p>
+      <p className="payDoneSub">{cvId?tr('Your CV is paid. Let us build it now!','CV របស់អ្នកបានទូទាត់ហើយ។ តោះបង្កើតវាឥឡូវនេះ!'):orderId?tr('Your order is confirmed. We are getting it ready.','ការបញ្ជាទិញរបស់អ្នកត្រូវបានបញ្ជាក់។ យើងកំពុងរៀបចំវា។'):cleared?tr('Your debt is fully paid. You are debt-free!','បំណុលរបស់អ្នកត្រូវបានបង់ទាំងស្រុងហើយ។ អ្នកគ្មានបំណុលទៀតទេ!'):pay?.kind==='debt'?tr('Your debt balance has been updated.','សមតុល្យបំណុលរបស់អ្នកត្រូវបានធ្វើបច្ចុប្បន្នភាព។'):tr('The money is now in your wallet.','ប្រាក់ត្រូវបានបញ្ចូលក្នុងកាបូបរបស់អ្នកហើយ។')}</p>
       {amount&&<div className="payDoneAmt"><PayCount to={Number(qr.amount)} cur={qr.currency}/></div>}
       <dl className="payDoneRows">
         {qr&&<div><dt>{tr('Paid to','បង់ទៅ')}</dt><dd>{qr.merchant||'YN Studio'}</dd></div>}
-        <div><dt>{tr('For','សម្រាប់')}</dt><dd>{orderId?(qr?.order_number?tr('Order','ការបញ្ជាទិញ')+' #'+qr.order_number:tr('Your order','ការបញ្ជាទិញរបស់អ្នក')):pay?.kind==='debt'?tr('Debt payment','ទូទាត់បំណុល'):tr('Wallet top-up','បញ្ចូលកាបូប')}</dd></div>
+        <div><dt>{tr('For','សម្រាប់')}</dt><dd>{cvId?tr('CV maker','បង្កើត CV'):orderId?(qr?.order_number?tr('Order','ការបញ្ជាទិញ')+' #'+qr.order_number:tr('Your order','ការបញ្ជាទិញរបស់អ្នក')):pay?.kind==='debt'?tr('Debt payment','ទូទាត់បំណុល'):tr('Wallet top-up','បញ្ចូលកាបូប')}</dd></div>
         {pay?.kind==='debt'&&pay.balance!=null&&<div><dt>{tr('Remaining debt','បំណុលនៅសល់')}</dt><dd>{'$'+owe.toFixed(2)}</dd></div>}
         <div><dt>{tr('Date','កាលបរិច្ឆេទ')}</dt><dd>{paidAt.toLocaleString(undefined,{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</dd></div>
       </dl>
@@ -100,9 +100,9 @@ function BakongPayModal({orderId,pay,onClose,onPaid}:{orderId?:string,pay?:{kind
         <div className="khqrScan"><i className="c1"/><i className="c2"/><i className="c3"/><i className="c4"/><img src={qr.image} alt="KHQR payment code"/>{left>0?<span className="khqrBeam" aria-hidden="true"/>:<span className="khqrGone">{tr('Expired','ផុតកំណត់')}</span>}</div>
         <div className="khqrTime"><span><Clock3/>{mm}:{ss}</span><i><u style={{transform:`scaleX(${Math.min(1,left/tot.current)})`}}/></i></div>
       </div></div>
-      {left>0?<><p className="payWait"><i/>{tr('Waiting for payment… this page updates by itself.','កំពុងរង់ចាំការទូទាត់… ទំព័រនេះនឹងធ្វើបច្ចុប្បន្នភាពដោយខ្លួនឯង។')}</p><button className="secondary wide" onClick={async()=>{const r=await saveKhqr(qr.image,qr.merchant||'YN Studio',amount);setSaveNote(r==='saved'?tr('QR saved to your downloads.','បានរក្សាទុក QR ក្នុងការទាញយករបស់អ្នក។'):r==='opened'?tr('Press and hold the picture to save it.','ចុចរូបភាពឱ្យជាប់ដើម្បីរក្សាទុក។'):'')}}>{tr('Save QR image','រក្សាទុករូបភាព QR')}</button>{saveNote&&<p className="payLead"><small>{saveNote}</small></p>}</>
+      {left>0?<><p className="payWait"><i/>{tr('Waiting for payment… this page updates by itself.','កំពុងរង់ចាំការទូទាត់… ទំព័រនេះនឹងធ្វើបច្ចុប្បន្នភាពដោយខ្លួនឯង។')}</p>{delayed&&<p className="notice">{tr('We cannot reach the bank check right now. If you already paid, keep this page open. It will confirm by itself.','យើងមិនអាចភ្ជាប់ទៅការត្រួតពិនិត្យធនាគារបានទេ។ បើអ្នកបានបង់ហើយ សូមទុកទំព័រនេះបើក វានឹងបញ្ជាក់ដោយខ្លួនឯង។')}</p>}<button className="secondary wide" onClick={async()=>{const r=await saveKhqr(qr.image,qr.merchant||'YN Studio',amount);setSaveNote(r==='saved'?tr('QR saved to your downloads.','បានរក្សាទុក QR ក្នុងការទាញយករបស់អ្នក។'):r==='opened'?tr('Press and hold the picture to save it.','ចុចរូបភាពឱ្យជាប់ដើម្បីរក្សាទុក។'):'')}}>{tr('Save QR image','រក្សាទុករូបភាព QR')}</button>{saveNote&&<p className="payLead"><small>{saveNote}</small></p>}</>
       :<button className="wide" onClick={()=>setAgain(n=>n+1)}>{tr('Get a new QR','យក QR ថ្មី')}</button>}
-      <p className="payLead"><small>{tr('You can close this and pay later from My orders.','អ្នកអាចបិទវា ហើយទូទាត់ពេលក្រោយពីការបញ្ជាទិញរបស់ខ្ញុំ។')}</small></p>
+      <p className="payLead"><small>{cvId?tr('You can close this and pay later from the CV page.','អ្នកអាចបិទវា ហើយទូទាត់ពេលក្រោយពីទំព័រ CV។'):tr('You can close this and pay later from My orders.','អ្នកអាចបិទវា ហើយទូទាត់ពេលក្រោយពីការបញ្ជាទិញរបស់ខ្ញុំ។')}</small></p>
     </>}
   </div></div>
 }
@@ -678,6 +678,7 @@ function Profile(){const nav=useNavigate();const[p,setP]=useState<any>(null),[na
 function AdminSecretCode(){return <AdminSecretCodeEditor Shell={AdminShell}/>}
 function AdminThemes(){return <AdminThemesPage Shell={AdminShell}/>}
 function Services(){return <ServicesPage Top={Top} Nav={Nav}/>}
+function CvPage(){return <CvMaker Top={Top} Nav={Nav} PayModal={BakongPayModal} useWalletBalance={useWalletBalance} useBakongEnabled={useBakongEnabled}/>}
 function AdminRequests(){return <AdminServiceRequests Shell={AdminShell}/>}
 function AdminProductMascots(){return <AdminProductMascotsPage Shell={AdminShell}/>}
 function AdminAssistant(){return <AdminAssistantTeachPage Shell={AdminShell}/>}
@@ -753,6 +754,7 @@ function App(){useLang();useEffect(()=>{initFx();initFit()},[]);return <>{!isPre
   <Route path="/profile" element={<Protected><Profile/></Protected>}/>
   <Route path="/wishlist" element={<Protected><Wishlist/></Protected>}/>
   <Route path="/services" element={<Protected><Services/></Protected>}/>
+  <Route path="/services/cv" element={<Protected><CvPage/></Protected>}/>
   <Route path="/notifications" element={<Protected><Notifications/></Protected>}/>
   <Route path="/support" element={<Protected><Support/></Protected>}/>
   <Route path="/rewards" element={<Protected><Rewards/></Protected>}/>

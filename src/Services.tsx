@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Check, Copy, ExternalLink, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
+  Check, Copy, ExternalLink, FileText, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
   Printer, Send, Smartphone, Trash2, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
 import './services.css';
@@ -149,6 +150,7 @@ function useReveal(dep: unknown) {
 
 export default function ServicesPage({ Top, Nav }: Chrome) {
   useLang();
+  const nav = useNavigate();
   const [open, setOpen] = useState<Service | null>(null);
   const [mine, setMine] = useState<Mine[]>([]);
 
@@ -199,6 +201,16 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
           <h1 id="svcTitle">{tr('Print it. Copy it. Design it.', 'បោះពុម្ព ថតចម្លង រចនា។')}</h1>
           <p>{tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
+
+        <article className="svcCvCard" data-rv>
+          <span className="svcCvPrice">$3</span>
+          <span className="svcCvIcon" aria-hidden="true"><FileText /></span>
+          <div>
+            <h3>{tr('CV maker', 'បង្កើត CV')}</h3>
+            <p>{tr('Pick a design, add your info in English or Khmer, pay and download your CV as a PDF.', 'ជ្រើសរើសគំរូ បញ្ចូលព័ត៌មានជាអង់គ្លេស ឬខ្មែរ ទូទាត់ ហើយទាញយក CV ជា PDF។')}</p>
+            <button type="button" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
+          </div>
+        </article>
 
         <h2 className="svcGroup" data-rv>{tr('Print and copy', 'បោះពុម្ព និងថតចម្លង')}</h2>
         <div className="svcList">{PRINT_COPY.map((s, i) => renderCard(s, i))}</div>
