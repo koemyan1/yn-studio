@@ -202,7 +202,7 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
           <p>{tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
 
-        <article className="svcCvCard" data-rv>
+        <article className="svcCvCard">
           <span className="svcCvPrice">$3</span>
           <span className="svcCvIcon" aria-hidden="true"><FileText /></span>
           <div>
