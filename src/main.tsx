@@ -399,7 +399,7 @@ function OrderScene({k,place}:{k:string,place:string}){
       <path d="M186 142L194 106h10l2 40z" fill="#6d28d9"/><line x1="204" y1="106" x2="206" y2="152" stroke="#2d2740" strokeWidth="4"/>
       <path d="M196 102L212 96" stroke="#2d2740" strokeWidth="5" strokeLinecap="round" fill="none"/><circle cx="214" cy="104" r="4" fill="#fde68a"/>
       <rect x="76" y="130" width="46" height="5" rx="2" fill="#2d2740"/>
-      <rect x="80" y="96" width="40" height="34" rx="5" fill="#fff"/><rect x="80" y="96" width="40" height="9" rx="4" fill="#7c3aed"/><image href="/yn-logo.png" x="80" y="94" width="40" height="40" preserveAspectRatio="xMidYMid meet"/>
+      <rect x="80" y="96" width="40" height="34" rx="5" fill="#fff"/><rect x="80" y="96" width="40" height="9" rx="4" fill="#7c3aed"/><clipPath id="osMotoBox"><rect x="80" y="105" width="40" height="25"/></clipPath><image href="/yn-logo.png" x="78" y="96" width="44" height="44" clipPath="url(#osMotoBox)" preserveAspectRatio="xMidYMid meet"/>
       <path d="M134 120L146 84L162 88L156 120Z" fill="#f472b6"/>
       <polyline points="140,122 164,126 160,144" fill="none" stroke="#25356b" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round"/>
       <line x1="156" y1="92" x2="198" y2="100" stroke="#f472b6" strokeWidth="6" strokeLinecap="round"/>
@@ -413,7 +413,7 @@ function OrderScene({k,place}:{k:string,place:string}){
     <rect x="0" y="150" width="320" height="40" fill="#4a4458"/><line className="osRoad" x1="0" y1="172" x2="320" y2="172" stroke="#fff" strokeWidth="3" strokeDasharray="20 16"/>
     <g className="osSpeed" stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity=".8"><line x1="20" y1="104" x2="58" y2="104"/><line x1="34" y1="122" x2="64" y2="122"/><line x1="14" y1="138" x2="50" y2="138"/></g>
     <g className="osTruck"><rect x="78" y="86" width="104" height="62" rx="6" fill="#fff"/><rect x="78" y="86" width="104" height="10" rx="5" fill={cab}/>
-      <image href="/yn-logo.png" x="90" y="81" width="80" height="80" preserveAspectRatio="xMidYMid meet"/>
+      <clipPath id="osTruckBox"><rect x="78" y="96" width="104" height="50"/></clipPath><image href="/yn-logo.png" x="92" y="83" width="76" height="76" clipPath="url(#osTruckBox)" preserveAspectRatio="xMidYMid meet"/>
       <path d="M184 104h28l16 20v24h-44z" fill={cab}/><path d="M190 110h18l11 14h-29z" fill="#d6ecff"/><rect x="78" y="146" width="150" height="6" rx="3" fill="#2d2740"/>
       <g className="osWheel"><circle cx="106" cy="152" r="13" fill="#2d2740"/><circle cx="106" cy="152" r="5" fill="#cfc8e0"/><path d="M106 143v18M97 152h18" stroke="#6d6585" strokeWidth="2"/></g>
       <g className="osWheel"><circle cx="204" cy="152" r="13" fill="#2d2740"/><circle cx="204" cy="152" r="5" fill="#cfc8e0"/><path d="M204 143v18M195 152h18" stroke="#6d6585" strokeWidth="2"/></g></g>
