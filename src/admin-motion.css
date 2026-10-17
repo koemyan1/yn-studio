@@ -1,0 +1,243 @@
+/* ==========================================================================
+   YN Studio admin — motion layer
+   Everything is scoped under .admin, so the customer side is untouched.
+   Import AFTER admin.css so it wins. Turn it all off by removing the import.
+   ========================================================================== */
+
+:root{--am-ease:cubic-bezier(.22,1,.36,1);--am-spring:cubic-bezier(.34,1.56,.64,1)}
+
+/* ---------- keyframes ---------- */
+@keyframes amPage{from{opacity:0;transform:translateY(10px)}}
+@keyframes amRise{from{opacity:0;transform:translateY(18px) scale(.98)}}
+@keyframes amPop{from{opacity:0;transform:scale(.88)}}
+@keyframes amFade{from{opacity:0}}
+@keyframes amTitle{from{opacity:0;transform:translateX(-14px);letter-spacing:.04em}}
+@keyframes amSlideR{from{opacity:0;transform:translateX(-18px)}}
+@keyframes amDrop{from{opacity:0;transform:translateY(-10px)}}
+@keyframes amSheet{from{opacity:0;transform:translateY(40px) scale(.98)}}
+@keyframes amGrad{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes amOrb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-26px,18px) scale(1.12)}}
+@keyframes amLogo{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(-3deg)}}
+@keyframes amGlow{0%,100%{box-shadow:0 6px 16px rgba(124,58,237,.3)}50%{box-shadow:0 8px 26px rgba(168,85,247,.55)}}
+@keyframes amWobble{0%{transform:rotate(0) scale(1)}25%{transform:rotate(-10deg) scale(1.12)}60%{transform:rotate(8deg) scale(1.12)}100%{transform:rotate(0) scale(1)}}
+@keyframes amRing{0%{transform:scale(.85);opacity:.5}70%,100%{transform:scale(1.5);opacity:0}}
+@keyframes amBar{from{transform:scaleY(0)}}
+@keyframes amNavIcon{0%{transform:scale(1)}40%{transform:scale(1.3) rotate(-8deg)}100%{transform:scale(1)}}
+@keyframes amBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes amSoftPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 38%,transparent)}70%,100%{box-shadow:0 0 0 8px transparent}}
+@keyframes amRipple{from{transform:scale(0);opacity:.28}to{transform:scale(1);opacity:0}}
+@keyframes amSpinIn{from{opacity:0;transform:rotate(-120deg) scale(.4)}}
+@keyframes amToastIn{from{opacity:0;transform:translateX(60px) scale(.92)}}
+@keyframes amToastBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes amBell{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-8deg)}75%{transform:rotate(4deg)}}
+@keyframes amProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes amBubble{from{opacity:0;transform:translateY(10px) scale(.94)}}
+@keyframes amSweep{from{transform:translateX(-120%) skewX(-18deg)}to{transform:translateX(260%) skewX(-18deg)}}
+
+/* ---------- page enter ---------- */
+.admin .adminContent{animation:amPage .5s var(--am-ease) backwards}
+.admin .adminTop h1{animation:amTitle .6s var(--am-ease) backwards}
+.admin .adminTop .eyebrow{animation:amFade .7s .1s backwards}
+.admin .adminTopActions>*{animation:amPop .45s var(--am-spring) backwards}
+.admin .adminTopActions>*:nth-child(2){animation-delay:.08s}
+
+/* smooth light/dark switch */
+.admin,.admin>aside,.admin .adminTop,.admin .panel,.admin .table,.admin .stat,.admin .tr,.admin .quickGrid a{
+  transition:background-color .45s ease,border-color .45s ease,color .35s ease,box-shadow .25s ease,transform .25s var(--am-ease);
+}
+
+/* scroll progress bar (Chrome / Edge / Safari 26+, silently ignored elsewhere) */
+@supports (animation-timeline:scroll()){
+  .admin::before{
+    content:"";position:fixed;top:0;left:0;right:0;height:3px;z-index:60;pointer-events:none;
+    transform-origin:0 50%;transform:scaleX(0);
+    background:linear-gradient(90deg,var(--a-accent),var(--a-accent2),#ec4899);
+    animation:amProgress linear both;animation-timeline:scroll(root block);
+  }
+}
+
+/* ---------- stagger entrance (first 14 items of any list/grid) ---------- */
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(-n+14){
+  animation:amRise .6s var(--am-ease) backwards;animation-delay:calc(var(--i,0)*55ms);
+}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*){--i:0}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(2){--i:1}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(3){--i:2}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(4){--i:3}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(5){--i:4}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(6){--i:5}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(7){--i:6}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(8){--i:7}
+.admin :is(.stat,.quickGrid>a,.orderAdminStats>div,.thStats>*,.adminOrderCard,.tr,.catRow,.statusRow,
+  .debtAdminHistoryRow,.debtPaymentRow,.supportThread,.adminChatThread,.thCard,.pmxTile,.pmxProd,
+  .pmxCountRow>*,.profileStats>*):nth-child(n+9){--i:8}
+
+/* blocks sitting directly in the page: panels, tables, banners… */
+.admin .adminContent>:is(.panel,.table,.toolbar,.adminToolbar,.notice,.sectionHead,.orderAdminHead,
+  .statusStudio,.packageWorkspace,.thPage,.pmx,.profilePanel,.stats,.quickGrid){
+  animation:amRise .65s var(--am-ease) backwards;
+}
+.admin .adminContent>:nth-child(2){animation-delay:.06s}
+.admin .adminContent>:nth-child(3){animation-delay:.12s}
+.admin .adminContent>:nth-child(4){animation-delay:.18s}
+.admin .adminContent>:nth-child(n+5){animation-delay:.24s}
+.admin .adminContent>:is(.stats,.quickGrid){animation-name:amFade}
+.admin .statusStudio>.panel,.admin .packageWorkspace>*{animation:amRise .6s var(--am-ease) backwards}
+.admin .statusStudio>.panel:nth-child(2),.admin .packageWorkspace>*:nth-child(2){animation-delay:.1s}
+
+/* ---------- sidebar ---------- */
+.admin .adminBrand .miniLogo{animation:amLogo 5s ease-in-out infinite,amGlow 3.6s ease-in-out infinite}
+.admin .adminNav a{transition:background-color .2s,color .2s,transform .25s var(--am-ease)}
+.admin .adminNav a:hover{transform:translateX(4px)}
+.admin .adminNav a:hover svg{animation:amNavIcon .5s var(--am-ease)}
+.admin .adminNav a.active svg{animation:amNavIcon .6s var(--am-spring)}
+.admin .adminNav a.active::before{animation:amBar .45s var(--am-spring) backwards;transform-origin:center}
+.admin .adminNav a.active{background:linear-gradient(90deg,var(--a-soft),transparent 140%)}
+/* first open after page load: links glide in one after another */
+html[data-am-boot] .admin .adminBrand{animation:amSlideR .5s var(--am-ease) backwards}
+html[data-am-boot] .admin .adminNavLabel{animation:amFade .6s backwards}
+html[data-am-boot] .admin .adminNav a{animation:amSlideR .5s var(--am-ease) backwards;animation-delay:calc(var(--g,0)*90ms + var(--l,0)*35ms + 120ms)}
+html[data-am-boot] .admin .adminAsideBottom{animation:amRise .6s .7s var(--am-ease) backwards}
+.admin .adminNavGroup:nth-child(1){--g:0}.admin .adminNavGroup:nth-child(2){--g:1}.admin .adminNavGroup:nth-child(3){--g:2}
+.admin .adminNavGroup:nth-child(4){--g:3}.admin .adminNavGroup:nth-child(5){--g:4}.admin .adminNavGroup:nth-child(n+6){--g:5}
+.admin .adminNavGroup>a:nth-child(2){--l:1}.admin .adminNavGroup>a:nth-child(3){--l:2}
+.admin .adminNavGroup>a:nth-child(4){--l:3}.admin .adminNavGroup>a:nth-child(n+5){--l:4}
+/* dark/light button icon spins in whenever it swaps */
+.admin .adminTheme svg,.admin .adminTopActions button svg{animation:amSpinIn .55s var(--am-spring) backwards}
+.admin .adminAsideBottom .adminBtn:hover svg{transform:rotate(12deg) scale(1.1);transition:transform .25s var(--am-spring)}
+/* phone drawer backdrop */
+.admin.navOpen .adminScrim{animation:amFade .3s backwards}
+
+/* ---------- dashboard ---------- */
+.admin .stat{position:relative;transition:transform .3s var(--am-ease),box-shadow .3s,border-color .3s,background-color .45s}
+.admin .stat:hover{transform:translateY(-5px);border-color:var(--a-accent);box-shadow:0 16px 36px rgba(124,58,237,.2)}
+.admin .stat:hover .statIcon{animation:amWobble .6s var(--am-ease)}
+.admin .statIcon{position:relative;transition:background-color .3s,color .3s}
+.admin .stat:hover .statIcon{background:linear-gradient(135deg,var(--a-accent),var(--a-accent2));color:#fff}
+.admin .statIcon::after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid var(--a-accent);opacity:0;pointer-events:none;animation:amRing 3.2s ease-out infinite}
+.admin .stat:nth-child(2) .statIcon::after{animation-delay:.5s}
+.admin .stat:nth-child(3) .statIcon::after{animation-delay:1s}
+.admin .stat:nth-child(4) .statIcon::after{animation-delay:1.5s}
+.admin .stat strong{font-variant-numeric:tabular-nums}
+
+/* pointer spotlight (position set by adminMotion.tsx) */
+.admin :is(.stat,.quickGrid a,.adminOrderCard,.thCard,.pmxTile){position:relative}
+.admin :is(.stat,.quickGrid a,.adminOrderCard,.thCard,.pmxTile)::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),rgba(168,85,247,.16),transparent 62%);
+}
+.admin :is(.stat,.quickGrid a,.adminOrderCard,.thCard,.pmxTile):hover::after{opacity:1}
+
+/* welcome banner: drifting gradient + floating orbs + shine on the button */
+.admin .welcome{position:relative;overflow:hidden;background-size:220% 220%;animation:amGrad 12s ease-in-out infinite,amRise .7s var(--am-ease) backwards}
+.admin .welcome>*{position:relative;z-index:1}
+.admin .welcome::before,.admin .welcome::after{content:"";position:absolute;border-radius:50%;pointer-events:none;filter:blur(2px)}
+.admin .welcome::before{width:220px;height:220px;right:-50px;top:-90px;background:radial-gradient(circle,rgba(255,255,255,.28),transparent 68%);animation:amOrb 9s ease-in-out infinite}
+.admin .welcome::after{width:160px;height:160px;left:32%;bottom:-90px;background:radial-gradient(circle,rgba(244,114,182,.4),transparent 68%);animation:amOrb 11s -3s ease-in-out infinite reverse}
+.admin .welcome h2{animation:amSlideR .7s .15s var(--am-ease) backwards}
+.admin .welcome p{animation:amSlideR .7s .25s var(--am-ease) backwards}
+.admin .welcome .button{animation:amPop .6s .4s var(--am-spring) backwards}
+
+/* quick links */
+.admin .quickGrid a{transition:transform .3s var(--am-spring),border-color .2s,box-shadow .3s,background-color .45s}
+.admin .quickGrid a:hover{transform:translateY(-6px);box-shadow:0 18px 38px rgba(124,58,237,.18)}
+.admin .quickGrid a svg{transition:transform .35s var(--am-spring)}
+.admin .quickGrid a:hover svg{transform:translateY(-3px) rotate(-8deg) scale(1.18)}
+.admin .quickGrid a:active{transform:scale(.97)}
+
+/* ---------- cards, rows, lists ---------- */
+.admin .panel{transition:box-shadow .3s,border-color .3s,background-color .45s,transform .25s var(--am-ease)}
+.admin .panel:hover{border-color:var(--a-line2)}
+.admin :is(.adminOrderCard,.thCard,.pmxTile,.pmxProd){transition:transform .3s var(--am-ease),box-shadow .3s,border-color .3s}
+.admin :is(.adminOrderCard,.thCard,.pmxTile,.pmxProd):hover{transform:translateY(-4px);box-shadow:0 16px 34px rgba(60,30,100,.14);border-color:var(--a-accent)}
+.admin :is(.supportThread,.adminChatThread){transition:transform .25s var(--am-ease),background-color .2s}
+.admin :is(.supportThread,.adminChatThread):hover{transform:translateX(5px)}
+
+.admin .tr{position:relative}
+.admin .tr::before{content:"";position:absolute;left:0;top:50%;width:3px;height:0;border-radius:0 3px 3px 0;background:linear-gradient(180deg,var(--a-accent),var(--a-accent2));transition:height .25s var(--am-ease),top .25s var(--am-ease)}
+.admin .tr:hover::before{height:62%;top:19%}
+.admin .tr>img{transition:transform .3s var(--am-spring)}
+.admin .tr:hover>img{transform:scale(1.1) rotate(-2deg)}
+
+/* order statuses: waiting ones breathe */
+.admin .status{animation:amPop .45s var(--am-spring) backwards}
+/* (only the first few cards pulse, so long order lists stay cheap to paint) */
+.admin :is(.adminOrderCard,.tr):nth-child(-n+10) .status:is(.pending,.payment-pending,.processing){animation:amPop .45s var(--am-spring) backwards,amSoftPulse 2.2s ease-out .5s infinite}
+
+/* chat bubbles pop in */
+.admin .adminChatMessages>*{animation:amBubble .35s var(--am-ease) backwards}
+
+/* notices, empty states */
+.admin .notice{animation:amDrop .45s var(--am-ease) backwards}
+.admin .empty{animation:amFade .6s backwards}
+.admin .empty svg{animation:amBob 3.4s ease-in-out infinite}
+
+/* ---------- buttons & inputs ---------- */
+.admin :is(button,.button){transition:transform .22s var(--am-spring),box-shadow .25s,background-color .2s,border-color .2s,color .2s,filter .2s}
+.admin :is(button:not(:disabled),.button):active{transform:scale(.94)}
+.admin :is(.button,.adminContent button:not([class])):hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(124,58,237,.3)}
+.admin :is(.button,.adminContent button:not([class])):active{transform:translateY(0) scale(.95)}
+.admin .secondary:hover{transform:translateY(-1px)}
+.admin .icon:hover{transform:scale(1.1) rotate(6deg)}
+.admin .icon.danger:hover{transform:scale(1.1) rotate(-8deg)}
+.admin .icon:active{transform:scale(.88)}
+
+/* shine sweep on primary buttons */
+.admin :is(.button,.adminContent button:not([class])){position:relative;overflow:hidden}
+.admin :is(.button,.adminContent button:not([class]))::after{content:"";position:absolute;inset:0 auto 0 0;width:40%;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-120%) skewX(-18deg)}
+.admin :is(.button,.adminContent button:not([class])):hover::after{animation:amSweep .75s ease}
+
+/* ripple (spans created by adminMotion.tsx) */
+.admin .amRH{overflow:hidden}
+.admin .amRP{position:relative}
+.admin .amRipple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;transform:scale(0);animation:amRipple .65s ease-out forwards}
+
+.admin :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea){
+  transition:border-color .2s,box-shadow .25s,background-color .2s,transform .25s var(--am-ease);
+}
+.admin :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea):focus{
+  border-color:var(--a-accent);box-shadow:0 0 0 4px rgba(124,58,237,.16);outline:none;
+}
+
+/* tabs / segmented buttons feel springy */
+.admin :is(.thSeg,.ynSeg,.debtMethodTabs) button{transition:background-color .2s,color .2s,transform .25s var(--am-spring),box-shadow .25s}
+.admin :is(.thSeg,.ynSeg,.debtMethodTabs) button.on{animation:amPop .35s var(--am-spring)}
+
+/* ---------- overlays ---------- */
+.admin .pmxSheetBack{animation:amFade .25s backwards}
+.admin .pmxSheet{animation:amSheet .45s var(--am-ease) backwards}
+.adminLiveToast{animation:amToastIn .6s var(--am-spring) backwards!important;overflow:hidden}
+.adminLiveToastIcon svg{transform-origin:50% 12%;animation:amBell 1.1s .45s ease-in-out 2}
+.adminLiveToast::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;transform-origin:0 50%;background:linear-gradient(90deg,#7c3aed,#ec4899);animation:amToastBar 5.5s linear forwards}
+
+/* ---------- phones: keep it light ---------- */
+@media (max-width:700px){
+  .admin .welcome::before,.admin .welcome::after{display:none}
+  .admin .adminNav a:hover,.admin :is(.supportThread,.adminChatThread):hover{transform:none}
+}
+
+/* ---------- respect "reduce motion" ---------- */
+@media (prefers-reduced-motion:reduce){
+  .admin *,.admin *::before,.admin *::after,.adminLiveToast,.adminLiveToast *,.adminLiveToast::after{
+    animation:none!important;transition-duration:.01ms!important;
+  }
+  .admin::before{display:none}
+}

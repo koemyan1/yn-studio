@@ -1,0 +1,158 @@
+/* Admin scenes (see AdminScenes.tsx): looping illustrations on every admin page + one-shot action celebrations.
+   Same illustrated style as the customer "Payment received" scenes. */
+
+.asSvg{display:block;width:100%;height:100%;overflow:visible}
+.asSvg g,.asSvg circle,.asSvg rect,.asSvg path,.asSvg polygon,.asSvg ellipse,.asSvg line,.asSvg text{transform-box:fill-box;transform-origin:center}
+.asSvg .asShadow{fill:rgba(36,27,53,.18)}
+.asSvg .asNotch{fill:var(--a-card,#fff)}
+.asReplay{width:100%;height:100%}
+.asReplay .pdSvg{width:100%;height:100%;margin:0;filter:none}
+
+/* ---------- banner ---------- */
+.asBanner{position:relative;display:flex;align-items:center;gap:18px;margin:0 0 18px;padding:12px 22px 12px 24px;min-height:140px;overflow:hidden;
+  border-radius:var(--a-radius,18px);border:1px solid var(--a-line,#ebe4f5);box-shadow:var(--a-shadow,0 8px 24px rgba(60,30,100,.06));
+  background:linear-gradient(115deg,var(--a-soft,#f1eafd),var(--a-card,#fff) 72%)}
+.asBanner::before{content:"";position:absolute;right:-40px;top:-60px;width:300px;height:300px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(168,85,247,.2),transparent 66%);animation:asGlow 6s ease-in-out infinite}
+.asText{position:relative;flex:1;min-width:0;display:grid;gap:4px;align-content:center}
+.asText .eyebrow{font-size:10.5px;letter-spacing:.16em;color:var(--a-accent,#7c3aed)}
+.asText b{font-size:clamp(18px,2.6vw,25px);line-height:1.15;letter-spacing:-.02em;color:var(--a-text,#241b35);animation:asTextIn .7s .1s cubic-bezier(.22,1,.36,1) backwards}
+.asText small{font-size:13.5px;color:var(--a-mute,#7a6f8a);animation:asTextIn .7s .22s cubic-bezier(.22,1,.36,1) backwards}
+.asArt{position:relative;flex:none;width:min(230px,42%);height:134px}
+.asHide{position:absolute;top:8px;right:10px;width:26px;height:26px;padding:0;border-radius:50%;border:0;background:rgba(124,58,237,.1);color:var(--a-mute,#7a6f8a);font-size:17px;line-height:1;cursor:pointer;opacity:.7}
+.asHide:hover{opacity:1;background:rgba(124,58,237,.2)}
+.asChip{display:inline-flex;align-items:center;gap:6px;margin:0 0 14px;padding:6px 12px;border-radius:99px;border:1px dashed var(--a-line2,#ddd1ee);background:transparent;color:var(--a-mute,#7a6f8a);font-size:12.5px;font-weight:700;cursor:pointer}
+.asChip:hover{color:var(--a-accent,#7c3aed);border-color:var(--a-accent,#7c3aed)}
+.admin .adminContent>.asBanner{animation:amRise .65s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes asTextIn{from{opacity:0;transform:translateX(-14px)}}
+@keyframes asGlow{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+
+/* ---------- shared loops ---------- */
+@keyframes asBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes asSpinK{to{transform:rotate(360deg)}}
+@keyframes asTwinkleK{0%,100%{opacity:.15;transform:scale(.5) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(25deg)}}
+@keyframes asPopK{0%{opacity:0;transform:scale(0)}10%{opacity:1;transform:scale(1.14)}15%,86%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}
+@keyframes asDriftK{0%{transform:translateX(-14px)}50%{transform:translateX(18px)}100%{transform:translateX(-14px)}}
+.asBobSlow{animation:asBob 3.6s ease-in-out infinite}
+.asSpin{animation:asSpinK var(--t,8s) linear infinite}
+.asSpinRev{animation-direction:reverse}
+.asTwinkle{animation:asTwinkleK 2.4s var(--d,0s) ease-in-out infinite}
+.asPopLoop{animation:asPopK 5s var(--d,0s) cubic-bezier(.3,1.4,.5,1) infinite;opacity:0}
+.asPopBig{transform-origin:50% 100%}
+.asDrift{animation:asDriftK 9s ease-in-out infinite}
+.asDrift2{animation-duration:12s;animation-direction:reverse}
+
+/* shop */
+@keyframes asCoinUpK{0%{opacity:0;transform:translate(0,0) scale(.3)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),-74px) scale(1)}}
+@keyframes asDoorK{0%,12%{transform:scaleX(1)}28%,70%{transform:scaleX(.12)}86%,100%{transform:scaleX(1)}}
+@keyframes asSwayK{0%,100%{transform:rotate(-.8deg)}50%{transform:rotate(.8deg)}}
+.asCoinUp{animation:asCoinUpK 3.2s var(--d,0s) ease-out infinite;opacity:0}
+.asDoor{transform-origin:0% 50%!important;animation:asDoorK 3.2s ease-in-out infinite}
+.asSway{transform-origin:50% 0%!important;animation:asSwayK 4s ease-in-out infinite}
+
+/* tags */
+@keyframes asSwingK{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
+.asSwing{animation:asSwingK 2.8s var(--d,0s) ease-in-out infinite}
+
+/* palette */
+@keyframes asDrawK{0%{stroke-dashoffset:1;opacity:1}55%{stroke-dashoffset:0;opacity:1}90%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes asBrushK{0%{transform:translate(-136px,26px)}55%{transform:translate(0,0)}100%{transform:translate(0,0)}}
+.asDrawLoop{stroke-dasharray:1;animation:asDrawK 4.4s ease-in-out infinite}
+.asBrush{animation:asBrushK 4.4s ease-in-out infinite}
+
+/* mascot / snack */
+@keyframes asJumpK{0%,100%{transform:translateY(0) scale(1.06,.92)}18%{transform:translateY(-4px) scale(.98,1.04)}45%{transform:translateY(-30px) scale(.96,1.06)}72%{transform:translateY(0) scale(1.08,.9)}}
+@keyframes asBlinkK{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}
+@keyframes asShadowJumpK{0%,100%{transform:scale(1.05);opacity:.9}45%{transform:scale(.62);opacity:.5}}
+@keyframes asBounceK{0%,100%{transform:translateY(0) scale(1.07,.92)}45%{transform:translateY(-36px) rotate(10deg) scale(.97,1.04)}}
+.asJump{transform-origin:50% 100%!important;animation:asJumpK 1.9s ease-in-out infinite}
+.asBlink{animation:asBlinkK 3.4s infinite}
+.asShadowJump{animation:asShadowJumpK 1.9s ease-in-out infinite}
+.asBounce{transform-origin:50% 100%!important;animation:asBounceK 1.8s var(--d,0s) ease-in-out infinite}
+.asShadowJump[style]{animation-duration:1.8s;animation-delay:var(--d,0s)}
+
+/* frames */
+@keyframes asFrameK{0%{transform:translateY(0) scale(1)}8%,26%{transform:translateY(-8px) scale(1.12)}36%,100%{transform:translateY(0) scale(1)}}
+@keyframes asDotHiK{0%{opacity:.25;transform:scale(1)}8%,26%{opacity:1;transform:scale(1.5)}36%,100%{opacity:.25;transform:scale(1)}}
+.asFrame{animation:asFrameK 4.2s var(--d,0s) cubic-bezier(.3,1.3,.5,1) infinite}
+.asDotHi{animation:asDotHiK 4.2s var(--d,0s) ease-in-out infinite}
+
+/* ticket */
+@keyframes asWiggleK{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes asShineK{0%,20%{transform:translateX(-30px) skewX(-18deg)}70%,100%{transform:translateX(190px) skewX(-18deg)}}
+@keyframes asRingK{0%{opacity:.7;transform:scale(.5)}100%{opacity:0;transform:scale(1.8)}}
+.asWiggle{animation:asWiggleK 2.6s ease-in-out infinite}
+.asShine{animation:asShineK 3s ease-in-out infinite}
+.asPulseRing{fill:none;stroke:#a78bfa;stroke-width:3;animation:asRingK 1.3s .3s ease-out both}
+
+/* truck */
+@keyframes asRoadK{to{transform:translateX(-40px)}}
+@keyframes asDriveK{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes asSpeedK{0%{opacity:0;transform:translateX(14px) scaleX(.4)}40%{opacity:1}100%{opacity:0;transform:translateX(-18px) scaleX(1)}}
+.asRoad{animation:asRoadK .7s linear infinite}
+.asDrive{animation:asDriveK .45s ease-in-out infinite}
+.asSpeed{animation:asSpeedK .9s var(--d,0s) linear infinite}
+.asWheel{animation:asSpinK .6s linear infinite}
+
+/* label printer */
+@keyframes asPaperK{0%{transform:translateY(-52px)}55%,86%{transform:translateY(0)}100%{transform:translateY(-52px);opacity:0}}
+@keyframes asBlinkDotK{0%,100%{opacity:1}50%{opacity:.25}}
+.asPaper{animation:asPaperK 4.4s cubic-bezier(.4,0,.2,1) infinite}
+.asBlinkDot{animation:asBlinkDotK .8s infinite}
+
+/* track */
+@keyframes asProgK{0%{transform:scaleX(0);opacity:1}62%,90%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+@keyframes asPinK{0%{transform:translateX(0)}62%,90%{transform:translateX(160px)}100%{transform:translateX(160px);opacity:0}}
+@keyframes asNodeK{0%,4%{opacity:0;transform:scale(0)}12%{opacity:1;transform:scale(1.25)}18%,90%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.asProg{transform-origin:0% 50%!important;animation:asProgK 5.4s ease-in-out infinite}
+.asPin{animation:asPinK 5.4s ease-in-out infinite}
+.asNode{animation:asNodeK 5.4s var(--d,0s) ease-out infinite;opacity:0}
+
+/* people */
+@keyframes asHeartK{0%{opacity:0;transform:translateY(24px) scale(.3)}25%{opacity:1}100%{opacity:0;transform:translateY(-26px) scale(1.2)}}
+.asHeart{animation:asHeartK 2.6s 1s ease-out infinite;opacity:0}
+
+/* receipt */
+@keyframes asLineK{0%{transform:scaleX(0)}16%,84%{transform:scaleX(1)}100%{transform:scaleX(0)}}
+@keyframes asFlipK{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.08)}}
+.asLine{transform-origin:0% 50%!important;animation:asLineK 4.6s var(--d,0s) ease-in-out infinite}
+.asFlip{animation:asFlipK 1.4s var(--d,0s) ease-in-out infinite}
+
+/* bell */
+@keyframes asRingBellK{0%,50%,100%{transform:rotate(0)}6%{transform:rotate(16deg)}12%{transform:rotate(-14deg)}18%{transform:rotate(11deg)}24%{transform:rotate(-8deg)}30%{transform:rotate(4deg)}36%{transform:rotate(0)}}
+@keyframes asWaveK{0%{opacity:.6;transform:scale(.7)}100%{opacity:0;transform:scale(1.7)}}
+@keyframes asBadgeK{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.asRing{transform-origin:50% 0%!important;animation:asRingBellK 2.6s ease-in-out infinite}
+.asWave{fill:none;stroke:#fbbf24;stroke-width:3;opacity:0;animation:asWaveK 2.1s var(--d,0s) ease-out infinite}
+.asBadge{animation:asBadgeK 1.2s ease-in-out infinite}
+
+/* chat */
+@keyframes asTypingK{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+.asTyping{animation:asTypingK 1s var(--d,0s) ease-in-out infinite}
+
+/* ---------- one-shot action overlay ---------- */
+.asOverlay{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;padding:20px;background:rgba(20,10,35,.5);backdrop-filter:blur(6px);animation:amFade .25s backwards;cursor:pointer}
+.asCard{position:relative;overflow:hidden;width:min(330px,88vw);padding:18px 18px 22px;text-align:center;border-radius:28px;background:#fff;color:#241b35;
+  box-shadow:0 30px 80px rgba(20,10,35,.45);display:grid;gap:4px;animation:asCardIn .55s cubic-bezier(.34,1.56,.64,1) backwards}
+.asOverlay.dark .asCard{background:#15101f;color:#f4eefc}
+.asCardArt{width:100%;height:190px}
+.asCardArt .asReplay,.asCardArt .pdSvg{width:100%;height:100%}
+.asCard b{font-size:20px;letter-spacing:-.01em}
+.asCard small{color:#7a6f8a;font-size:13.5px}
+.asCardBar{position:absolute;left:0;right:0;bottom:0;height:4px;transform-origin:0 50%;background:linear-gradient(90deg,#7c3aed,#ec4899);animation:asBarK 3.3s linear forwards}
+@keyframes asCardIn{from{opacity:0;transform:translateY(40px) scale(.86)}}
+@keyframes asBarK{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+@media (max-width:700px){
+  .asBanner{min-height:112px;padding:10px 14px 10px 16px;gap:8px}
+  .asArt{width:44%;height:104px}
+  .asText small{display:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .asSvg *,.asBanner::before,.asText b,.asText small,.asCard,.asCardBar,.asOverlay{animation:none!important}
+  .asPopLoop,.asCoinUp,.asNode,.asHeart,.asWave{opacity:1}
+  .asCoinUp,.asWave,.asHeart{opacity:0}
+  .asNode{opacity:1}
+  .asProg{transform:scaleX(1)}
+}

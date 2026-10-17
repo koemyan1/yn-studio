@@ -5,7 +5,7 @@ import { tr } from './lang';
    Animated scenes for the "Payment received" screen. One scene per payment type:
    - order      : the item drops into a box, the flaps close, tape seals it, the box hops.
    - wallet     : a banknote showing the amount (plus coins) flies into a wallet.
-   - debt       : a jar fills with the debt, then a chunk is scooped out (what the customer paid).
+   - debt       : coins drop into a jar, then the old amount on a DEBT paper is scratched out and the new amount shows.
    - debtClear  : a paper that says DEBT shakes and is ripped in two, then a big tick.
    - cv         : a CV sheet slides in, its photo pops, the text lines write themselves, then a PAID tick stamps it.
    All motion lives in paymentScenes.css (switched off by prefers-reduced-motion).
@@ -113,48 +113,46 @@ function WalletScene({ amountText }: { amountText: string }) {
   );
 }
 
-/* ---------- 3. debt paid in part: a jar fills, then a chunk is removed ---------- */
+/* ---------- 3. debt paid in part: money drops into a jar, the DEBT paper's old amount is scratched out, the new amount appears ---------- */
 const JAR = 'M98 40 H142 V54 C162 60 168 74 168 92 V128 C168 140 160 148 148 148 H92 C80 148 72 140 72 128 V92 C72 74 78 60 98 54 Z';
-const JH = 94; // interior height from the shoulder (y=54) to the bottom (y=148)
 
-function JarScene({ amountText, frac }: { amountText: string; frac: number }) {
-  const L0 = 0.88;
-  const f = Math.min(Math.max(Number.isFinite(frac) ? frac : 0.5, 0), 1);
-  const L1 = Math.max(0.08, Math.min(L0 * f, L0 - 0.1)); // always a visible drop
-  const vars = css({ '--h': (JH + 14) + 'px', '--y0': (JH * (1 - L0)).toFixed(1) + 'px', '--y1': (JH * (1 - L1)).toFixed(1) + 'px' });
+function DebtScene({ oldText, newText }: { oldText: string; newText: string }) {
+  const fs = (t: string, base: number) => (t.length <= 6 ? base : t.length <= 8 ? base * 0.84 : base * 0.7);
+  const coins = [{ ox: '-10px', d: '.55s' }, { ox: '8px', d: '.85s' }, { ox: '-2px', d: '1.15s' }];
   return (
-    <svg className="pdSvg pdJar" viewBox="0 0 240 170" style={vars} aria-hidden="true">
+    <svg className="pdSvg pdDebt" viewBox="0 0 240 170" aria-hidden="true">
       <defs>
-        <linearGradient id="pdLiqG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fb7185" /><stop offset="1" stopColor="#e11d48" /></linearGradient>
-        <clipPath id="pdJarClip"><path d={JAR} /></clipPath>
+        <clipPath id="pdDbJarClip"><path d={JAR} /></clipPath>
+        <radialGradient id="pdDbCoin" cx=".35" cy=".3" r=".8"><stop offset="0" stopColor="#fde68a" /><stop offset="1" stopColor="#f59e0b" /></radialGradient>
+        <linearGradient id="pdDbGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fcd34d" /><stop offset="1" stopColor="#f59e0b" /></linearGradient>
       </defs>
-      <ellipse className="pdShadow" cx="120" cy="156" rx="54" ry="6" />
-      <g className="pdJarIn">
-        <g clipPath="url(#pdJarClip)">
-          <g className="pdLiquid">
-            <rect x="60" y="54" width="120" height="120" fill="url(#pdLiqG)" />
-            <g className="pdWave"><path d="M30 54q10-7 20 0t20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0v12H30z" fill="#fb7185" /></g>
-            <circle className="pdBub" cx="100" cy="132" r="3.5" fill="#fff" fillOpacity=".5" />
-            <circle className="pdBub b2" cx="132" cy="126" r="2.5" fill="#fff" fillOpacity=".5" />
-            <circle className="pdBub b3" cx="116" cy="138" r="3" fill="#fff" fillOpacity=".45" />
+      <ellipse className="pdShadow" cx="54" cy="156" rx="40" ry="5" />
+      <g transform="translate(-54 8) scale(.88)">
+        <g className="pdDbJar">
+          <g className="pdDbJig">
+            <g clipPath="url(#pdDbJarClip)"><rect className="pdDbGold" x="60" y="54" width="120" height="120" fill="url(#pdDbGold)" /></g>
+            <path d={JAR} fill="#fff" fillOpacity=".16" stroke="#c4b5fd" strokeWidth="4" strokeLinejoin="round" />
+            <path d="M84 72C80 92 80 110 84 128" stroke="#fff" strokeOpacity=".6" strokeWidth="4" strokeLinecap="round" fill="none" />
+            <rect x="94" y="26" width="52" height="15" rx="5" fill="#a78bfa" />
           </g>
         </g>
-        <path d={JAR} fill="#fff" fillOpacity=".14" stroke="#c4b5fd" strokeWidth="4" strokeLinejoin="round" />
-        <path d="M84 72C80 92 80 110 84 128" stroke="#fff" strokeOpacity=".6" strokeWidth="4" strokeLinecap="round" fill="none" />
-        <path d="M160 82h-9M160 102h-9M160 122h-9" stroke="#c4b5fd" strokeWidth="2.5" strokeLinecap="round" />
-        <rect x="94" y="26" width="52" height="15" rx="5" fill="#a78bfa" />
-        <rect x="98" y="30" width="20" height="3.5" rx="1.75" fill="#fff" fillOpacity=".5" />
       </g>
-      <g className="pdChunk">
-        <rect x="104" y="88" width="34" height="26" rx="11" fill="url(#pdLiqG)" />
-        <rect x="109" y="92" width="11" height="5" rx="2.5" fill="#fff" fillOpacity=".6" />
-      </g>
-      <g transform="translate(150 20)">
-        <g className="pdChip">
-          <rect width="78" height="27" rx="13.5" fill="#16a34a" />
-          <text x="39" y="18.5" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="900">{'\u2212' + amountText}</text>
+      {coins.map((c, i) => (
+        <g key={i} className="pdDbCoin" style={css({ '--ox': c.ox, animationDelay: c.d })}>
+          <circle cx="54" cy="-6" r="9" fill="url(#pdDbCoin)" stroke="#d97706" strokeWidth="1.5" />
+          <circle cx="54" cy="-6" r="5" fill="none" stroke="#d97706" strokeWidth="1" opacity=".7" />
         </g>
+      ))}
+      <g className="pdDbPaper">
+        <rect x="112" y="16" width="118" height="134" rx="8" fill="#fff" stroke="#e5e7eb" strokeWidth="1.5" />
+        <path d="M112 44V24a8 8 0 0 1 8-8H222a8 8 0 0 1 8 8V44Z" fill="#ef4444" />
+        <text x="171" y="37" textAnchor="middle" fontSize="18" fontWeight="900" fill="#fff" letterSpacing="2">{tr('DEBT', '\u1794\u17c6\u178e\u17bb\u179b')}</text>
+        <text className="pdDbOld" x="171" y="80" textAnchor="middle" fontSize={fs(oldText, 22)} fontWeight="900" fill="#6b7280">{oldText}</text>
+        <path className="pdDbScratch" d="M122 72L220 66L124 78L220 74L124 85L220 81" pathLength={1} />
+        <text x="171" y="108" textAnchor="middle" fontSize="10" fontWeight="800" fill="#9ca3af" letterSpacing="1">{tr('NOW OWE', '\u1793\u17c5\u1787\u17c6\u1796\u17b6\u1780\u17cb')}</text>
+        <text className="pdDbNew" x="171" y="134" textAnchor="middle" fontSize={fs(newText, 25)} fontWeight="900" fill="#16a34a">{newText}</text>
       </g>
+      <Sparks cx={171} cy={120} delay="3s" />
     </svg>
   );
 }
@@ -229,10 +227,10 @@ function CvScene() {
   );
 }
 
-export default function PaymentScene({ kind, amountText, frac }: { kind: SceneKind; amountText: string; frac?: number }) {
+export default function PaymentScene({ kind, amountText, oldText, newText }: { kind: SceneKind; amountText: string; frac?: number; oldText?: string; newText?: string }) {
   if (kind === 'order') return <OrderScene />;
   if (kind === 'wallet') return <WalletScene amountText={amountText} />;
   if (kind === 'debtClear') return <RipScene />;
   if (kind === 'cv') return <CvScene />;
-  return <JarScene amountText={amountText} frac={frac ?? 0.5} />;
+  return <DebtScene oldText={oldText || amountText} newText={newText || amountText} />;
 }

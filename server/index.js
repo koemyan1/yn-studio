@@ -519,6 +519,38 @@ async function verifyBakongCv(cv) {
   return true;
 }
 
+const bigJson = express.json({ limit: '1500kb' });
+const CV_TEMPLATES = ['rosa', 'jonathan', 'donna', 'daniel', 'muhammad', 'richard', 'director'];
+/* Create or update the customer's CV row through the server (service role), so it never depends on table grants. */
+app.post('/api/cv/save', bigJson, async (req, res) => {
+  try {
+    if (!(SB.url && SB.service && SB.anon)) return res.status(503).json({ error: 'The server is not connected to the database yet.' });
+    if (limited(req, 120)) return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
+    const user = await userFromToken(req);
+    if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+    const b = req.body || {};
+    const data = b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : null;
+    if (!data || JSON.stringify(data).length > 1200000) return res.status(400).json({ error: 'The CV data is missing or too big.' });
+    const template = CV_TEMPLATES.includes(b.template) ? b.template : 'rosa';
+    const lang = b.lang === 'km' ? 'km' : 'en';
+    if (b.cv_id) {
+      const id = String(b.cv_id);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Invalid CV order.' });
+      const cur = (await sb(`cv_orders?id=eq.${id}&select=id,user_id,status,price&limit=1`))?.[0];
+      if (!cur || cur.user_id !== user.id) return res.status(404).json({ error: 'CV order not found.' });
+      const patch = cur.status === 'paid' ? { data } : { data, template, lang }; // template + language are locked once paid
+      await sb(`cv_orders?id=eq.${id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }) });
+      return res.json({ id, price: Number(cur.price), status: cur.status });
+    }
+    const row = (await sb('cv_orders', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ user_id: user.id, template, lang, data }) }))?.[0];
+    if (!row) throw new Error('insert returned nothing');
+    res.json({ id: row.id, price: Number(row.price), status: row.status });
+  } catch (e) {
+    console.error('cv save', e);
+    res.status(500).json({ error: 'Could not save your CV. ' + String(e?.message || '').slice(0, 160) });
+  }
+});
+
 app.post('/api/bakong/cv/create', jsonBody, async (req, res) => {
   try {
     const cv = await ownCv(req, res); if (!cv) return;
@@ -532,7 +564,7 @@ app.post('/api/bakong/cv/create', jsonBody, async (req, res) => {
     res.json({ image: q.image, amount: q.amount, currency: BK.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: cvNo(cv) });
   } catch (e) {
     console.error('bakong cv create', e);
-    res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });
+    res.status(500).json({ error: 'Could not create the KHQR. ' + String(e?.message || '').slice(0, 160) });
   }
 });
 

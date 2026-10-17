@@ -44,17 +44,25 @@ async function uid(): Promise<string | null> {
   return data.user?.id || null;
 }
 
-/** Shrinks a phone photo to a small JPEG data URL so it can live inside the CV data. */
+/** Shrinks a phone photo to a small JPEG (longest side 900 px, aspect kept). Each template then crops it to its own frame. */
 async function readPhoto(file: File): Promise<string> {
   const bmp = await createImageBitmap(file);
-  const side = Math.min(bmp.width, bmp.height);
-  const out = Math.min(520, side);
+  const k = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas');
-  c.width = c.height = out;
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
   const g = c.getContext('2d');
   if (!g) throw new Error('canvas');
-  g.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, out, out);
-  return c.toDataURL('image/jpeg', 0.86);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.82);
+}
+
+const API_BASE: string = ((import.meta as any).env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
+async function api(path: string, body: any): Promise<any> {
+  const { data } = await supabase.auth.getSession();
+  const r = await fetch(API_BASE + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (data.session?.access_token || '') }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j?.error || 'Request failed (' + r.status + ')');
+  return j;
 }
 
 function ensureCvFonts() {
@@ -307,17 +315,9 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
 
   /* ---------- database ---------- */
   async function saveRow(): Promise<string> {
-    const u = await uid();
-    if (!u) throw new Error(tr('Please sign in again.', 'សូមចូលគណនីម្ដងទៀត។'));
-    if (cvId) {
-      const r = await supabase.from('cv_orders').update({ template: tpl, lang, data, updated_at: new Date().toISOString() }).eq('id', cvId);
-      if (r.error) throw r.error;
-      return cvId;
-    }
-    const r = await supabase.from('cv_orders').insert({ user_id: u, template: tpl, lang, data }).select('id,price').single();
-    if (r.error) throw new Error(/cv_orders|schema cache/i.test(r.error.message) ? tr('The CV service is not set up yet.', 'សេវា CV មិនទាន់រៀបចំរួចរាល់ទេ។') : r.error.message);
-    setCvId(r.data.id); setPrice(Number(r.data.price) || PRICE);
-    return r.data.id as string;
+    const j = await api('/api/cv/save', { cv_id: cvId, template: tpl, lang, data });
+    if (!cvId) { setCvId(j.id); setPrice(Number(j.price) || PRICE); }
+    return j.id as string;
   }
   async function isPaid(id: string): Promise<boolean> {
     for (let k = 0; k < 4; k++) {
@@ -375,8 +375,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
     if (first.current) { first.current = false; return; }
     setSaved('saving');
     const t = window.setTimeout(async () => {
-      const r = await supabase.from('cv_orders').update({ data, updated_at: new Date().toISOString() }).eq('id', cvId);
-      setSaved(r.error ? 'error' : 'saved');
+      try { await api('/api/cv/save', { cv_id: cvId, template: tpl, lang, data }); setSaved('saved'); } catch { setSaved('error'); }
     }, 900);
     return () => window.clearTimeout(t);
   }, [data, step, cvId]);
