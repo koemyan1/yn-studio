@@ -129,3 +129,100 @@
 .svcAdminThumb img{width:120px;height:120px;object-fit:cover;border-radius:14px;display:block}
 .svcAdminBody{display:grid;gap:10px;min-width:0}
 @media(max-width:520px){.svcAdminRow.idea{grid-template-columns:1fr}.svcAdminThumb img{width:100%;height:200px}}
+
+/* =============================================================================================
+   Motion pass: scroll reveals, living hero, card hover, celebratory "request sent"
+   (everything here is switched off by prefers-reduced-motion at the bottom)
+   ============================================================================================= */
+
+/* ---------- scroll reveal (elements opt in with data-rv, class "in" is added when visible) ---------- */
+.svcPage [data-rv]{opacity:0}
+.svcPage [data-rv].in{opacity:1;animation:svcRise .75s calc(var(--i,0) * 90ms) cubic-bezier(.2,.9,.25,1) backwards}
+.svcPage .svcGroup::after{transform:scaleX(0);transform-origin:left}
+.svcPage .svcGroup.in::after{animation:svcLine .9s .25s cubic-bezier(.2,.9,.25,1) forwards}
+.svcPage .svcCard.in .svcTags li{animation:svcTag .5s cubic-bezier(.2,1.5,.4,1) backwards}
+.svcPage .svcCard.in .svcTags li:nth-child(1){animation-delay:calc(var(--i,0) * 90ms + 280ms)}
+.svcPage .svcCard.in .svcTags li:nth-child(2){animation-delay:calc(var(--i,0) * 90ms + 350ms)}
+.svcPage .svcCard.in .svcTags li:nth-child(3){animation-delay:calc(var(--i,0) * 90ms + 420ms)}
+.svcPage .svcCard.in .svcTags li:nth-child(4){animation-delay:calc(var(--i,0) * 90ms + 490ms)}
+.svcPage .svcMine.in li{animation:svcRise .5s backwards}
+.svcPage .svcMine.in li:nth-child(1){animation-delay:.15s}.svcPage .svcMine.in li:nth-child(2){animation-delay:.22s}
+.svcPage .svcMine.in li:nth-child(3){animation-delay:.29s}.svcPage .svcMine.in li:nth-child(4){animation-delay:.36s}
+.svcPage .svcMine.in li:nth-child(5){animation-delay:.43s}.svcPage .svcMine.in li:nth-child(6){animation-delay:.5s}
+
+/* ---------- hero: the sheet drops in, the print head sweeps across, CMYK dots bob and overlap ---------- */
+.svcHero{animation:svcPaper .85s cubic-bezier(.2,.9,.25,1) backwards}
+.svcHero h1{animation:svcRise .8s .15s cubic-bezier(.2,.9,.25,1) backwards}
+.svcHero p{animation:svcRise .8s .3s cubic-bezier(.2,.9,.25,1) backwards}
+.svcSweep{position:absolute;z-index:2;top:0;bottom:0;left:0;width:3px;border-radius:3px;pointer-events:none;opacity:0;background:linear-gradient(#00a3d9,#e5007d,#f2b705);box-shadow:0 0 22px 5px rgba(229,0,125,.35);animation:svcSweep 1.5s .4s ease-in-out both}
+.svcCrop{transform-origin:center;animation:svcCrop .6s .5s cubic-bezier(.2,1.4,.4,1) backwards}
+.svcDots b{animation:svcDotIn .7s cubic-bezier(.2,1.6,.4,1) backwards,svcBobX 3.6s 1s ease-in-out infinite}
+.svcDots b:nth-child(1){animation-delay:.55s,1s}.svcDots b:nth-child(2){animation-delay:.65s,1.3s}
+.svcDots b:nth-child(3){animation-delay:.75s,1.6s}.svcDots b:nth-child(4){animation-delay:.85s,1.9s}
+
+/* ---------- cards ---------- */
+.svcCard{transition:transform .3s cubic-bezier(.2,.9,.25,1),box-shadow .3s ease}
+.svcInk{animation:svcHalftone 5s linear infinite}
+.svcInk svg{animation:svcBob 3.2s calc(var(--i,0) * .4s) ease-in-out infinite;transition:transform .3s}
+.svcInk.sm,.svcInk.sm svg{animation:none}
+@media(hover:hover){
+  .svcCard:hover{transform:translateY(-4px);box-shadow:0 26px 44px -22px rgba(72,35,120,.55)}
+  .svcCard:hover .svcInk svg{animation:svcWiggle .6s ease-in-out}
+  .svcPage .svcAsk:hover{box-shadow:0 12px 22px -10px var(--svc,#7c3aed)}
+}
+.svcCard:active{transform:scale(.99)}
+.svcPage .svcAsk{position:relative;overflow:hidden}
+.svcPage .svcAsk::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-20deg);animation:svcShine 3.8s calc(1.2s + var(--i,0) * .6s) ease-in-out infinite}
+
+/* ---------- suggestion box + your requests ---------- */
+.svcDrop svg{animation:svcBob 2.4s ease-in-out infinite}
+.svcDrop{transition:transform .25s ease,border-color .25s ease,background .25s ease}
+@media(hover:hover){.svcDrop:hover{transform:scale(1.015);border-color:var(--purple,#7c3aed)}}
+.svcStatus.s-new,.svcStatus.s-in_progress{animation:svcPulse 2.2s ease-out infinite}
+
+/* ---------- request sheet ---------- */
+.svcScrim{animation:svcFade .25s ease both}
+.svcSheet{animation:svcUp .5s cubic-bezier(.2,1.05,.3,1) both}
+.svcDone{position:relative}
+.svcBurst{position:absolute;left:50%;top:50px;width:0;height:0;pointer-events:none}
+.svcBurst i{position:absolute;left:-4px;top:-6px;width:8px;height:12px;border-radius:2px;background:var(--c);opacity:0;animation:svcBurst 1.2s var(--d) cubic-bezier(.1,.8,.3,1) both}
+.svcBurst i.b1{width:9px;height:9px;border-radius:50%}
+.svcBurst i.b2{width:5px;height:15px;border-radius:3px}
+.svcDoneIcon{position:relative;width:78px;height:78px;background:none;color:inherit;animation:none}
+.svcDoneIcon svg{width:78px;height:78px;overflow:visible;filter:drop-shadow(0 10px 18px rgba(22,163,74,.4))}
+.svcDoneIcon circle{fill:#16a34a;transform-box:fill-box;transform-origin:center;animation:svcPop2 .55s cubic-bezier(.2,1.5,.4,1) backwards}
+.svcDoneIcon path{fill:none;stroke:#fff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:svcDraw .45s .3s ease-out forwards}
+.svcDoneIcon::before{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid #16a34a;opacity:0;animation:svcRing 1.4s .25s ease-out 2}
+.svcDone h3{animation:svcRise .5s .35s backwards}
+.svcDone p{animation:svcRise .5s .45s backwards}
+.svcDone .svcPrimary{animation:svcRise .5s .55s backwards}
+
+@keyframes svcRise{from{opacity:0;transform:translateY(26px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes svcLine{to{transform:scaleX(1)}}
+@keyframes svcTag{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
+@keyframes svcPaper{from{opacity:0;transform:translateY(-28px) rotate(-1.6deg)}to{opacity:1;transform:none}}
+@keyframes svcSweep{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:calc(100% - 3px);opacity:0}}
+@keyframes svcCrop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:none}}
+@keyframes svcDotIn{from{opacity:0;transform:translateY(-22px) scale(.3)}to{opacity:.92;transform:none}}
+@keyframes svcBobX{0%,100%{transform:translate(0,0)}50%{transform:translate(-5px,-5px)}}
+@keyframes svcHalftone{from{background-position:0 0}to{background-position:8px 8px}}
+@keyframes svcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes svcWiggle{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(-14deg) scale(1.12)}60%{transform:rotate(10deg) scale(1.12)}}
+@keyframes svcShine{0%,55%{left:-70%}100%{left:130%}}
+@keyframes svcPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 38%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+@keyframes svcFade{from{opacity:0}to{opacity:1}}
+@keyframes svcBurst{0%{opacity:1;transform:rotate(var(--a)) translateY(-32px)}100%{opacity:0;transform:rotate(var(--a)) translateY(calc(var(--r) * -1)) rotate(240deg) scale(.5)}}
+@keyframes svcPop2{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes svcDraw{to{stroke-dashoffset:0}}
+@keyframes svcRing{from{opacity:.6;transform:scale(1)}to{opacity:0;transform:scale(1.9)}}
+
+@media(prefers-reduced-motion:reduce){
+  .svcPage [data-rv]{opacity:1}
+  .svcPage [data-rv].in,.svcPage .svcGroup.in::after,.svcPage .svcCard.in .svcTags li,.svcPage .svcMine.in li,
+  .svcHero,.svcHero h1,.svcHero p,.svcCrop,.svcDots b,.svcInk,.svcInk svg,.svcCard,.svcPage .svcAsk::after,
+  .svcDrop,.svcDrop svg,.svcStatus,.svcScrim,.svcSheet,.svcBurst i,.svcDoneIcon circle,.svcDoneIcon::before,
+  .svcDone h3,.svcDone p,.svcDone .svcPrimary{animation:none!important;transition:none!important}
+  .svcPage .svcGroup::after{transform:none}
+  .svcSweep,.svcBurst,.svcDoneIcon::before,.svcPage .svcAsk::after{display:none}
+  .svcDoneIcon path{stroke-dashoffset:0;animation:none}
+}

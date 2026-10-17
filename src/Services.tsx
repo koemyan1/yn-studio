@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Check, CheckCircle2, Copy, ExternalLink, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
+  Check, Copy, ExternalLink, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
   Printer, Send, Smartphone, Trash2, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -130,6 +130,23 @@ type Chrome = { Top: React.ComponentType<{ title?: string; back?: boolean }>; Na
 
 type Mine = { id: string; kind: 'service' | 'product'; title: string; status: string; created_at: string };
 
+/** Fades/slides elements in as they scroll into view. Elements opt in with data-rv. */
+function useReveal(dep: unknown) {
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll<HTMLElement>('.svcPage [data-rv]:not(.in)'));
+    if (!els.length) return;
+    if (typeof IntersectionObserver === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      els.forEach(e => e.classList.add('in'));
+      return;
+    }
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    els.forEach(e => io.observe(e));
+    return () => io.disconnect();
+  }, [dep]);
+}
+
 export default function ServicesPage({ Top, Nav }: Chrome) {
   useLang();
   const [open, setOpen] = useState<Service | null>(null);
@@ -154,9 +171,10 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
     setMine(rows.slice(0, 6));
   }, []);
   useEffect(() => { loadMine(); }, [loadMine]);
+  useReveal(mine.length);
 
-  const renderCard = (s: Service) => (
-    <article className="svcCard" key={s.k} style={{ ['--svc' as any]: s.ink, ['--svc-fg' as any]: s.fg || '#fff' }}>
+  const renderCard = (s: Service, i: number) => (
+    <article className="svcCard" data-rv key={s.k} style={{ ['--svc' as any]: s.ink, ['--svc-fg' as any]: s.fg || '#fff', ['--i' as any]: i }}>
       <div className="svcInk"><s.Icon /></div>
       <div className="svcBody">
         <h3>{tr(s.en, s.km)}</h3>
@@ -175,22 +193,23 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
         <Top title={tr('Services', 'សេវាកម្ម')} back />
 
         <section className="svcHero" aria-labelledby="svcTitle">
+          <span className="svcSweep" aria-hidden="true" />
           <i className="svcCrop tl" /><i className="svcCrop tr" /><i className="svcCrop bl" /><i className="svcCrop br" />
           <div className="svcDots" aria-hidden="true"><b style={{ background: '#00a3d9' }} /><b style={{ background: '#e5007d' }} /><b style={{ background: '#f2b705' }} /><b style={{ background: '#241b35' }} /></div>
           <h1 id="svcTitle">{tr('Print it. Copy it. Design it.', 'បោះពុម្ព ថតចម្លង រចនា។')}</h1>
           <p>{tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
 
-        <h2 className="svcGroup">{tr('Print and copy', 'បោះពុម្ព និងថតចម្លង')}</h2>
-        <div className="svcList">{PRINT_COPY.map(renderCard)}</div>
+        <h2 className="svcGroup" data-rv>{tr('Print and copy', 'បោះពុម្ព និងថតចម្លង')}</h2>
+        <div className="svcList">{PRINT_COPY.map((s, i) => renderCard(s, i))}</div>
 
-        <h2 className="svcGroup">{tr('Design', 'រចនា')}</h2>
-        <div className="svcList">{DESIGN.map(renderCard)}</div>
+        <h2 className="svcGroup" data-rv>{tr('Design', 'រចនា')}</h2>
+        <div className="svcList">{DESIGN.map((s, i) => renderCard(s, i))}</div>
 
         <ProductIdea onSent={loadMine} />
 
         {mine.length > 0 && (
-          <section className="svcMine" aria-label={tr('Your requests', 'សំណើរបស់អ្នក')}>
+          <section className="svcMine" data-rv aria-label={tr('Your requests', 'សំណើរបស់អ្នក')}>
             <h2 className="svcGroup">{tr('Your requests', 'សំណើរបស់អ្នក')}</h2>
             <ul>
               {mine.map(r => (
@@ -260,7 +279,8 @@ function RequestSheet({ service, onClose, onSent }: { service: Service; onClose:
         <button type="button" className="svcClose" onClick={onClose} aria-label={tr('Close', 'បិទ')}><X /></button>
         {sent ? (
           <div className="svcDone">
-            <span className="svcDoneIcon"><CheckCircle2 /></span>
+            <div className="svcBurst" aria-hidden="true">{Array.from({ length: 22 }, (_, k) => <i key={k} className={'b' + (k % 3)} style={{ ['--a' as any]: (k * 360 / 22) + 'deg', ['--c' as any]: ['#00a3d9', '#e5007d', '#f2b705', '#241b35', '#7c3aed'][k % 5], ['--r' as any]: (80 + (k % 4) * 20) + 'px', ['--d' as any]: (k % 4) * 35 + 'ms' }} />)}</div>
+            <span className="svcDoneIcon"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="25" /><path d="M15 27l7 7 15-16" /></svg></span>
             <h3>{tr('Request sent', 'បានផ្ញើសំណើ')}</h3>
             <p>{tr('We will review it and reply with a price. You can follow it under Your requests on this page.', 'យើងនឹងពិនិត្យ ហើយឆ្លើយតបជាមួយតម្លៃ។ អ្នកអាចតាមដានវានៅក្នុង «សំណើរបស់អ្នក» នៅលើទំព័រនេះ។')}</p>
             <button type="button" className="svcPrimary" onClick={onClose}>{tr('Done', 'រួចរាល់')}</button>
@@ -329,7 +349,7 @@ function ProductIdea({ onSent }: { onSent: () => void }) {
   }
 
   return (
-    <section className="svcIdea" aria-labelledby="svcIdeaTitle">
+    <section className="svcIdea" data-rv aria-labelledby="svcIdeaTitle">
       <h2 id="svcIdeaTitle">{tr('Cannot find a product?', 'រកមិនឃើញផលិតផលមែនទេ?')}</h2>
       <p>{tr('Send us a picture of what you want. If we can get it, we will add it to the shop.', 'ផ្ញើរូបភាពនៃអ្វីដែលអ្នកចង់បានមកយើង។ បើយើងរកបាន យើងនឹងដាក់វាចូលហាង។')}</p>
 

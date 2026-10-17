@@ -37,8 +37,6 @@
 .payDoneBadge path{fill:none;stroke:#fff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:pdDraw .45s .3s ease-out forwards}
 .payDoneBadge::before,.payDoneBadge::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid #16a34a;opacity:0;animation:pdRing 1.5s .2s ease-out 1}
 .payDoneBadge::after{animation-delay:.5s}
-.payDoneBurst{position:absolute;left:50%;top:56px;width:0;height:0;pointer-events:none}
-.payDoneBurst i{position:absolute;left:-4px;top:-7px;width:8px;height:14px;border-radius:2px;background:hsl(var(--h) 85% 58%);opacity:0;animation:pdBurst 1.2s var(--d) cubic-bezier(.1,.8,.3,1) both}
 .payDoneAmt{font-size:42px;font-weight:950;letter-spacing:-.035em;font-variant-numeric:tabular-nums;animation:pdUp .5s .45s both}
 .payDoneRows{width:100%;margin:12px 0 8px;padding:2px 16px;border-radius:18px;background:rgba(127,127,127,.1);text-align:left;animation:pdUp .5s .55s both}
 .payDoneRows div{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px dashed rgba(127,127,127,.32)}
@@ -46,7 +44,7 @@
 .payDoneRows dt{color:var(--muted,#776f86)}
 .payDoneRows dd{margin:0;font-weight:800;text-align:right}
 .payDoneBar{display:block;width:100%;height:4px;margin-top:8px;border-radius:4px;background:rgba(127,127,127,.18);overflow:hidden}
-.payDoneBar::after{content:"";display:block;height:100%;background:#16a34a;transform-origin:left;animation:pdBar 4.2s linear forwards}
+.payDoneBar::after{content:"";display:block;height:100%;background:#16a34a;transform-origin:left;animation:pdBar 5.2s linear forwards}
 
 @keyframes khqrBeam{0%,100%{top:0;opacity:.2}12%,88%{opacity:1}50%{top:calc(100% - 3px)}}
 @keyframes pdPulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}100%{box-shadow:0 0 0 10px rgba(22,163,74,0)}}
@@ -55,8 +53,17 @@
 @keyframes pdRing{from{opacity:.6;transform:scale(1)}to{opacity:0;transform:scale(1.9)}}
 @keyframes pdUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes pdBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
-@keyframes pdBurst{0%{opacity:1;transform:rotate(var(--a)) translateY(-30px)}100%{opacity:0;transform:rotate(var(--a)) translateY(-118px) scale(.5)}}
 @media(prefers-reduced-motion:reduce){.khqrBeam,.payWait i,.payDone *,.payDoneBadge::before,.payDoneBadge::after{animation:none!important}.payDoneBadge path{stroke-dashoffset:0}.payDoneBurst,.payDoneBadge::before,.payDoneBadge::after{display:none}.payDoneBar::after{transform:scaleX(.5)}}
+
+/* ---- payment received: extra celebration ---- */
+.payDoneBadge{isolation:isolate;animation:pdFloat 3.2s 1.2s ease-in-out infinite}
+.payDoneBadge svg{filter:drop-shadow(0 12px 22px rgba(22,163,74,.45))}
+.payDoneAmt{padding:0 6px;background:linear-gradient(100deg,currentColor 42%,#16a34a 50%,currentColor 58%) 120% 0/250% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:pdUp .5s .45s both,pdShine 1.4s 1.1s ease-in-out 1 both}
+.payDone>.wide{animation:pdUp .5s .65s both,pdGlow 2.2s 1.6s ease-in-out infinite}
+@keyframes pdFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes pdShine{from{background-position:120% 0}to{background-position:-20% 0}}
+@keyframes pdGlow{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0)}50%{box-shadow:0 0 0 7px rgba(124,58,237,.18)}}
+@media(prefers-reduced-motion:reduce){.payDoneAmt{background:none;-webkit-text-fill-color:currentColor}.payDoneBadge,.payDone>.wide{animation:none!important}}
 
 /* Centered message box (blocking messages such as "choose your delivery location") */
 .msgBox{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:20px;background:rgba(24,16,38,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:mbFade .2s ease both}
