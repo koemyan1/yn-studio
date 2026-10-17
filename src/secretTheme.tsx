@@ -29,6 +29,8 @@ export type StyleProps = {
   locked?: boolean;
   /** Move the part (px) without touching the page layout around it. */
   moveX?: number; moveY?: number;
+  /** Stays on the screen while the customer scrolls (does not move with the page). stickyTop = distance from the top edge in px. */
+  sticky?: boolean; stickyTop?: number;
   /** A picture used as the part's icon (replaces the little built-in icon of buttons / nav items). */
   icon?: string; iconSize?: number; iconSide?: 'left' | 'right' | 'top'; iconKeep?: boolean;
 };
@@ -71,7 +73,7 @@ const BASE_COMPONENTS: ComponentDef[] = [
 ];
 
 /** Every part can be moved, get a background colour / picture, and (except plain pictures) an icon picture. */
-const UNIVERSAL: PropName[] = ['background', 'backgroundImage', 'moveX', 'moveY'];
+const UNIVERSAL: PropName[] = ['background', 'backgroundImage', 'moveX', 'moveY', 'sticky', 'stickyTop'];
 const ICON_PROPS: PropName[] = ['icon', 'iconSize', 'iconSide'];
 export const COMPONENTS: ComponentDef[] = BASE_COMPONENTS.map(d => {
   const extra = [...UNIVERSAL, ...(d.key === 'productImage' ? [] : ICON_PROPS)].filter(x => !d.props.includes(x));
@@ -81,7 +83,7 @@ export const COMPONENTS: ComponentDef[] = BASE_COMPONENTS.map(d => {
 });
 
 /** Anything the admin taps in the preview that is not in the list above becomes a "tapped part" with every tool. */
-export const AUTO_PROPS: PropName[] = ['background', 'backgroundImage', 'color', 'borderColor', 'borderWidth', 'radius', 'shadow', 'fontSize', 'fontWeight', 'padding', 'opacity', 'fit', 'moveX', 'moveY', 'icon', 'iconSize', 'iconSide', 'hidden'];
+export const AUTO_PROPS: PropName[] = ['sticky', 'stickyTop', 'background', 'backgroundImage', 'color', 'borderColor', 'borderWidth', 'radius', 'shadow', 'fontSize', 'fontWeight', 'padding', 'opacity', 'fit', 'moveX', 'moveY', 'icon', 'iconSize', 'iconSide', 'hidden'];
 export type CustomPart = { selector: string; label: string };
 export function cleanSelector(v: any): string {
   return typeof v === 'string' ? v.replace(/[{};<@\\\n\r]/g, '').trim().slice(0, 240) : '';
@@ -116,7 +118,7 @@ export const TEXT_KEYS: { key: string; label: string; fallback: string; multilin
   { key: 'heroText', label: 'Hero text', fallback: 'Discover products selected for you.' },
   { key: 'categoryAll', label: '"All" category label', fallback: 'All' },
   { key: 'navHome', label: 'Nav: Home', fallback: 'Home' },
-  { key: 'navWishlist', label: 'Nav: Wishlist', fallback: 'Wishlist' },
+  { key: 'navServices', label: 'Nav: Services', fallback: 'Services' },
   { key: 'navCart', label: 'Nav: Cart', fallback: 'Cart' },
   { key: 'navOrders', label: 'Nav: Orders', fallback: 'Orders' },
   { key: 'navWallet', label: 'Nav: Wallet', fallback: 'Wallet' },
@@ -305,7 +307,7 @@ const cssUrl = (u: string) => `url("${String(u).replace(/"/g, '%22')}")`;
 const safe = (v: any) => String(v).replace(/[;{}<>]/g, '');
 const scoped = (selector: string) => selector.split(',').map(s => `${PREFIX} ${s.trim()}`).join(',');
 
-function declarations(p: StyleProps): string {
+function declarations(p: StyleProps, allowSticky = true): string {
   const d: string[] = [];
   if (p.hidden) return 'display:none!important;';
   if (p.background) d.push(`background:${safe(p.background)}!important`);
@@ -319,6 +321,7 @@ function declarations(p: StyleProps): string {
   if (p.padding != null) d.push(`padding:${Number(p.padding)}px!important`);
   if (p.opacity != null) d.push(`opacity:${Number(p.opacity) / 100}!important`);
   if (p.fit) d.push(`object-fit:${p.fit}!important`);
+  if (allowSticky && p.sticky) d.push('position:sticky!important', `top:${Number(p.stickyTop ?? 8)}px!important`, 'z-index:60!important');
   if (p.moveX || p.moveY) d.push(`translate:${Number(p.moveX || 0)}px ${Number(p.moveY || 0)}px!important`);
   return d.join(';') + (d.length ? ';' : '');
 }
@@ -456,7 +459,7 @@ export function buildThemeCss(input: any, path = '/', opts: { dark?: boolean; li
   for (const def of allComponents(c)) {
     const p = c.components[def.key];
     if (!p) continue;
-    const d = declarations(p);
+    const d = declarations(p, !def.key.startsWith('bottomNav'));
     if (d) css += `${scoped(def.selector)}{${d}}`;
     // an icon picture replaces the part's own little icon (unless "keep" is on); the picture itself is added by <PartIcons/>
     if (p.icon && !p.hidden && !p.iconKeep) css += scoped(def.selector.split(',').map(x => `${x.trim()} > svg`).join(',')) + '{display:none!important;}';
@@ -655,13 +658,14 @@ export function SecretThemeRuntime() {
     let alive = true;
     async function load() {
       if (path.startsWith('/admin')) { if (alive) setCustomer(null); return; }
+      const loadDefault = async () => { try { const d = await supabase.rpc('get_default_look'); const dr = Array.isArray(d.data) ? d.data[0] : d.data; return dr?.config ? { id: 'default-look', config: dr.config } : null; } catch { return null; } };
       const { data } = await supabase.auth.getUser();
-      if (!data.user) { if (alive) setCustomer(null); return; }
+      if (!data.user) { const dl = await loadDefault(); if (alive) setCustomer(dl); return; }
       const r = await supabase.rpc('get_customer_secret_theme');
       if (!alive) return;
       const row = Array.isArray(r.data) ? r.data[0] : r.data;
       if (row?.id) { localStorage.setItem('yn-secret-theme-id', row.id); setCustomer(row); }
-      else { localStorage.removeItem('yn-secret-theme-id'); setCustomer(null); }
+      else { localStorage.removeItem('yn-secret-theme-id'); const dl = await loadDefault(); if (alive) setCustomer(dl); }
     }
     void load();
     const reload = () => { void load(); };

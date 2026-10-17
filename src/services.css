@@ -1,0 +1,131 @@
+/* Services page + admin Requests page.
+   Idea: a print proof sheet. The hero has crop marks and four misregistered ink dots (cyan, magenta,
+   yellow, black); every service gets one ink colour (--svc) with a halftone band. Scoped to .svc* only. */
+
+.svcPage{--svc-line:var(--line,#e9e2f4)}
+
+/* ---------- hero: the proof sheet ---------- */
+.svcHero{position:relative;margin:30px 22px 34px;padding:34px 22px 28px;background:var(--card,#fff);border-radius:4px;box-shadow:0 22px 50px -24px rgba(72,35,120,.35),0 2px 0 rgba(36,27,53,.04)}
+.svcHero h1{margin:0;max-width:11em;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-weight:800;font-size:clamp(36px,10vw,58px);line-height:.98;letter-spacing:-.045em;color:var(--ink,#241b35);text-wrap:balance}
+.svcHero p{margin:16px 0 0;max-width:30em;font-size:15.5px;line-height:1.55;color:var(--muted,#776f86)}
+.svcDots{position:absolute;top:18px;right:18px;display:flex}
+.svcDots b{width:24px;height:24px;border-radius:50%;margin-left:-9px;mix-blend-mode:multiply;opacity:.92}
+.svcDots b:first-child{margin-left:0}
+.svcCrop{position:absolute;width:18px;height:18px;pointer-events:none}
+.svcCrop::before,.svcCrop::after{content:"";position:absolute;background:var(--ink,#241b35)}
+.svcCrop::before{width:11px;height:1.5px}
+.svcCrop::after{width:1.5px;height:11px}
+.svcCrop.tl{left:-18px;top:-18px}.svcCrop.tl::before{left:0;bottom:0}.svcCrop.tl::after{right:0;top:0}
+.svcCrop.tr{right:-18px;top:-18px}.svcCrop.tr::before{right:0;bottom:0}.svcCrop.tr::after{left:0;top:0}
+.svcCrop.bl{left:-18px;bottom:-18px}.svcCrop.bl::before{left:0;top:0}.svcCrop.bl::after{right:0;bottom:0}
+.svcCrop.br{right:-18px;bottom:-18px}.svcCrop.br::before{right:0;top:0}.svcCrop.br::after{left:0;bottom:0}
+
+/* ---------- group headings ---------- */
+.svcPage .svcGroup{display:flex;align-items:center;gap:12px;margin:30px 2px 14px;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--ink,#241b35)}
+.svcPage .svcGroup::after{content:"";flex:1;height:1.5px;background:var(--svc-line)}
+
+/* ---------- service cards ---------- */
+.svcList{display:grid;gap:14px}
+.svcCard{display:grid;grid-template-columns:78px minmax(0,1fr);background:var(--card,#fff);border:1px solid var(--svc-line);border-radius:22px;overflow:hidden;box-shadow:0 14px 34px -22px rgba(72,35,120,.4)}
+.svcInk{display:grid;place-items:center;background-color:var(--svc,#7c3aed);background-image:radial-gradient(rgba(255,255,255,.3) 1.3px,transparent 1.7px);background-size:8px 8px;color:var(--svc-fg,#fff)}
+.svcInk svg{width:30px;height:30px;stroke-width:2}
+.svcInk.sm{width:44px;height:44px;border-radius:14px;flex:none}
+.svcInk.sm svg{width:22px;height:22px}
+.svcBody{padding:18px 18px 18px 18px;display:grid;gap:8px;align-content:start;min-width:0}
+.svcBody h3{margin:0;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:20px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+.svcBody p{margin:0;font-size:14px;line-height:1.55;color:var(--muted,#776f86)}
+.svcTags{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px;padding:0;list-style:none}
+.svcTags li{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--soft,#f4efff);color:var(--ink,#241b35);border:1px solid color-mix(in srgb,var(--svc,#7c3aed) 38%,transparent)}
+.svcPage .svcAsk{justify-self:start;border:0;border-radius:999px;padding:11px 18px;font-weight:800;font-size:14px;cursor:pointer;background:var(--svc,#7c3aed);color:var(--svc-fg,#fff);box-shadow:0 8px 18px -10px var(--svc,#7c3aed);transition:transform .15s ease,box-shadow .15s ease}
+.svcPage .svcAsk:hover{transform:translateY(-1px)}
+.svcPage .svcAsk:active{transform:translateY(0) scale(.98)}
+
+/* ---------- "cannot find a product" ---------- */
+.svcIdea{margin:38px 0 8px;padding:24px 20px;border-radius:26px;background:var(--soft,#f4efff);border:2px dashed #cdb6f2;display:grid;gap:14px}
+.svcIdea h2{margin:0;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:25px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.svcIdea>p{margin:-6px 0 2px;font-size:14.5px;line-height:1.55;color:var(--muted,#776f86)}
+.svcDrop{display:grid;place-items:center;gap:6px;min-height:176px;padding:18px;text-align:center;border-radius:20px;border:2px dashed #b99be8;background:var(--card,#fff);color:var(--muted,#776f86);cursor:pointer;overflow:hidden;position:relative}
+.svcDrop svg{width:34px;height:34px;color:var(--purple,#7c3aed)}
+.svcDrop b{color:var(--ink,#241b35);font-size:15px}
+.svcDrop small{font-weight:600;font-size:12.5px}
+.svcDrop.has{padding:0;border-style:solid;border-color:var(--svc-line)}
+.svcDrop img{width:100%;max-height:340px;object-fit:cover;display:block}
+.svcPage .svcLink{justify-self:start;margin-top:-6px;border:0;background:none;padding:2px 0;color:var(--purple,#7c3aed);font-weight:800;font-size:13.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* ---------- shared form pieces (page + sheet) ---------- */
+.svcField{display:grid;gap:7px}
+.svcField>span{font-size:13.5px;font-weight:800;color:var(--ink,#241b35)}
+.svcField input,.svcField textarea{font-size:16px;line-height:1.45;resize:vertical}
+.svcField input:focus-visible,.svcField textarea:focus-visible{border-color:var(--purple,#7c3aed);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
+.svcPage .svcPrimary,.svcSheet .svcPrimary{width:100%;border:0;border-radius:16px;padding:15px 18px;font-weight:800;font-size:16px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#7c3aed,#9b5cff);box-shadow:0 14px 28px -14px rgba(124,58,237,.7)}
+.svcPage .svcPrimary:disabled,.svcSheet .svcPrimary:disabled{opacity:.6;cursor:wait}
+.svcPage button:focus-visible,.svcSheet button:focus-visible,.svcFile:focus-within,.svcDrop:focus-within{outline:3px solid rgba(124,58,237,.45);outline-offset:2px}
+.svcErr{margin:0;padding:11px 13px;border-radius:12px;background:#fff0f1;color:#b4232f;font-weight:700;font-size:14px}
+.svcOk{margin:0;display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:12px;background:#e8f8ee;color:#14753c;font-weight:700;font-size:14px}
+.svcOk svg{width:18px;height:18px;flex:none}
+.svcFile{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:16px;border:2px dashed #cdb6f2;background:var(--soft,#f4efff);cursor:pointer}
+.svcFile svg{width:24px;height:24px;flex:none;color:var(--purple,#7c3aed)}
+.svcFile span{display:grid;gap:2px;min-width:0}
+.svcFile b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.svcFile small{font-weight:600;font-size:12px;color:var(--muted,#776f86)}
+.svcFile.has{border-style:solid;border-color:var(--purple,#7c3aed)}
+
+/* ---------- request sheet ---------- */
+.svcScrim{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(36,27,53,.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.svcSheet{position:relative;width:min(560px,100%);max-height:92dvh;overflow:auto;display:grid;gap:14px;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));border-radius:28px 28px 0 0;background:var(--card,#fff);color:var(--ink,#241b35);border-top:7px solid var(--svc,#7c3aed);box-shadow:0 -24px 60px rgba(36,27,53,.35);animation:svcUp .24s cubic-bezier(.2,.8,.25,1)}
+.svcSheetHead{display:flex;align-items:center;gap:12px;padding-right:44px}
+.svcSheetHead h3{margin:0;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:21px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+.svcSheet .svcClose{position:absolute;top:14px;right:14px;width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--soft,#f4efff);color:var(--ink,#241b35);cursor:pointer}
+.svcSheet .svcClose svg{width:19px;height:19px}
+.svcDone{display:grid;justify-items:center;gap:10px;padding:14px 4px 4px;text-align:center}
+.svcDone h3{margin:0;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:24px;font-weight:800;letter-spacing:-.03em}
+.svcDone p{margin:0 0 8px;max-width:26em;font-size:14.5px;line-height:1.55;color:var(--muted,#776f86)}
+.svcDoneIcon{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:#e8f8ee;color:#14753c;animation:svcPop .35s cubic-bezier(.2,1.4,.4,1)}
+.svcDoneIcon svg{width:34px;height:34px}
+@keyframes svcUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes svcPop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@media(min-width:700px){.svcScrim{align-items:center}.svcSheet{border-radius:28px;max-height:88dvh}}
+
+/* ---------- your requests ---------- */
+.svcMine ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.svcMine li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--card,#fff);border:1px solid var(--svc-line)}
+.svcMineIcon{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--soft,#f4efff);color:var(--purple,#7c3aed);flex:none}
+.svcMineIcon svg{width:18px;height:18px}
+.svcMineText{display:grid;min-width:0;flex:1}
+.svcMineText b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.svcMineText small{color:var(--muted,#776f86);font-weight:600;font-size:12px}
+.svcStatus{flex:none;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#efe7ff;color:#5b21b6}
+.svcStatus.s-in_progress{background:#fff2d6;color:#8a5a00}
+.svcStatus.s-done{background:#e0f6e8;color:#14753c}
+.svcStatus.s-declined{background:#eceaf0;color:#5d566b}
+
+@media(prefers-reduced-motion:reduce){
+  .svcSheet,.svcDoneIcon{animation:none}
+  .svcPage .svcAsk{transition:none}
+}
+@media(max-width:380px){
+  .svcCard{grid-template-columns:62px minmax(0,1fr)}
+  .svcDots b{width:20px;height:20px}
+}
+
+/* ---------- admin: Requests ---------- */
+.svcAdminTabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.svcAdminTabs button{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;border:1px solid var(--line,#e9e2f4);background:transparent;color:inherit;font-weight:800;cursor:pointer}
+.svcAdminTabs button.on{background:var(--purple,#7c3aed);border-color:var(--purple,#7c3aed);color:#fff}
+.svcAdminTabs em{font-style:normal;min-width:20px;padding:1px 7px;border-radius:999px;background:#e5007d;color:#fff;font-size:12px;text-align:center}
+.svcAdminList{display:grid;gap:12px}
+.svcAdminRow{display:grid;gap:10px;margin:0}
+.svcAdminRow header{display:grid;gap:3px}
+.svcAdminRow header small{opacity:.7}
+.svcAdminText{margin:0;white-space:pre-wrap;line-height:1.5}
+.svcAdminMeta{margin:0;opacity:.85}
+.svcAdminFile{display:flex;align-items:center;gap:12px;color:inherit;text-decoration:none;font-weight:700}
+.svcAdminFile img{width:84px;height:84px;object-fit:cover;border-radius:12px}
+.svcAdminFile span{display:inline-flex;align-items:center;gap:6px;color:var(--purple,#7c3aed)}
+.svcAdminFile svg{width:16px;height:16px}
+.svcAdminRow footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.svcAdminRow footer select{width:auto;min-width:150px}
+.svcAdminRow.idea{grid-template-columns:120px minmax(0,1fr);align-items:start}
+.svcAdminThumb img{width:120px;height:120px;object-fit:cover;border-radius:14px;display:block}
+.svcAdminBody{display:grid;gap:10px;min-width:0}
+@media(max-width:520px){.svcAdminRow.idea{grid-template-columns:1fr}.svcAdminThumb img{width:100%;height:200px}}

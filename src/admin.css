@@ -386,3 +386,8 @@
 
 /* ---- Categories page: per-category delivery fee amount ---- */
 .catRow input[type=number]{width:100px;max-width:120px;border-radius:10px;padding:8px 10px;font-weight:700;text-align:right}
+
+/* admin: bottom navigation toggles */
+.navToggleList{display:grid;gap:8px;margin:12px 0}
+.navToggleRow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line,#e5e0f0);border-radius:12px;cursor:pointer;font-weight:600}
+.navToggleRow input{width:20px;height:20px;accent-color:#7c3aed;flex:none}

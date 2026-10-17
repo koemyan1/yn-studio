@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Copy, Eye, EyeOff, Layers, MapPin, Moon, Palette, Pencil, Plus, Search, Sun, Tags, Trash2, Wand2 } from 'lucide-react';
 import { supabase } from './supabase';
-import { DEFAULT_TOKENS, darkTokens, normalizeTheme } from './secretTheme';
+import { DEFAULT_TOKENS, blankTheme, darkTokens, normalizeTheme } from './secretTheme';
+const DEFAULT_CODE = '__default_look__';
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
 type Filter = 'all' | 'active' | 'inactive';
@@ -67,6 +68,7 @@ export default function AdminThemes({ Shell }: { Shell: Shell }) {
   const [shown, setShown] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [defRow, setDefRow] = useState<any | null>(null);
 
   async function load() {
     setLoading(true);
@@ -77,7 +79,8 @@ export default function AdminThemes({ Shell }: { Shell: Shell }) {
     ]);
     if (t.error) setMsg('Could not load themes: ' + t.error.message + ' — run supabase-secret-themes-and-store-location.sql first.');
     else setMsg('');
-    setThemes(t.data || []);
+    setDefRow((t.data || []).find((x: any) => x.secret_code === DEFAULT_CODE) || null);
+    setThemes((t.data || []).filter((x: any) => x.secret_code !== DEFAULT_CODE));
     setCats(c.data || []);
     const map: Record<string, string[]> = {};
     (m.data || []).forEach((x: any) => { (map[x.theme_id] ??= []).push(x.category_id); });
@@ -130,11 +133,35 @@ export default function AdminThemes({ Shell }: { Shell: Shell }) {
     try { await navigator.clipboard.writeText(t.secret_code || ''); setCopied(t.id); window.setTimeout(() => setCopied(c => c === t.id ? '' : c), 1600); } catch { setMsg('Copy is not available in this browser.'); }
   }
 
+  async function openDefault() {
+    if (defRow) { window.location.href = '/admin/secret-code?theme=' + defRow.id; return; }
+    setBusyId('default'); setMsg('');
+    const r = await supabase.from('site_themes').insert({ name: 'Default look', secret_code: DEFAULT_CODE, active: false, config: blankTheme() }).select().single();
+    setBusyId('');
+    if (r.error) setMsg('Could not create the default look: ' + r.error.message + ' (run supabase-default-look.sql first).'); else window.location.href = '/admin/secret-code?theme=' + r.data.id;
+  }
+  async function toggleDefault() {
+    if (!defRow) return;
+    setBusyId('default'); setMsg('');
+    const r = await supabase.from('site_themes').update({ active: !defRow.active }).eq('id', defRow.id);
+    setBusyId('');
+    if (r.error) setMsg(r.error.message); else setDefRow({ ...defRow, active: !defRow.active });
+  }
   const fmt = (d: string) => { try { return new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
 
   return (
     <Shell title="Themes">
       <div className="thPage">
+        <section className="panel" style={{ marginBottom: 14 }}>
+          <span className="eyebrow">EVERYONE · NO SECRET CODE NEEDED</span>
+          <h2>Default look</h2>
+          <p className="muted">Design the normal store the same way as a theme (pictures for the bottom bar, search bar, product cards, parts that stay on screen…). Customers without a secret theme see it. A customer's own secret theme still wins.</p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" onClick={openDefault} disabled={busyId === 'default'}><Pencil /> {defRow ? 'Edit default look' : 'Create default look'}</button>
+            {defRow && <button type="button" className="secondary" onClick={toggleDefault} disabled={busyId === 'default'}>{defRow.active ? 'Turn off for everyone' : 'Turn on for everyone'}</button>}
+          </div>
+          {defRow && <p className="muted" style={{ marginTop: 8 }}>Status: <b>{defRow.active ? 'ON for everyone' : 'OFF (only saved, nobody sees it yet)'}</b></p>}
+        </section>
         <div className="thStats">
           <div><b>{themes.length}</b><span>Total themes</span></div>
           <div><b>{activeCount}</b><span>Active</span></div>

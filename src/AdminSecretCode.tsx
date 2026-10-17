@@ -513,6 +513,8 @@ export default function AdminSecretCode({ Shell }: { Shell: Shell }) {
         </div>);
       case 'iconSize': return cp.icon ? <RangeField key={prop} label="Icon size" value={cp.iconSize ?? 22} min={10} max={96} onChange={v => setProp(k, prop, v)} onClear={clr} /> : null;
       case 'iconSide': return cp.icon ? <label key={prop} className="ynField"><span>Icon position</span><select value={cp.iconSide || 'left'} onChange={e => setProp(k, prop, e.target.value)}><option value="left">Before the text</option><option value="right">After the text</option><option value="top">Above the text</option></select></label> : null;
+      case 'sticky': return <Check key={prop} checked={!!cp.sticky} onChange={v => setProp(k, prop, v)}>Stay on screen when scrolling (does not move with the page)</Check>;
+      case 'stickyTop': return cp.sticky ? <RangeField key={prop} label="Distance from the top while staying" value={cp.stickyTop ?? 8} min={0} max={200} onChange={v => setProp(k, prop, v)} onClear={clr} /> : null;
       case 'hidden': return <Check key={prop} checked={!!cp.hidden} onChange={v => setProp(k, prop, v)}>Hide this part completely</Check>;
       default: return null;
     }
