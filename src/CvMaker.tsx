@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Download, FileText, ImagePlus, Languages,
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
 import PaymentScene from './PaymentScenes';
+import { saveSheetAsPdf } from './pdfSave';
 import { CvSheet, LEVEL_LANG, LEVEL_SKILL, TEMPLATES, emptyCv, tplOf } from './cvTemplates';
 import type { CvData, Level, TplKey } from './cvTemplates';
 import './cvTemplates.css';
@@ -402,12 +403,27 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
     document.body.appendChild(el); setPrintHost(el);
     return () => { el.remove(); };
   }, []);
-  function savePdf() {
+  /** Old way (browser print dialog). Only used if the direct PDF download fails on some device. */
+  function printFallback() {
     const old = document.title;
     document.title = ('CV - ' + (data.name || 'YN Studio')).slice(0, 60);
     const back = () => { document.title = old; window.removeEventListener('afterprint', back); };
     window.addEventListener('afterprint', back);
     window.setTimeout(() => { window.print(); window.setTimeout(back, 4000); }, 80);
+  }
+  const [pdfBusy, setPdfBusy] = useState(false);
+  /** Saves the CV (only the CV, not the site) straight to the device as a PDF file. */
+  async function savePdf() {
+    if (pdfBusy) return;
+    const sheet = printHost?.querySelector('.cvSheetRoot') as HTMLElement | null;
+    setPdfBusy(true);
+    try {
+      if (!sheet) throw new Error('CV sheet not ready');
+      await saveSheetAsPdf(sheet, 'CV - ' + (data.name || 'YN Studio'));
+    } catch (e) {
+      console.error('Direct PDF save failed, opening the print dialog instead:', e);
+      printFallback();
+    } finally { setPdfBusy(false); }
   }
 
   const T = tpl ? tplOf(tpl) : null;
@@ -545,7 +561,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
             <div className="cvmEdHead">
               <div><span className="cvmBadgeOk"><Sparkles />{tr('Paid', 'បានទូទាត់')}</span><h1>{tr('Your CV is ready', 'CV របស់អ្នករួចរាល់ហើយ')}</h1>
                 <p className="cvmSave" data-s={saved}>{saved === 'saving' ? tr('Saving…', 'កំពុងរក្សាទុក…') : saved === 'saved' ? tr('All changes saved', 'បានរក្សាទុកការកែប្រែទាំងអស់') : saved === 'error' ? tr('Could not save. Check your connection.', 'មិនអាចរក្សាទុកបានទេ។ សូមពិនិត្យអ៊ីនធឺណិត។') : tr('Edit anything, then save as PDF.', 'កែអ្វីក៏បាន រួចរក្សាទុកជា PDF។')}</p></div>
-              <button type="button" className="cvmGo" onClick={savePdf}><Download />{tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
+              <button type="button" className="cvmGo" disabled={pdfBusy} onClick={savePdf}><Download />{pdfBusy ? tr('Saving…', 'កំពុងរក្សាទុក…') : tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
             </div>
             {overflow && <p className="cvmWarn" role="alert">{tr('This is more than fits on one page, even at the smallest text size. Remove an item so everything fits.', 'អក្សរខ្លះហួសពីបាតទំព័រ។ សូមកាត់បន្ថយអក្សរ ឬលុបធាតុមួយ ដើម្បីឱ្យចុះក្នុងទំព័រ។')}</p>}
             <div className="cvmTabs" role="tablist">
@@ -559,7 +575,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
             <p className="cvmHint center">{tr('Tip: in the print window choose “Save as PDF” and set margins to “None”.', 'គន្លឹះ៖ នៅក្នុងផ្ទាំងបោះពុម្ព សូមជ្រើស «Save as PDF» ហើយកំណត់គែមទៅ «None»។')}</p>
             <div className="cvmBar two">
               <button type="button" className="cvmBack" onClick={() => { setStep('home'); setTpl(null); setCvId(null); setData(emptyCv()); try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } loadMine(); }}><ArrowLeft />{tr('My CVs', 'CV របស់ខ្ញុំ')}</button>
-              <button type="button" className="cvmGo" onClick={savePdf}><Download />{tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
+              <button type="button" className="cvmGo" disabled={pdfBusy} onClick={savePdf}><Download />{pdfBusy ? tr('Saving…', 'កំពុងរក្សាទុក…') : tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
             </div>
           </>
         )}

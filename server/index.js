@@ -18,6 +18,15 @@ app.use((_req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(self)');
   next();
 });
+// The app can be opened from more than one address (ynstudio.site, www., the old onrender.com address...). Calls to /api carry a
+// Bearer token (no cookies), so allowing any origin is safe and stops "works on one address, not on the other" payment problems.
+app.use('/api', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 /* ------------------------------------------------------------------ *

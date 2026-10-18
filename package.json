@@ -21,6 +21,7 @@
     "react-router-dom": "^7.8.2",
     "express": "^5.1.0",
     "@zxing/browser": "^0.1.5",
+    "html-to-image": "^1.11.13",
     "@capacitor/core": "^8.0.0",
     "@capgo/background-geolocation": "^8.0.0",
     "leaflet": "^1.9.4",
