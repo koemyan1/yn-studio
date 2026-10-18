@@ -26,7 +26,7 @@ alter table public.cv_orders enable row level security;
 
 drop policy if exists "cv own read" on public.cv_orders;
 create policy "cv own read" on public.cv_orders for select
-  using (user_id = auth.uid() or exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin'));
+  using (user_id = auth.uid());   -- ONLY the customer who made the CV can read it (nobody else, not even other customers or admins)
 drop policy if exists "cv own insert" on public.cv_orders;
 create policy "cv own insert" on public.cv_orders for insert
   with check (user_id = auth.uid() and status = 'pending');

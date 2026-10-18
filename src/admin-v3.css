@@ -1,0 +1,182 @@
+/* ==========================================================================
+   YN Studio admin — v3 "Midnight" look
+   A new style for EVERY admin page: dark gradient sidebar, floating glass top bar,
+   indigo -> cyan accent, softer rounded cards, pill buttons, cleaner tables.
+   Everything is scoped under .admin (customer side untouched).
+   Loaded LAST in main.tsx. To go back to the old look, remove that one import.
+   ========================================================================== */
+
+/* ---------- palette (re-points the old purple variables so every page follows) ---------- */
+.admin{
+  --a-bg:#eef2f9;--a-card:#ffffff;--a-card2:#f5f8fe;--a-line:#e2e8f4;--a-line2:#cfd9ec;
+  --a-text:#0f172a;--a-mute:#64748b;--a-soft:#e8eeff;--a-accent:#4f46e5;--a-accent2:#06b6d4;
+  --a-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -8px rgba(30,41,90,.12);
+  --a-radius:22px;--a-side:264px;
+  /* old variables used by older admin rules */
+  --purple:#4f46e5;--purple2:#06b6d4;--ink:#0f172a;--muted:#64748b;--line:#e2e8f4;--card:#fff;--soft:#e8eeff;
+  --admin-card:#fff;--admin-card2:#f5f8fe;--admin-line:#e2e8f4;--admin-soft:#e8eeff;--admin-text:#0f172a;
+  background:
+    radial-gradient(900px 420px at 100% -10%,rgba(99,102,241,.13),transparent 60%),
+    radial-gradient(700px 380px at 30% 110%,rgba(6,182,212,.10),transparent 60%),
+    var(--a-bg);
+  background-attachment:fixed;
+  font-feature-settings:"cv11","ss01";
+}
+.admin.admin-dark{
+  --a-bg:#060914;--a-card:#0e1424;--a-card2:#131b30;--a-line:#1c2640;--a-line2:#2a3858;
+  --a-text:#e8edf8;--a-mute:#93a3c2;--a-soft:#16203d;--a-accent:#818cf8;--a-accent2:#22d3ee;
+  --a-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -10px rgba(0,0,0,.55);
+  --purple:#818cf8;--purple2:#22d3ee;--ink:#e8edf8;--muted:#93a3c2;--line:#1c2640;--card:#0e1424;--soft:#16203d;
+  --admin-card:#0e1424;--admin-card2:#131b30;--admin-line:#1c2640;--admin-soft:#16203d;--admin-text:#e8edf8;
+  background:
+    radial-gradient(900px 420px at 100% -10%,rgba(99,102,241,.18),transparent 60%),
+    radial-gradient(700px 380px at 30% 110%,rgba(6,182,212,.10),transparent 60%),
+    #060914!important;
+  background-attachment:fixed;
+}
+html.yn-admin-page,body.yn-admin-page{background:#eef2f9}
+html.yn-admin-dark-page,body.yn-admin-dark-page{background:#060914}
+
+/* ---------- sidebar: always dark, glowing active pill ---------- */
+.admin>aside{
+  margin:14px 0 14px 14px;height:calc(100svh - 28px);top:14px;
+  border:1px solid rgba(255,255,255,.07);border-radius:26px;
+  background:linear-gradient(175deg,#111a3a 0%,#0b1226 55%,#08101f 100%);
+  box-shadow:0 24px 60px -18px rgba(8,12,40,.55);
+  padding:16px 12px 12px;
+}
+.admin.admin-dark>aside{background:linear-gradient(175deg,#0f1733 0%,#0a1020 55%,#070d1a 100%);border-color:rgba(255,255,255,.07)}
+.admin .adminBrand b{color:#fff;font-size:17px}
+.admin .adminBrand small{color:#8fa3d6}
+.admin .adminBrand .miniLogo{border-radius:15px;box-shadow:0 8px 22px rgba(79,70,229,.5);background:#fff}
+.admin .adminNavLabel{color:#6f82b8;opacity:1;letter-spacing:.14em;padding-left:14px}
+.admin .adminNav a{color:#b4c2e8;border-radius:14px;padding:10px 14px;font-weight:650}
+.admin .adminNav a svg{opacity:.85}
+.admin .adminNav a:hover{background:rgba(255,255,255,.07);color:#fff}
+.admin .adminNav a.active{
+  color:#fff;font-weight:800;
+  background:linear-gradient(120deg,rgba(99,102,241,.95),rgba(6,182,212,.85));
+  box-shadow:0 10px 24px -8px rgba(79,70,229,.7);
+}
+.admin .adminNav a.active svg{opacity:1}
+.admin .adminNav a.active::before{display:none}
+.admin.admin-dark .adminNav a:hover{background:rgba(255,255,255,.07);color:#fff}
+.admin.admin-dark .adminNav a.active{color:#fff;background:linear-gradient(120deg,rgba(99,102,241,.95),rgba(6,182,212,.85))}
+.admin .adminAsideBottom{border-top:1px solid rgba(255,255,255,.09)}
+.admin aside .adminAsideBottom .adminBtn{color:#b4c2e8;border-radius:14px}
+.admin aside .adminAsideBottom .adminBtn:hover{background:rgba(255,255,255,.08);color:#fff}
+.admin aside .adminAsideBottom .adminLogout:hover{background:rgba(244,63,94,.16);color:#ff9bb0}
+.admin .adminNav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16)}
+.admin .adminNav{scrollbar-color:rgba(255,255,255,.16) transparent}
+.admin .adminClose{color:#fff;background:rgba(255,255,255,.08)!important;border-color:transparent!important}
+
+/* ---------- main column + floating top bar ---------- */
+.admin>main{padding:0 clamp(16px,2.6vw,34px) 56px}
+.admin .adminTop{
+  top:14px;margin:14px 0 22px;padding:12px 14px 12px 22px;
+  border:1px solid var(--a-line);border-radius:22px;
+  background:color-mix(in srgb,var(--a-card) 78%,transparent);
+  backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);
+  box-shadow:var(--a-shadow);
+}
+.admin .adminTop h1{font-size:clamp(20px,2.4vw,26px);font-weight:850;letter-spacing:-.03em;
+  background:linear-gradient(100deg,var(--a-text) 30%,var(--a-accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.admin .adminTop .eyebrow{color:var(--a-accent2);font-size:10px;letter-spacing:.2em}
+.admin .adminTopActions .secondary,.admin .adminTopActions .button{border-radius:999px;height:40px}
+
+/* ---------- cards / panels / tables ---------- */
+.admin .panel,.admin .table,.admin .stat,.admin .welcome,.admin .adminToolbar,.admin .adminCreateForm,
+.admin .ordercard,.admin .transaction,.admin .thBar,.admin .thStats>div,.admin .catAdd,.admin .catCard{
+  border-radius:var(--a-radius);border:1px solid var(--a-line);background:var(--a-card);box-shadow:var(--a-shadow);
+}
+.admin .panel{padding:24px;position:relative}
+.admin .panel h2{font-size:19px;font-weight:850;letter-spacing:-.02em}
+.admin .panel h2::after{content:"";display:block;width:34px;height:4px;margin-top:8px;border-radius:99px;background:linear-gradient(90deg,var(--a-accent),var(--a-accent2));opacity:.9}
+.admin .panel h2:only-child::after{display:none}
+.admin .eyebrow{color:var(--a-accent);font-weight:850;letter-spacing:.16em}
+.admin .sectionHead h2{letter-spacing:-.02em}
+.admin .sectionHead a{color:var(--a-accent)}
+
+.admin .table{padding:6px}
+.admin .tr{border-bottom:0;border-radius:16px;margin:2px 0;padding:12px 14px}
+.admin .tr:hover{background:var(--a-soft)}
+.admin .tr>img{border-radius:14px;box-shadow:0 4px 12px rgba(15,23,42,.12)}
+
+/* stat tiles with a coloured corner glow */
+.admin .stat{position:relative;overflow:hidden;gap:14px}
+.admin .stat::after{content:"";position:absolute;right:-26px;top:-26px;width:96px;height:96px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--a-accent) 28%,transparent),transparent 68%);pointer-events:none}
+.admin .stats .stat:nth-child(2)::after{background:radial-gradient(circle,rgba(6,182,212,.30),transparent 68%)}
+.admin .stats .stat:nth-child(3)::after{background:radial-gradient(circle,rgba(16,185,129,.28),transparent 68%)}
+.admin .stats .stat:nth-child(4)::after{background:radial-gradient(circle,rgba(245,158,11,.30),transparent 68%)}
+.admin .statIcon{border-radius:16px;background:linear-gradient(135deg,var(--a-accent),var(--a-accent2));color:#fff;box-shadow:0 10px 22px -8px rgba(79,70,229,.6)}
+.admin .stats .stat:nth-child(2) .statIcon{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
+.admin .stats .stat:nth-child(3) .statIcon{background:linear-gradient(135deg,#10b981,#06b6d4)}
+.admin .stats .stat:nth-child(4) .statIcon{background:linear-gradient(135deg,#f59e0b,#f43f5e)}
+.admin .stat strong{font-size:31px;font-weight:850}
+
+.admin .welcome{background:linear-gradient(120deg,#312e81 0%,#4f46e5 48%,#06b6d4 120%);box-shadow:0 26px 60px -20px rgba(79,70,229,.55)}
+.admin.admin-dark .welcome{background:linear-gradient(120deg,#1e1b4b 0%,#3730a3 50%,#0e7490 120%)}
+.admin .welcome .button{color:#312e81!important}
+.admin .quickGrid a{border-radius:20px;position:relative;overflow:hidden}
+.admin .quickGrid a:hover{border-color:var(--a-accent);box-shadow:0 18px 40px -16px rgba(79,70,229,.45)}
+.admin .quickGrid svg{width:40px;height:40px;padding:9px;border-radius:13px;background:var(--a-soft);color:var(--a-accent)}
+
+/* ---------- buttons: pills with gradient ---------- */
+.admin main button:not(.secondary):not(.icon):not(.textBtn):not(.thMini):not(.thDarkBtn):not(.asHide):not(.asChip),
+.admin main .button:not(.secondary){
+  border-radius:999px;background:linear-gradient(120deg,var(--a-accent),color-mix(in srgb,var(--a-accent) 45%,var(--a-accent2)));
+  box-shadow:0 10px 22px -10px color-mix(in srgb,var(--a-accent) 80%,transparent);
+}
+.admin main button:not(.secondary):not(.icon):not(.textBtn):not(.thMini):not(.thDarkBtn):not(.asHide):not(.asChip):hover:not(:disabled){filter:brightness(1.07);transform:translateY(-1px)}
+.admin main .secondary{border-radius:999px;background:var(--a-card);color:var(--a-text);border:1px solid var(--a-line2)}
+.admin main .secondary:hover{background:var(--a-soft);border-color:var(--a-accent);color:var(--a-accent)}
+.admin main .icon{border-radius:14px;background:var(--a-card2);border-color:var(--a-line)}
+.admin main .icon:hover{background:var(--a-soft);border-color:var(--a-accent);color:var(--a-accent)}
+.admin.admin-dark main .secondary{background:var(--a-card2);color:var(--a-text)}
+.admin .textBtn{color:var(--a-accent)!important}
+
+/* ---------- fields ---------- */
+.admin main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+.admin main select,.admin main textarea{border-radius:14px;background:var(--a-card2);border:1px solid var(--a-line2);padding:12px 14px}
+.admin main input:focus,.admin main select:focus,.admin main textarea:focus{background:var(--a-card);border-color:var(--a-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--a-accent) 18%,transparent)}
+.admin main input[type=checkbox],.admin main input[type=radio],.admin main input[type=range]{accent-color:var(--a-accent)}
+.admin label{font-weight:700;color:var(--a-text)}
+.admin .drop{border:2px dashed var(--a-line2);border-radius:20px;background:var(--a-card2);color:var(--a-mute)}
+.admin .drop:hover{border-color:var(--a-accent);background:var(--a-soft)}
+.admin .drop svg{color:var(--a-accent)}
+
+/* ---------- small pieces ---------- */
+.admin .notice{border-radius:14px;background:var(--a-soft);color:var(--a-accent);border:1px solid color-mix(in srgb,var(--a-accent) 22%,transparent)}
+.admin.admin-dark .notice{color:#c7d2fe}
+.admin .status{border-radius:999px;font-weight:800;letter-spacing:.01em}
+.admin .rolePill,.admin .customerAdminHeader>b{background:var(--a-soft);color:var(--a-accent)}
+.admin.admin-dark .rolePill,.admin.admin-dark .customerAdminHeader>b{color:#c7d2fe}
+.admin .thSeg{background:var(--a-soft);border-radius:999px}
+.admin .thSeg button{border-radius:999px!important}
+.admin .thSeg button.on{color:var(--a-accent)!important}
+.admin .thCard{border-radius:24px}
+.admin .thTags span{background:var(--a-soft);color:var(--a-accent)}
+.admin.admin-dark .thTags span{color:#c7d2fe}
+.admin .asBanner{border-radius:var(--a-radius);background:linear-gradient(115deg,var(--a-soft),var(--a-card) 75%)}
+.admin .asBanner::before{background:radial-gradient(circle,rgba(6,182,212,.22),transparent 66%)}
+.admin .asText .eyebrow{color:var(--a-accent2)}
+.admin .adminLiveToast{border-radius:18px}
+
+/* ---------- page entrance: content glides in, one after another ---------- */
+@keyframes v3In{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.admin .adminContent>*{animation:v3In .5s cubic-bezier(.22,1,.36,1) both}
+.admin .adminContent>*:nth-child(2){animation-delay:.05s}
+.admin .adminContent>*:nth-child(3){animation-delay:.1s}
+.admin .adminContent>*:nth-child(4){animation-delay:.15s}
+.admin .adminContent>*:nth-child(n+5){animation-delay:.2s}
+@media(prefers-reduced-motion:reduce){.admin .adminContent>*{animation:none}}
+
+/* ---------- mobile: sidebar becomes a floating drawer ---------- */
+@media(max-width:999px){
+  .admin{background-attachment:scroll}
+  .admin>aside{margin:0;top:0;height:100svh;border-radius:0 26px 26px 0;width:min(300px,86vw)}
+  .admin .adminTop{top:8px;margin:8px 0 14px;padding:10px 10px 10px 14px;border-radius:20px}
+  .admin .adminMenuBtn{border-radius:14px;background:var(--a-soft);border-color:transparent;color:var(--a-accent)}
+  .admin .panel{padding:18px;border-radius:20px}
+}

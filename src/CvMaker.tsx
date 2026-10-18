@@ -29,7 +29,8 @@ type CvLang = 'en' | 'km';
 type Mine = { id: string; template: string; lang: string; status: string; created_at: string; name: string | null };
 
 const PRICE = 3;
-const DRAFT = 'yn-cv-draft';
+const DRAFT_PREFIX = 'yn-cv-draft:';   // one draft per logged-in user, so nobody sees another customer's typing on a shared phone
+const draftKey = (u: string | null) => (u ? DRAFT_PREFIX + u : null);
 const money = (n: number) => '$' + n.toFixed(2);
 const CAPS = { skills: 999, softSkills: 999, languages: 999, education: 999, experience: 999, references: 999, achievements: 999, certs: 999 };   // unlimited: the page auto-shrinks the text to fit
 
@@ -294,9 +295,9 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
   const [step, setStep] = useState<Step>('home');
   const [tpl, setTpl] = useState<TplKey | null>(null);
   const [lang, setLang] = useState<CvLang>(siteKm ? 'km' : 'en');
-  const [data, setData] = useState<CvData>(() => {
-    try { return normalize(JSON.parse(localStorage.getItem(DRAFT) || 'null')?.data); } catch { return emptyCv(); }
-  });
+  const [data, setData] = useState<CvData>(() => emptyCv());
+  const [me, setMe] = useState<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
   const [cvId, setCvId] = useState<string | null>(null);
   const [mine, setMine] = useState<Mine[]>([]);
   const [busy, setBusy] = useState(false);
@@ -314,15 +315,32 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
 
   useEffect(() => { ensureCvFonts(); }, []);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [step]);
-  // keep what the customer typed if they refresh
+  // find out who is logged in, drop the old shared draft, and load only THIS user's draft
   useEffect(() => {
-    if (step === 'editor') return;
-    const t = window.setTimeout(() => { try { localStorage.setItem(DRAFT, JSON.stringify({ data })); } catch { /* full */ } }, 400);
+    let live = true;
+    (async () => {
+      const u = await uid();
+      try { localStorage.removeItem('yn-cv-draft'); } catch { /* ignore */ }
+      if (!live) return;
+      setMe(u);
+      const k = draftKey(u);
+      if (k) { try { const d = JSON.parse(localStorage.getItem(k) || 'null')?.data; if (d) setData(normalize(d)); } catch { /* ignore */ } }
+      setDraftReady(true);
+    })();
+    return () => { live = false; };
+  }, []);
+  // keep what the customer typed if they refresh (saved under their own user id only)
+  useEffect(() => {
+    const k = draftKey(me);
+    if (step === 'editor' || !draftReady || !k) return;
+    const t = window.setTimeout(() => { try { localStorage.setItem(k, JSON.stringify({ data })); } catch { /* full */ } }, 400);
     return () => window.clearTimeout(t);
-  }, [data, step]);
+  }, [data, step, me, draftReady]);
 
   const loadMine = useCallback(async () => {
-    const r = await supabase.from('cv_orders').select('id,template,lang,status,created_at,name:data->>name').order('created_at', { ascending: false }).limit(8);
+    const u = await uid();
+    if (!u) { setMine([]); return; }
+    const r = await supabase.from('cv_orders').select('id,template,lang,status,created_at,name:data->>name').eq('user_id', u).order('created_at', { ascending: false }).limit(8);
     if (!r.error) setMine((r.data as any[]) || []);
   }, []);
   useEffect(() => { loadMine(); }, [loadMine]);
@@ -337,7 +355,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
   }
   async function isPaid(id: string): Promise<boolean> {
     for (let k = 0; k < 4; k++) {
-      const r = await supabase.from('cv_orders').select('status').eq('id', id).maybeSingle();
+      const r = await supabase.from('cv_orders').select('status').eq('id', id).eq('user_id', (await uid()) || '').maybeSingle();
       if (r.data?.status === 'paid') return true;
       await new Promise(res => setTimeout(res, 900));
     }
@@ -346,7 +364,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
   async function openRow(m: Mine) {
     setBusy(true); setErr('');
     try {
-      const r = await supabase.from('cv_orders').select('id,template,lang,status,data,price').eq('id', m.id).single();
+      const r = await supabase.from('cv_orders').select('id,template,lang,status,data,price').eq('id', m.id).eq('user_id', (await uid()) || '').single();
       if (r.error) throw r.error;
       setTpl(tplOf(r.data.template).key); setLang(r.data.lang === 'km' ? 'km' : 'en'); setData(normalize(r.data.data)); setCvId(r.data.id); setPrice(Number(r.data.price) || PRICE);
       setStep(r.data.status === 'paid' ? 'editor' : 'pay');
@@ -574,7 +592,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
             </div>
             <p className="cvmHint center">{tr('Tip: in the print window choose “Save as PDF” and set margins to “None”.', 'គន្លឹះ៖ នៅក្នុងផ្ទាំងបោះពុម្ព សូមជ្រើស «Save as PDF» ហើយកំណត់គែមទៅ «None»។')}</p>
             <div className="cvmBar two">
-              <button type="button" className="cvmBack" onClick={() => { setStep('home'); setTpl(null); setCvId(null); setData(emptyCv()); try { localStorage.removeItem(DRAFT); } catch { /* ignore */ } loadMine(); }}><ArrowLeft />{tr('My CVs', 'CV របស់ខ្ញុំ')}</button>
+              <button type="button" className="cvmBack" onClick={() => { setStep('home'); setTpl(null); setCvId(null); setData(emptyCv()); try { const k = draftKey(me); if (k) localStorage.removeItem(k); } catch { /* ignore */ } loadMine(); }}><ArrowLeft />{tr('My CVs', 'CV របស់ខ្ញុំ')}</button>
               <button type="button" className="cvmGo" disabled={pdfBusy} onClick={savePdf}><Download />{pdfBusy ? tr('Saving…', 'កំពុងរក្សាទុក…') : tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
             </div>
           </>
