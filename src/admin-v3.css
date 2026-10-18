@@ -8,62 +8,62 @@
 
 /* ---------- palette (re-points the old purple variables so every page follows) ---------- */
 .admin{
-  --a-bg:#eef2f9;--a-card:#ffffff;--a-card2:#f5f8fe;--a-line:#e2e8f4;--a-line2:#cfd9ec;
-  --a-text:#0f172a;--a-mute:#64748b;--a-soft:#e8eeff;--a-accent:#4f46e5;--a-accent2:#06b6d4;
-  --a-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -8px rgba(30,41,90,.12);
+  --a-bg:#f3ecfc;--a-card:#ffffff;--a-card2:#f9f4ff;--a-line:#e6dbf6;--a-line2:#d2c0ee;
+  --a-text:#1f1236;--a-mute:#6f5f8a;--a-soft:#eddfff;--a-accent:#7c3aed;--a-accent2:#c026d3;
+  --a-shadow:0 1px 2px rgba(40,15,80,.05),0 10px 30px -8px rgba(80,30,150,.18);
   --a-radius:22px;--a-side:264px;
   /* old variables used by older admin rules */
-  --purple:#4f46e5;--purple2:#06b6d4;--ink:#0f172a;--muted:#64748b;--line:#e2e8f4;--card:#fff;--soft:#e8eeff;
-  --admin-card:#fff;--admin-card2:#f5f8fe;--admin-line:#e2e8f4;--admin-soft:#e8eeff;--admin-text:#0f172a;
+  --purple:#7c3aed;--purple2:#c026d3;--ink:#1f1236;--muted:#6f5f8a;--line:#e6dbf6;--card:#fff;--soft:#eddfff;
+  --admin-card:#fff;--admin-card2:#f9f4ff;--admin-line:#e6dbf6;--admin-soft:#eddfff;--admin-text:#1f1236;
   background:
-    radial-gradient(900px 420px at 100% -10%,rgba(99,102,241,.13),transparent 60%),
-    radial-gradient(700px 380px at 30% 110%,rgba(6,182,212,.10),transparent 60%),
+    radial-gradient(900px 420px at 100% -10%,rgba(139,92,246,.22),transparent 60%),
+    radial-gradient(700px 380px at 20% 110%,rgba(217,70,239,.14),transparent 60%),
     var(--a-bg);
   background-attachment:fixed;
   font-feature-settings:"cv11","ss01";
 }
 .admin.admin-dark{
-  --a-bg:#060914;--a-card:#0e1424;--a-card2:#131b30;--a-line:#1c2640;--a-line2:#2a3858;
-  --a-text:#e8edf8;--a-mute:#93a3c2;--a-soft:#16203d;--a-accent:#818cf8;--a-accent2:#22d3ee;
+  --a-bg:#0e0620;--a-card:#190d2e;--a-card2:#201339;--a-line:#321f52;--a-line2:#472d73;
+  --a-text:#f3ebff;--a-mute:#b7a2d6;--a-soft:#2a1747;--a-accent:#a78bfa;--a-accent2:#e879f9;
   --a-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -10px rgba(0,0,0,.55);
-  --purple:#818cf8;--purple2:#22d3ee;--ink:#e8edf8;--muted:#93a3c2;--line:#1c2640;--card:#0e1424;--soft:#16203d;
-  --admin-card:#0e1424;--admin-card2:#131b30;--admin-line:#1c2640;--admin-soft:#16203d;--admin-text:#e8edf8;
+  --purple:#a78bfa;--purple2:#e879f9;--ink:#f3ebff;--muted:#b7a2d6;--line:#321f52;--card:#190d2e;--soft:#2a1747;
+  --admin-card:#190d2e;--admin-card2:#201339;--admin-line:#321f52;--admin-soft:#2a1747;--admin-text:#f3ebff;
   background:
-    radial-gradient(900px 420px at 100% -10%,rgba(99,102,241,.18),transparent 60%),
-    radial-gradient(700px 380px at 30% 110%,rgba(6,182,212,.10),transparent 60%),
-    #060914!important;
+    radial-gradient(900px 420px at 100% -10%,rgba(139,92,246,.26),transparent 60%),
+    radial-gradient(700px 380px at 20% 110%,rgba(217,70,239,.14),transparent 60%),
+    #0e0620!important;
   background-attachment:fixed;
 }
-html.yn-admin-page,body.yn-admin-page{background:#eef2f9}
-html.yn-admin-dark-page,body.yn-admin-dark-page{background:#060914}
+html.yn-admin-page,body.yn-admin-page{background:#f3ecfc}
+html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0e0620}
 
 /* ---------- sidebar: always dark, glowing active pill ---------- */
 .admin>aside{
   margin:14px 0 14px 14px;height:calc(100svh - 28px);top:14px;
   border:1px solid rgba(255,255,255,.07);border-radius:26px;
-  background:linear-gradient(175deg,#111a3a 0%,#0b1226 55%,#08101f 100%);
-  box-shadow:0 24px 60px -18px rgba(8,12,40,.55);
+  background:linear-gradient(175deg,#5b21b6 0%,#3b1280 55%,#26094f 100%);
+  box-shadow:0 24px 60px -18px rgba(60,20,120,.6);
   padding:16px 12px 12px;
 }
-.admin.admin-dark>aside{background:linear-gradient(175deg,#0f1733 0%,#0a1020 55%,#070d1a 100%);border-color:rgba(255,255,255,.07)}
+.admin.admin-dark>aside{background:linear-gradient(175deg,#3f1380 0%,#2a0c58 55%,#1a0638 100%);border-color:rgba(255,255,255,.07)}
 .admin .adminBrand b{color:#fff;font-size:17px}
-.admin .adminBrand small{color:#8fa3d6}
-.admin .adminBrand .miniLogo{border-radius:15px;box-shadow:0 8px 22px rgba(79,70,229,.5);background:#fff}
-.admin .adminNavLabel{color:#6f82b8;opacity:1;letter-spacing:.14em;padding-left:14px}
-.admin .adminNav a{color:#b4c2e8;border-radius:14px;padding:10px 14px;font-weight:650}
+.admin .adminBrand small{color:#d9c4ff}
+.admin .adminBrand .miniLogo{border-radius:15px;box-shadow:0 8px 22px rgba(124,58,237,.55);background:#fff}
+.admin .adminNavLabel{color:#c4a6f5;opacity:1;letter-spacing:.14em;padding-left:14px}
+.admin .adminNav a{color:#e6d6ff;border-radius:14px;padding:10px 14px;font-weight:650}
 .admin .adminNav a svg{opacity:.85}
 .admin .adminNav a:hover{background:rgba(255,255,255,.07);color:#fff}
 .admin .adminNav a.active{
   color:#fff;font-weight:800;
-  background:linear-gradient(120deg,rgba(99,102,241,.95),rgba(6,182,212,.85));
-  box-shadow:0 10px 24px -8px rgba(79,70,229,.7);
+  background:linear-gradient(120deg,rgba(255,255,255,.26),rgba(232,121,249,.55));
+  box-shadow:0 10px 24px -8px rgba(192,38,211,.7),inset 0 0 0 1px rgba(255,255,255,.18);
 }
 .admin .adminNav a.active svg{opacity:1}
 .admin .adminNav a.active::before{display:none}
 .admin.admin-dark .adminNav a:hover{background:rgba(255,255,255,.07);color:#fff}
-.admin.admin-dark .adminNav a.active{color:#fff;background:linear-gradient(120deg,rgba(99,102,241,.95),rgba(6,182,212,.85))}
+.admin.admin-dark .adminNav a.active{color:#fff;background:linear-gradient(120deg,rgba(255,255,255,.26),rgba(232,121,249,.55))}
 .admin .adminAsideBottom{border-top:1px solid rgba(255,255,255,.09)}
-.admin aside .adminAsideBottom .adminBtn{color:#b4c2e8;border-radius:14px}
+.admin aside .adminAsideBottom .adminBtn{color:#e6d6ff;border-radius:14px}
 .admin aside .adminAsideBottom .adminBtn:hover{background:rgba(255,255,255,.08);color:#fff}
 .admin aside .adminAsideBottom .adminLogout:hover{background:rgba(244,63,94,.16);color:#ff9bb0}
 .admin .adminNav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16)}
@@ -100,26 +100,26 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#060914}
 .admin .table{padding:6px}
 .admin .tr{border-bottom:0;border-radius:16px;margin:2px 0;padding:12px 14px}
 .admin .tr:hover{background:var(--a-soft)}
-.admin .tr>img{border-radius:14px;box-shadow:0 4px 12px rgba(15,23,42,.12)}
+.admin .tr>img{border-radius:14px;box-shadow:0 4px 12px rgba(40,15,80,.18)}
 
 /* stat tiles with a coloured corner glow */
 .admin .stat{position:relative;overflow:hidden;gap:14px}
 .admin .stat::after{content:"";position:absolute;right:-26px;top:-26px;width:96px;height:96px;border-radius:50%;
   background:radial-gradient(circle,color-mix(in srgb,var(--a-accent) 28%,transparent),transparent 68%);pointer-events:none}
-.admin .stats .stat:nth-child(2)::after{background:radial-gradient(circle,rgba(6,182,212,.30),transparent 68%)}
-.admin .stats .stat:nth-child(3)::after{background:radial-gradient(circle,rgba(16,185,129,.28),transparent 68%)}
-.admin .stats .stat:nth-child(4)::after{background:radial-gradient(circle,rgba(245,158,11,.30),transparent 68%)}
-.admin .statIcon{border-radius:16px;background:linear-gradient(135deg,var(--a-accent),var(--a-accent2));color:#fff;box-shadow:0 10px 22px -8px rgba(79,70,229,.6)}
-.admin .stats .stat:nth-child(2) .statIcon{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
-.admin .stats .stat:nth-child(3) .statIcon{background:linear-gradient(135deg,#10b981,#06b6d4)}
-.admin .stats .stat:nth-child(4) .statIcon{background:linear-gradient(135deg,#f59e0b,#f43f5e)}
+.admin .stats .stat:nth-child(2)::after{background:radial-gradient(circle,rgba(192,38,211,.30),transparent 68%)}
+.admin .stats .stat:nth-child(3)::after{background:radial-gradient(circle,rgba(139,92,246,.30),transparent 68%)}
+.admin .stats .stat:nth-child(4)::after{background:radial-gradient(circle,rgba(236,72,153,.28),transparent 68%)}
+.admin .statIcon{border-radius:16px;background:linear-gradient(135deg,var(--a-accent),var(--a-accent2));color:#fff;box-shadow:0 10px 22px -8px rgba(124,58,237,.6)}
+.admin .stats .stat:nth-child(2) .statIcon{background:linear-gradient(135deg,#c026d3,#8b5cf6)}
+.admin .stats .stat:nth-child(3) .statIcon{background:linear-gradient(135deg,#8b5cf6,#6d28d9)}
+.admin .stats .stat:nth-child(4) .statIcon{background:linear-gradient(135deg,#d946ef,#ec4899)}
 .admin .stat strong{font-size:31px;font-weight:850}
 
-.admin .welcome{background:linear-gradient(120deg,#312e81 0%,#4f46e5 48%,#06b6d4 120%);box-shadow:0 26px 60px -20px rgba(79,70,229,.55)}
-.admin.admin-dark .welcome{background:linear-gradient(120deg,#1e1b4b 0%,#3730a3 50%,#0e7490 120%)}
-.admin .welcome .button{color:#312e81!important}
+.admin .welcome{background:linear-gradient(120deg,#4c1d95 0%,#7c3aed 48%,#c026d3 120%);box-shadow:0 26px 60px -20px rgba(124,58,237,.6)}
+.admin.admin-dark .welcome{background:linear-gradient(120deg,#2e1065 0%,#5b21b6 50%,#a21caf 120%)}
+.admin .welcome .button{color:#4c1d95!important}
 .admin .quickGrid a{border-radius:20px;position:relative;overflow:hidden}
-.admin .quickGrid a:hover{border-color:var(--a-accent);box-shadow:0 18px 40px -16px rgba(79,70,229,.45)}
+.admin .quickGrid a:hover{border-color:var(--a-accent);box-shadow:0 18px 40px -16px rgba(124,58,237,.45)}
 .admin .quickGrid svg{width:40px;height:40px;padding:9px;border-radius:13px;background:var(--a-soft);color:var(--a-accent)}
 
 /* ---------- buttons: pills with gradient ---------- */
@@ -148,18 +148,18 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#060914}
 
 /* ---------- small pieces ---------- */
 .admin .notice{border-radius:14px;background:var(--a-soft);color:var(--a-accent);border:1px solid color-mix(in srgb,var(--a-accent) 22%,transparent)}
-.admin.admin-dark .notice{color:#c7d2fe}
+.admin.admin-dark .notice{color:#e3d2ff}
 .admin .status{border-radius:999px;font-weight:800;letter-spacing:.01em}
 .admin .rolePill,.admin .customerAdminHeader>b{background:var(--a-soft);color:var(--a-accent)}
-.admin.admin-dark .rolePill,.admin.admin-dark .customerAdminHeader>b{color:#c7d2fe}
+.admin.admin-dark .rolePill,.admin.admin-dark .customerAdminHeader>b{color:#e3d2ff}
 .admin .thSeg{background:var(--a-soft);border-radius:999px}
 .admin .thSeg button{border-radius:999px!important}
 .admin .thSeg button.on{color:var(--a-accent)!important}
 .admin .thCard{border-radius:24px}
 .admin .thTags span{background:var(--a-soft);color:var(--a-accent)}
-.admin.admin-dark .thTags span{color:#c7d2fe}
+.admin.admin-dark .thTags span{color:#e3d2ff}
 .admin .asBanner{border-radius:var(--a-radius);background:linear-gradient(115deg,var(--a-soft),var(--a-card) 75%)}
-.admin .asBanner::before{background:radial-gradient(circle,rgba(6,182,212,.22),transparent 66%)}
+.admin .asBanner::before{background:radial-gradient(circle,rgba(192,38,211,.22),transparent 66%)}
 .admin .asText .eyebrow{color:var(--a-accent2)}
 .admin .adminLiveToast{border-radius:18px}
 
@@ -180,3 +180,11 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#060914}
   .admin .adminMenuBtn{border-radius:14px;background:var(--a-soft);border-color:transparent;color:var(--a-accent)}
   .admin .panel{padding:18px;border-radius:20px}
 }
+
+/* ---------- purple finish (v4): everything on every admin page stays in the purple family ---------- */
+.admin .adminTop{background:color-mix(in srgb,var(--a-card) 70%,#c4a6f5 30%);border-color:color-mix(in srgb,var(--a-accent) 28%,transparent)}
+.admin.admin-dark .adminTop{background:color-mix(in srgb,var(--a-card) 80%,#7c3aed 20%)}
+.admin .adminMenuBtn{background:var(--a-soft);color:var(--a-accent)}
+.admin ::selection{background:color-mix(in srgb,var(--a-accent) 30%,transparent)}
+.admin main{scrollbar-color:var(--a-line2) transparent}
+.admin .status{box-shadow:0 0 0 1px color-mix(in srgb,currentColor 18%,transparent)}
