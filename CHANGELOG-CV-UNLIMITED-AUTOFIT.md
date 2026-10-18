@@ -4,3 +4,6 @@
 - Summary / About / descriptions / school / company etc: no character limits (name, job title and contact lines keep their limits because they sit in the fixed header).
 - Auto-fit: when a column is longer than the page, its contents shrink just enough to fit (down to 20%). Works in the editor, the preview and the PDF.
 - The red "goes past the bottom" warning now only shows if it would not fit even at the smallest size.
+
+## Work experience or Achievements
+In the CV maker form, designs that have a work-experience section now show two buttons: **Work experience** / **Achievements**. The customer picks one; the CV shows that section (heading changes to "Achievements") in the same spot and layout. Achievements have a title, years and a description. The other one is kept but not shown, so they can switch back. The "Modern arch" design already has its own achievements section, so it has no switch.

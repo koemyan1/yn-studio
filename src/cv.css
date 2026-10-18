@@ -121,3 +121,4 @@
   #cvPrintHost{display:block!important;position:static!important;left:auto!important;width:794px;height:1123px;overflow:hidden}
   #cvPrintHost .cvSheetRoot{box-shadow:none}
 }
+.cvmKind{display:flex;gap:8px;margin-bottom:12px}.cvmKind button{flex:1;background:#fff;color:var(--ink);border:1px solid var(--line)}.cvmKind button.on{background:var(--purple);color:#fff;border-color:transparent}

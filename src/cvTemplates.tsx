@@ -18,13 +18,15 @@ export type CvData = {
   education: { period: string; school: string; degree: string; note: string }[];
   experience: { period: string; company: string; role: string; desc: string }[];
   references: { name: string; role: string; phone: string; email: string }[];
-  achievements: { period: string; text: string }[];
+  achievements: { period: string; text: string; title?: string }[];
+  /** what the work-experience slot shows: 'work' (default) or 'achievements' (customer's choice) */
+  expKind?: 'work' | 'achievements';
   certs: { name: string; year: string }[];
 };
 
 export const emptyCv = (): CvData => ({
   name: '', title: '', about: '', summary: '', phone: '', email: '', address: '', website: '', photo: '',
-  skills: [], softSkills: [], languages: [], education: [], experience: [], references: [], achievements: [], certs: [],
+  skills: [], softSkills: [], languages: [], education: [], experience: [], references: [], achievements: [], certs: [], expKind: 'work',
 });
 
 export type Section = 'photo' | 'about' | 'summary' | 'contact' | 'website' | 'skills' | 'softSkills' | 'languages'
@@ -32,7 +34,7 @@ export type Section = 'photo' | 'about' | 'summary' | 'contact' | 'website' | 's
 export type TplKey = 'rosa' | 'jonathan' | 'donna' | 'daniel' | 'muhammad' | 'richard' | 'director';
 
 /* ------------------------------------- shared helpers ------------------------------------- */
-type Ctx = { blank: boolean; km: boolean };
+type Ctx = { blank: boolean; km: boolean; ach?: boolean };
 const C = createContext<Ctx>({ blank: false, km: false });
 const useC = () => useContext(C);
 
@@ -105,7 +107,7 @@ function Name2({ d }: { d: CvData }) {
 const lvText = (l: number | undefined, km: boolean, t = LEVEL_LANG) => t[Math.min(3, Math.max(0, (l || 3) - 1))][km ? 1 : 0];
 
 type Hf = (k: string) => string;
-const useH = (): Hf => { const { km } = useC(); return (k: string) => (HL[k] || [k, k])[km ? 1 : 0]; };
+const useH = (): Hf => { const { km, ach } = useC(); return (k: string) => (HL[ach && (k === 'works' || k === 'experience' || k === 'work') ? 'achievements' : k] || [k, k])[km ? 1 : 0]; };
 
 /* ------------------------------------- 1. Rosa (dark sidebar) ------------------------------------- */
 function T1({ d }: { d: CvData }) {
@@ -350,6 +352,13 @@ export const TEMPLATES: Tpl[] = [
 ];
 export const tplOf = (k: string) => TEMPLATES.find(t => t.key === k) || TEMPLATES[0];
 
+/** When the customer chose "Achievements" for the work-experience slot, the achievements are fed to that slot (same layout, new heading). */
+function slotView(d: CvData, tpl: TplKey): CvData {
+  if (d.expKind !== 'achievements') return d;
+  const titleFirst = tpl === 'daniel';   // this design puts the job title (not the company) on the bold first line
+  return { ...d, experience: (d.achievements || []).map(a => ({ period: a.period, company: titleFirst ? '' : (a.title || ''), role: titleFirst ? (a.title || '') : '', desc: a.text })) };
+}
+
 /** One CV page (794 x 1123 px). blank = design only (no text, no photo). onFit tells the editor when the text is too long for the page. */
 export function CvSheet({ tpl, data, blank = false, km = false, onFit }: { tpl: TplKey; data: CvData; blank?: boolean; km?: boolean; onFit?: (overflow: boolean) => void }) {
   const T = tplOf(tpl);
@@ -392,8 +401,8 @@ export function CvSheet({ tpl, data, blank = false, km = false, onFit }: { tpl: 
     return () => { live = false; ro?.disconnect(); };
   }, [tpl, data, blank, km, onFit]);
   return (
-    <C.Provider value={{ blank, km }}>
-      <div ref={root} className={'cvSheetRoot' + (km ? ' km' : '')} data-notranslate="1"><T.Comp d={data} /></div>
+    <C.Provider value={{ blank, km, ach: !blank && data.expKind === 'achievements' && !(T.sections as string[]).includes('achievements') }}>
+      <div ref={root} className={'cvSheetRoot' + (km ? ' km' : '')} data-notranslate="1"><T.Comp d={(T.sections as string[]).includes('achievements') ? data : slotView(data, tpl)} /></div>
     </C.Provider>
   );
 }

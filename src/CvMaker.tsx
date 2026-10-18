@@ -164,7 +164,13 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
         </fieldset>
       )}
 
-      {has('experience') && (
+      {has('experience') && !has('achievements') && (
+        <div className="cvmKind" role="group" aria-label={tr('Choose a section', 'ជ្រើសរើសផ្នែក')}>
+          <button type="button" className={data.expKind !== 'achievements' ? 'on' : ''} onClick={() => set({ expKind: 'work' })}>{tr('Work experience', 'បទពិសោធន៍ការងារ')}</button>
+          <button type="button" className={data.expKind === 'achievements' ? 'on' : ''} onClick={() => set({ expKind: 'achievements' })}>{tr('Achievements', 'សមិទ្ធផល')}</button>
+        </div>
+      )}
+      {has('experience') && !(data.expKind === 'achievements' && !has('achievements')) && (
         <RowList title={tr('Work experience', 'បទពិសោធន៍ការងារ')} hint={tr('Newest first. Put each duty on its own line.', 'ថ្មីបំផុតមុន។ សរសេរកិច្ចការនីមួយៗលើមួយបន្ទាត់។')}
           items={data.experience} cap={CAPS.experience} blank={() => ({ period: '', company: '', role: '', desc: '' })} onChange={v => set({ experience: v })}
           render={(x, p) => <>
@@ -172,6 +178,15 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
               <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2022 - 2024" onChange={e => p({ period: e.target.value })} /></Field></div>
             <Field label={tr('Job title', 'មុខតំណែង')}><input value={x.role} onChange={e => p({ role: e.target.value })} /></Field>
             <Field label={tr('What you did', 'អ្វីដែលអ្នកបានធ្វើ')}><textarea rows={3} value={x.desc} onChange={e => p({ desc: e.target.value })} /></Field>
+          </>} />
+      )}
+      {has('experience') && !has('achievements') && data.expKind === 'achievements' && (
+        <RowList title={tr('Achievements', 'សមិទ្ធផល')} hint={tr('Newest first. Awards, results, projects you are proud of.', 'ថ្មីបំផុតមុន។ ពានរង្វាន់ លទ្ធផល គម្រោងដែលអ្នកមោទនភាព។')}
+          items={data.achievements} cap={CAPS.achievements} blank={() => ({ period: '', title: '', text: '' })} onChange={v => set({ achievements: v })}
+          render={(x, p) => <>
+            <div className="cvmTwo"><Field label={tr('Title', 'ចំណងជើង')}><input value={x.title || ''} onChange={e => p({ title: e.target.value })} /></Field>
+              <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2021" onChange={e => p({ period: e.target.value })} /></Field></div>
+            <Field label={tr('What you achieved', 'អ្វីដែលអ្នកសម្រេចបាន')}><textarea rows={3} value={x.text} onChange={e => p({ text: e.target.value })} /></Field>
           </>} />
       )}
 
