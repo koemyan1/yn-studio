@@ -177,7 +177,7 @@ function T2({ d }: { d: CvData }) {
 /* ------------------------------------- 3. Donna (light blue, circle photo) ------------------------------------- */
 function T3({ d }: { d: CvData }) {
   const { blank, km } = useC(); const h = useH();
-  const edu = rows(d.education, 2, blank), sk = rows(d.skills, 4, blank), lg = rows(d.languages, 2, blank), exp = rows(d.experience, 3, blank), rf = rows(d.references, 2, blank).slice(0, 2);
+  const edu = rows(d.education, 2, blank), sk = rows(d.skills, 4, blank), lg = rows(d.languages, 2, blank), exp = rows(d.experience, 3, blank), rf = rows(d.references, 2, blank);
   return (
     <div className="cvPage t3">
       <div className="t3band" />
@@ -244,7 +244,7 @@ function T4({ d }: { d: CvData }) {
 /* ------------------------------------- 5. Muhammad (brown) ------------------------------------- */
 function T5({ d }: { d: CvData }) {
   const { blank, km } = useC(); const h = useH();
-  const sk = rows(d.skills, 6, blank), lg = rows(d.languages, 3, blank), edu = rows(d.education, 2, blank), exp = rows(d.experience, 3, blank), rf = rows(d.references, 1, blank).slice(0, 2);
+  const sk = rows(d.skills, 6, blank), lg = rows(d.languages, 3, blank), edu = rows(d.education, 2, blank), exp = rows(d.experience, 3, blank), rf = rows(d.references, 1, blank);
   const Head = ({ k }: { k: string }) => <div className="t5pill"><span>{h(k)}</span></div>;
   const Ic = ({ children }: { children: React.ReactNode }) => <svg className="t5i" viewBox="0 0 24 24" aria-hidden="true">{children}</svg>;
   return (
@@ -275,7 +275,7 @@ function T5({ d }: { d: CvData }) {
 /* ------------------------------------- 6. Richard (navy + blue) ------------------------------------- */
 function T6({ d }: { d: CvData }) {
   const { blank } = useC(); const h = useH();
-  const edu = rows(d.education, 2, blank), sk = rows(d.skills, 7, blank), exp = rows(d.experience, 2, blank), rf = rows(d.references, 2, blank).slice(0, 2);
+  const edu = rows(d.education, 2, blank), sk = rows(d.skills, 7, blank), exp = rows(d.experience, 2, blank), rf = rows(d.references, 2, blank);
   const [a, b] = nameParts(d);
   return (
     <div className="cvPage t6">
@@ -354,23 +354,42 @@ export const tplOf = (k: string) => TEMPLATES.find(t => t.key === k) || TEMPLATE
 export function CvSheet({ tpl, data, blank = false, km = false, onFit }: { tpl: TplKey; data: CvData; blank?: boolean; km?: boolean; onFit?: (overflow: boolean) => void }) {
   const T = tplOf(tpl);
   const root = React.useRef<HTMLDivElement | null>(null);
-  React.useEffect(() => {
-    if (!onFit || blank) return;
+  /* AUTO-FIT: the page is a fixed A4 sheet. When a column (sidebar, main text...) is longer than the space left on the page,
+     its contents are zoomed down just enough to fit, so any number of items always fits on the page (min 20%).
+     onFit(true) is only reported if even that smallest size is not enough. */
+  React.useLayoutEffect(() => {
+    if (blank) return;
     let live = true;
-    const check = () => {
-      const page = root.current?.querySelector('.cvPage');
-      if (!page || !live) return;
+    const LIMIT = 1123 - 24;
+    const run = () => {
+      const rootEl = root.current, page = rootEl?.querySelector('.cvPage') as HTMLElement | null;
+      if (!rootEl || !page || !live || !rootEl.offsetWidth) return;   // hidden / not laid out yet: ResizeObserver runs us again
       let over = false;
-      page.querySelectorAll(':scope > div').forEach(col => {
-        const el = col as HTMLElement, last = el.lastElementChild as HTMLElement | null;
-        if (!last || typeof last.offsetTop !== 'number') return;
-        if (el.offsetTop + last.offsetTop + last.offsetHeight > 1123 - 14) over = true;
-      });
-      onFit(over);
+      const cols = Array.from(page.querySelectorAll(':scope > div')) as HTMLElement[];
+      for (const col of cols) {
+        const kids = Array.from(col.children) as HTMLElement[];
+        if (!kids.length) continue;
+        const last = kids[kids.length - 1];
+        const setZoom = (k: number) => kids.forEach(c => { (c.style as any).zoom = k >= 1 ? '' : String(k); });
+        const bottom = () => {
+          const rr = rootEl.getBoundingClientRect(), sc = rr.width / rootEl.offsetWidth || 1;
+          return (last.getBoundingClientRect().bottom - rr.top) / sc;
+        };
+        setZoom(1);
+        if (bottom() <= LIMIT) continue;
+        let lo = 0.2, hi = 1;
+        setZoom(lo);
+        if (bottom() > LIMIT) { over = true; continue; }
+        for (let i = 0; i < 10; i++) { const mid = (lo + hi) / 2; setZoom(mid); if (bottom() <= LIMIT) lo = mid; else hi = mid; }
+        setZoom(lo);
+      }
+      onFit?.(over);
     };
-    check();
-    (document as any).fonts?.ready?.then(check);
-    return () => { live = false; };
+    run();
+    (document as any).fonts?.ready?.then(run);
+    const ro = typeof ResizeObserver !== 'undefined' && root.current ? new ResizeObserver(run) : null;
+    if (ro && root.current) ro.observe(root.current);
+    return () => { live = false; ro?.disconnect(); };
   }, [tpl, data, blank, km, onFit]);
   return (
     <C.Provider value={{ blank, km }}>

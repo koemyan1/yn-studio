@@ -202,15 +202,16 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
           <p>{tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
 
-        <article className="svcCvCard">
-          <span className="svcCvPrice">$3</span>
-          <span className="svcCvIcon" aria-hidden="true"><FileText /></span>
-          <div>
+        <article className="svcCard" data-rv style={{ ['--svc' as any]: '#7c3aed', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
+          <div className="svcInk"><FileText /></div>
+          <div className="svcBody">
             <h3>{tr('CV maker', 'បង្កើត CV')}</h3>
             <p>{tr('Pick a design, add your info in English or Khmer, pay and download your CV as a PDF.', 'ជ្រើសរើសគំរូ បញ្ចូលព័ត៌មានជាអង់គ្លេស ឬខ្មែរ ទូទាត់ ហើយទាញយក CV ជា PDF។')}</p>
-            <button type="button" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
+            <ul className="svcTags">{(isKm() ? ['៧ គំរូ', 'អង់គ្លេស / ខ្មែរ', 'PDF', '$3'] : ['7 designs', 'English / Khmer', 'PDF', '$3']).map(t => <li key={t}>{t}</li>)}</ul>
+            <button type="button" className="svcAsk" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
           </div>
         </article>
+        <div style={{ height: 22 }} />
 
         <h2 className="svcGroup" data-rv>{tr('Print and copy', 'បោះពុម្ព និងថតចម្លង')}</h2>
         <div className="svcList">{PRINT_COPY.map((s, i) => renderCard(s, i))}</div>

@@ -30,7 +30,7 @@ type Mine = { id: string; template: string; lang: string; status: string; create
 const PRICE = 3;
 const DRAFT = 'yn-cv-draft';
 const money = (n: number) => '$' + n.toFixed(2);
-const CAPS = { skills: 8, softSkills: 5, languages: 4, education: 3, experience: 3, references: 2, achievements: 2, certs: 3 };
+const CAPS = { skills: 999, softSkills: 999, languages: 999, education: 999, experience: 999, references: 999, achievements: 999, certs: 999 };   // unlimited: the page auto-shrinks the text to fit
 
 const normalize = (d: any): CvData => {
   const e = emptyCv();
@@ -150,8 +150,8 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
         )}
         <Field label={tr('Full name', 'ឈ្មោះពេញ')}><input value={data.name} onChange={e => set({ name: e.target.value })} maxLength={40} autoComplete="name" /></Field>
         <Field label={tr('Job title', 'មុខតំណែង')}><input value={data.title} onChange={e => set({ title: e.target.value })} maxLength={40} /></Field>
-        {has('about') && <Field label={tr('Short intro (About me)', 'ការណែនាំខ្លី (អំពីខ្ញុំ)')}><textarea rows={3} maxLength={160} value={data.about} onChange={e => set({ about: e.target.value })} /></Field>}
-        {has('summary') && <Field label={has('about') ? tr('Summary', 'សេចក្តីសង្ខេប') : tr('Profile / About me', 'ប្រវត្តិរូប / អំពីខ្ញុំ')}><textarea rows={4} maxLength={420} value={data.summary} onChange={e => set({ summary: e.target.value })} /></Field>}
+        {has('about') && <Field label={tr('Short intro (About me)', 'ការណែនាំខ្លី (អំពីខ្ញុំ)')}><textarea rows={3} value={data.about} onChange={e => set({ about: e.target.value })} /></Field>}
+        {has('summary') && <Field label={has('about') ? tr('Summary', 'សេចក្តីសង្ខេប') : tr('Profile / About me', 'ប្រវត្តិរូប / អំពីខ្ញុំ')}><textarea rows={4} value={data.summary} onChange={e => set({ summary: e.target.value })} /></Field>}
       </fieldset>
 
       {has('contact') && (
@@ -168,40 +168,40 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
         <RowList title={tr('Work experience', 'បទពិសោធន៍ការងារ')} hint={tr('Newest first. Put each duty on its own line.', 'ថ្មីបំផុតមុន។ សរសេរកិច្ចការនីមួយៗលើមួយបន្ទាត់។')}
           items={data.experience} cap={CAPS.experience} blank={() => ({ period: '', company: '', role: '', desc: '' })} onChange={v => set({ experience: v })}
           render={(x, p) => <>
-            <div className="cvmTwo"><Field label={tr('Company', 'ក្រុមហ៊ុន')}><input value={x.company} onChange={e => p({ company: e.target.value })} maxLength={40} /></Field>
-              <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2022 - 2024" onChange={e => p({ period: e.target.value })} maxLength={24} /></Field></div>
-            <Field label={tr('Job title', 'មុខតំណែង')}><input value={x.role} onChange={e => p({ role: e.target.value })} maxLength={40} /></Field>
-            <Field label={tr('What you did', 'អ្វីដែលអ្នកបានធ្វើ')}><textarea rows={3} value={x.desc} onChange={e => p({ desc: e.target.value })} maxLength={240} /></Field>
+            <div className="cvmTwo"><Field label={tr('Company', 'ក្រុមហ៊ុន')}><input value={x.company} onChange={e => p({ company: e.target.value })} /></Field>
+              <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2022 - 2024" onChange={e => p({ period: e.target.value })} /></Field></div>
+            <Field label={tr('Job title', 'មុខតំណែង')}><input value={x.role} onChange={e => p({ role: e.target.value })} /></Field>
+            <Field label={tr('What you did', 'អ្វីដែលអ្នកបានធ្វើ')}><textarea rows={3} value={x.desc} onChange={e => p({ desc: e.target.value })} /></Field>
           </>} />
       )}
 
       {has('education') && (
         <RowList title={tr('Education', 'ការអប់រំ')} items={data.education} cap={CAPS.education} blank={() => ({ period: '', school: '', degree: '', note: '' })} onChange={v => set({ education: v })}
           render={(x, p) => <>
-            <Field label={tr('School / University', 'សាលា / សាកលវិទ្យាល័យ')}><input value={x.school} onChange={e => p({ school: e.target.value })} maxLength={50} /></Field>
-            <div className="cvmTwo"><Field label={tr('Degree / Course', 'សញ្ញាបត្រ / វគ្គសិក្សា')}><input value={x.degree} onChange={e => p({ degree: e.target.value })} maxLength={50} /></Field>
-              <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2016 - 2020" onChange={e => p({ period: e.target.value })} maxLength={24} /></Field></div>
-            {(tpl === 'richard' || tpl === 'director') && <Field label={tr('Note (optional)', 'កំណត់ចំណាំ (ស្រេចចិត្ត)')}><input value={x.note} onChange={e => p({ note: e.target.value })} maxLength={50} /></Field>}
+            <Field label={tr('School / University', 'សាលា / សាកលវិទ្យាល័យ')}><input value={x.school} onChange={e => p({ school: e.target.value })} /></Field>
+            <div className="cvmTwo"><Field label={tr('Degree / Course', 'សញ្ញាបត្រ / វគ្គសិក្សា')}><input value={x.degree} onChange={e => p({ degree: e.target.value })} /></Field>
+              <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2016 - 2020" onChange={e => p({ period: e.target.value })} /></Field></div>
+            {(tpl === 'richard' || tpl === 'director') && <Field label={tr('Note (optional)', 'កំណត់ចំណាំ (ស្រេចចិត្ត)')}><input value={x.note} onChange={e => p({ note: e.target.value })} /></Field>}
           </>} />
       )}
 
       {has('skills') && (
         <RowList title={tr('Skills', 'ជំនាញ')} items={data.skills} cap={CAPS.skills} blank={() => ({ name: '', level: 3 as Level })} onChange={v => set({ skills: v })}
           render={(x, p) => <div className={T.skillBars ? 'cvmTwo' : ''}>
-            <Field label={tr('Skill', 'ជំនាញ')}><input value={x.name} onChange={e => p({ name: e.target.value })} maxLength={32} /></Field>
+            <Field label={tr('Skill', 'ជំនាញ')}><input value={x.name} onChange={e => p({ name: e.target.value })} /></Field>
             {T.skillBars && <Field label={tr('Level', 'កម្រិត')}><LevelSelect value={x.level} onChange={l => p({ level: l })} labels={LEVEL_SKILL} /></Field>}
           </div>} />
       )}
 
       {has('softSkills') && (
         <RowList title={tr('Soft skills', 'ជំនាញទន់')} items={data.softSkills} cap={CAPS.softSkills} blank={() => ''} onChange={v => set({ softSkills: v })}
-          render={(x, _p, i) => <Field label={tr('Skill', 'ជំនាញ')}><input value={x} onChange={e => set({ softSkills: data.softSkills.map((y, j) => (j === i ? e.target.value : y)) })} maxLength={32} /></Field>} />
+          render={(x, _p, i) => <Field label={tr('Skill', 'ជំនាញ')}><input value={x} onChange={e => set({ softSkills: data.softSkills.map((y, j) => (j === i ? e.target.value : y)) })} /></Field>} />
       )}
 
       {has('languages') && (
         <RowList title={tr('Languages', 'ភាសា')} items={data.languages} cap={CAPS.languages} blank={() => ({ name: '', level: 3 as Level })} onChange={v => set({ languages: v })}
           render={(x, p) => <div className="cvmTwo">
-            <Field label={tr('Language', 'ភាសា')}><input value={x.name} onChange={e => p({ name: e.target.value })} maxLength={24} /></Field>
+            <Field label={tr('Language', 'ភាសា')}><input value={x.name} onChange={e => p({ name: e.target.value })} /></Field>
             <Field label={tr('Level', 'កម្រិត')}><LevelSelect value={x.level} onChange={l => p({ level: l })} labels={LEVEL_LANG} /></Field>
           </div>} />
       )}
@@ -209,24 +209,24 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
       {has('certs') && (
         <RowList title={tr('Certifications', 'វិញ្ញាបនបត្រ')} items={data.certs} cap={CAPS.certs} blank={() => ({ name: '', year: '' })} onChange={v => set({ certs: v })}
           render={(x, p) => <div className="cvmTwo">
-            <Field label={tr('Certificate', 'វិញ្ញាបនបត្រ')}><input value={x.name} onChange={e => p({ name: e.target.value })} maxLength={40} /></Field>
-            <Field label={tr('Year', 'ឆ្នាំ')}><input value={x.year} onChange={e => p({ year: e.target.value })} maxLength={8} /></Field>
+            <Field label={tr('Certificate', 'វិញ្ញាបនបត្រ')}><input value={x.name} onChange={e => p({ name: e.target.value })} /></Field>
+            <Field label={tr('Year', 'ឆ្នាំ')}><input value={x.year} onChange={e => p({ year: e.target.value })} /></Field>
           </div>} />
       )}
 
       {has('achievements') && (
         <RowList title={tr('Achievements', 'សមិទ្ធផល')} items={data.achievements} cap={CAPS.achievements} blank={() => ({ period: '', text: '' })} onChange={v => set({ achievements: v })}
           render={(x, p) => <>
-            <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2021" onChange={e => p({ period: e.target.value })} maxLength={20} /></Field>
-            <Field label={tr('What you achieved', 'អ្វីដែលអ្នកសម្រេចបាន')}><textarea rows={2} value={x.text} onChange={e => p({ text: e.target.value })} maxLength={100} /></Field>
+            <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2021" onChange={e => p({ period: e.target.value })} /></Field>
+            <Field label={tr('What you achieved', 'អ្វីដែលអ្នកសម្រេចបាន')}><textarea rows={2} value={x.text} onChange={e => p({ text: e.target.value })} /></Field>
           </>} />
       )}
 
       {has('references') && (
         <RowList title={tr('References', 'អ្នកផ្តល់ការយោង')} items={data.references} cap={CAPS.references} blank={() => ({ name: '', role: '', phone: '', email: '' })} onChange={v => set({ references: v })}
           render={(x, p) => <>
-            <div className="cvmTwo"><Field label={tr('Name', 'ឈ្មោះ')}><input value={x.name} onChange={e => p({ name: e.target.value })} maxLength={30} /></Field>
-              <Field label={tr('Job / Company', 'មុខតំណែង / ក្រុមហ៊ុន')}><input value={x.role} onChange={e => p({ role: e.target.value })} maxLength={40} /></Field></div>
+            <div className="cvmTwo"><Field label={tr('Name', 'ឈ្មោះ')}><input value={x.name} onChange={e => p({ name: e.target.value })} /></Field>
+              <Field label={tr('Job / Company', 'មុខតំណែង / ក្រុមហ៊ុន')}><input value={x.role} onChange={e => p({ role: e.target.value })} /></Field></div>
             <div className="cvmTwo"><Field label={tr('Phone', 'ទូរស័ព្ទ')}><input value={x.phone} onChange={e => p({ phone: e.target.value })} maxLength={24} /></Field>
               <Field label={tr('Email', 'អ៊ីមែល')}><input value={x.email} onChange={e => p({ email: e.target.value })} maxLength={50} /></Field></div>
           </>} />
@@ -532,7 +532,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
                 <p className="cvmSave" data-s={saved}>{saved === 'saving' ? tr('Saving…', 'កំពុងរក្សាទុក…') : saved === 'saved' ? tr('All changes saved', 'បានរក្សាទុកការកែប្រែទាំងអស់') : saved === 'error' ? tr('Could not save. Check your connection.', 'មិនអាចរក្សាទុកបានទេ។ សូមពិនិត្យអ៊ីនធឺណិត។') : tr('Edit anything, then save as PDF.', 'កែអ្វីក៏បាន រួចរក្សាទុកជា PDF។')}</p></div>
               <button type="button" className="cvmGo" onClick={savePdf}><Download />{tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
             </div>
-            {overflow && <p className="cvmWarn" role="alert">{tr('Some text goes past the bottom of the page. Shorten it or remove an item so everything fits.', 'អក្សរខ្លះហួសពីបាតទំព័រ។ សូមកាត់បន្ថយអក្សរ ឬលុបធាតុមួយ ដើម្បីឱ្យចុះក្នុងទំព័រ។')}</p>}
+            {overflow && <p className="cvmWarn" role="alert">{tr('This is more than fits on one page, even at the smallest text size. Remove an item so everything fits.', 'អក្សរខ្លះហួសពីបាតទំព័រ។ សូមកាត់បន្ថយអក្សរ ឬលុបធាតុមួយ ដើម្បីឱ្យចុះក្នុងទំព័រ។')}</p>}
             <div className="cvmTabs" role="tablist">
               <button type="button" role="tab" aria-selected={tab === 'preview'} className={tab === 'preview' ? 'on' : ''} onClick={() => setTab('preview')}><FileText />{tr('Preview', 'មើលជាមុន')}</button>
               <button type="button" role="tab" aria-selected={tab === 'edit'} className={tab === 'edit' ? 'on' : ''} onClick={() => setTab('edit')}><Pencil />{tr('Edit', 'កែ')}</button>
