@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- overlay only (transparent): diagonal twill + fibre flecks that sit over any blue/navy background-color -->
+  <defs>
+    <pattern id="twill" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(32)">
+      <rect width="4" height="4" fill="none"/><rect width="1.4" height="4" fill="#fff" opacity=".075"/><rect x="2.4" width="1" height="4" fill="#000" opacity=".12"/>
+    </pattern>
+    <filter id="fleck" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".9 .5" numOctaves="2" seed="11" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 .72  0 0 0 0 .8  0 0 0 0 1  0 0 0 1.3 -.62"/>
+    </filter>
+  </defs>
+  <rect width="96" height="96" fill="url(#twill)"/>
+  <rect width="96" height="96" filter="url(#fleck)" opacity=".55"/>
+</svg>

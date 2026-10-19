@@ -529,7 +529,7 @@ async function verifyBakongCv(cv) {
 }
 
 const bigJson = express.json({ limit: '1500kb' });
-const CV_TEMPLATES = ['rosa', 'jonathan', 'donna', 'daniel', 'muhammad', 'richard', 'director'];
+const CV_TEMPLATES = ['rosa', 'jonathan', 'donna', 'daniel', 'muhammad', 'richard', 'director', 'sacha', 'olivia', 'sanchez', 'thomas', 'adam', 'john'];
 /* Create or update the customer's CV row through the server (service role), so it never depends on table grants. */
 app.post('/api/cv/save', bigJson, async (req, res) => {
   try {

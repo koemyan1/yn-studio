@@ -32,12 +32,12 @@ const PRICE = 3;
 const DRAFT_PREFIX = 'yn-cv-draft:';   // one draft per logged-in user, so nobody sees another customer's typing on a shared phone
 const draftKey = (u: string | null) => (u ? DRAFT_PREFIX + u : null);
 const money = (n: number) => '$' + n.toFixed(2);
-const CAPS = { skills: 999, softSkills: 999, languages: 999, education: 999, experience: 999, references: 999, achievements: 999, certs: 999 };   // unlimited: the page auto-shrinks the text to fit
+const CAPS = { skills: 999, softSkills: 999, languages: 999, education: 999, experience: 999, references: 999, achievements: 999, certs: 999, interests: 999 };   // unlimited: the page auto-shrinks the text to fit
 
 const normalize = (d: any): CvData => {
   const e = emptyCv();
   const o: any = { ...e, ...(d || {}) };
-  for (const k of ['skills', 'softSkills', 'languages', 'education', 'experience', 'references', 'achievements', 'certs']) if (!Array.isArray(o[k])) o[k] = [];
+  for (const k of ['skills', 'softSkills', 'languages', 'education', 'experience', 'references', 'achievements', 'certs', 'interests']) if (!Array.isArray(o[k])) o[k] = [];
   return o as CvData;
 };
 
@@ -71,7 +71,7 @@ function ensureCvFonts() {
   if (document.getElementById('cv-fonts')) return;
   const l = document.createElement('link');
   l.id = 'cv-fonts'; l.rel = 'stylesheet';
-  l.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Noto+Sans+Khmer:wght@300;400;500;600;700&display=swap';
+  l.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800;900&family=Anton&family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&family=Lato:wght@300;400;700;900&family=Noto+Sans+Khmer:wght@300;400;500;600;700&display=swap';
   document.head.appendChild(l);
 }
 
@@ -198,7 +198,7 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
             <Field label={tr('School / University', 'សាលា / សាកលវិទ្យាល័យ')}><input value={x.school} onChange={e => p({ school: e.target.value })} /></Field>
             <div className="cvmTwo"><Field label={tr('Degree / Course', 'សញ្ញាបត្រ / វគ្គសិក្សា')}><input value={x.degree} onChange={e => p({ degree: e.target.value })} /></Field>
               <Field label={tr('Years', 'ឆ្នាំ')}><input value={x.period} placeholder="2016 - 2020" onChange={e => p({ period: e.target.value })} /></Field></div>
-            {(tpl === 'richard' || tpl === 'director') && <Field label={tr('Note (optional)', 'កំណត់ចំណាំ (ស្រេចចិត្ត)')}><input value={x.note} onChange={e => p({ note: e.target.value })} /></Field>}
+            {T.eduNote && <Field label={tr('Note (optional)', 'កំណត់ចំណាំ (ស្រេចចិត្ត)')}><input value={x.note} onChange={e => p({ note: e.target.value })} /></Field>}
           </>} />
       )}
 
@@ -213,6 +213,11 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
       {has('softSkills') && (
         <RowList title={tr('Soft skills', 'ជំនាញទន់')} items={data.softSkills} cap={CAPS.softSkills} blank={() => ''} onChange={v => set({ softSkills: v })}
           render={(x, _p, i) => <Field label={tr('Skill', 'ជំនាញ')}><input value={x} onChange={e => set({ softSkills: data.softSkills.map((y, j) => (j === i ? e.target.value : y)) })} /></Field>} />
+      )}
+
+      {has('interests') && (
+        <RowList title={tr('Interests', 'ចំណូលចិត្ត')} items={data.interests} cap={CAPS.interests} blank={() => ''} onChange={v => set({ interests: v })}
+          render={(x, _p, i) => <Field label={tr('Interest', 'ចំណូលចិត្ត')}><input value={x} onChange={e => set({ interests: data.interests.map((y, j) => (j === i ? e.target.value : y)) })} /></Field>} />
       )}
 
       {has('languages') && (

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060c26"/><stop offset=".6" stop-color="#101d4a"/><stop offset="1" stop-color="#1a2d62"/></linearGradient>
+    <radialGradient id="halo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#e9dfb4" stop-opacity=".4"/><stop offset="1" stop-color="#9fb0e0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="moon" cx=".38" cy=".34" r=".8"><stop offset="0" stop-color="#f3ebc4"/><stop offset=".7" stop-color="#d9cb92"/><stop offset="1" stop-color="#bba96e"/></radialGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffcf6a" stop-opacity=".7"/><stop offset="1" stop-color="#ffcf6a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ea3d8" stop-opacity="0"/><stop offset="1" stop-color="#8ea3d8" stop-opacity=".28"/></linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#050a20" stop-opacity=".55"/><stop offset=".55" stop-color="#050a20" stop-opacity=".1"/><stop offset="1" stop-color="#050a20" stop-opacity="0"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="2"/></filter>
+    <radialGradient id="cfur" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#1a2140"/><stop offset="1" stop-color="#080b19"/></radialGradient>
+    <radialGradient id="gold" cx=".36" cy=".3" r=".8"><stop offset="0" stop-color="#ffe08a"/><stop offset=".65" stop-color="#f1b72e"/><stop offset="1" stop-color="#c58a12"/></radialGradient>
+  </defs>
+  <style>
+    .w{fill:#ffc95c}
+    @media (prefers-reduced-motion:no-preference){.f1{animation:fl 5.5s ease-in-out infinite}.f2{animation:fl 7s ease-in-out -2s infinite}.f3{animation:fl 6.2s ease-in-out -4s infinite}
+      @keyframes fl{0%,100%{opacity:1}46%{opacity:1}50%{opacity:.35}54%{opacity:1}78%{opacity:.8}}}
+  </style>
+  <rect width="640" height="200" fill="url(#sky)"/>
+  <g fill="#e8e2c8"><circle cx="30" cy="24" r="1.1" opacity=".8"/><circle cx="96" cy="46" r=".9" opacity=".6"/><circle cx="170" cy="18" r="1.1" opacity=".8"/><circle cx="262" cy="36" r=".8" opacity=".6"/><circle cx="330" cy="14" r="1" opacity=".7"/><circle cx="60" cy="160" r=".8" opacity=".5"/><circle cx="214" cy="108" r=".9" opacity=".5"/><circle cx="610" cy="30" r="1" opacity=".7"/></g>
+  <!-- fireflies -->
+  <g fill="#ffe28a"><circle cx="40" cy="120" r="2" opacity=".8"/><circle cx="118" cy="150" r="1.6" opacity=".7"/><circle cx="196" cy="168" r="1.8" opacity=".75"/><circle cx="286" cy="138" r="1.5" opacity=".6"/></g>
+  <g fill="#ffe28a" opacity=".18" filter="url(#soft)"><circle cx="40" cy="120" r="7"/><circle cx="118" cy="150" r="6"/><circle cx="196" cy="168" r="6"/></g>
+  <!-- moon -->
+  <circle cx="470" cy="62" r="74" fill="url(#halo)"/>
+  <circle cx="470" cy="62" r="38" fill="url(#moon)"/>
+  <g fill="#a99a62" opacity=".34"><circle cx="458" cy="50" r="7"/><circle cx="482" cy="74" r="9"/><circle cx="456" cy="76" r="4"/></g>
+  <!-- distant trees -->
+  <g fill="#070d24"><path d="M360 200V120l-8 3 10-18-6 2 11-22 11 22-6-2 10 18-8-3v80z"/><path d="M590 200V104l-9 4 12-22-7 2 13-26 13 26-7-2 12 22-9-4v96z"/><path d="M628 200V132l-7 3 9-16-5 1 10-20 10 20-5-1 9 16-7-3v68z"/></g>
+  <!-- house -->
+  <g transform="translate(0 6)">
+    <circle cx="520" cy="124" r="64" fill="url(#glow)" opacity=".22"/>
+    <g fill="#0c1738" stroke="#2c4082" stroke-width="1.2" stroke-linejoin="round">
+      <path d="M470 130L520 84l50 46z"/><rect x="474" y="128" width="92" height="66"/>
+      <path d="M458 104L478 56l20 48z"/><rect x="461" y="102" width="34" height="92"/>
+      <path d="M546 96l17-50 17 50z"/><rect x="548" y="94" width="30" height="100"/>
+      <rect x="513" y="70" width="8" height="18"/>
+      <path d="M480 172h84l8 7H472z"/>
+    </g>
+    <g filter="url(#soft)" opacity=".5"><rect x="506" y="140" width="12" height="18" rx="6" fill="#ffb93d"/><rect x="528" y="140" width="12" height="18" rx="6" fill="#ffb93d"/></g>
+    <rect class="w f1" x="508" y="142" width="8" height="14" rx="4"/><rect class="w f2" x="530" y="142" width="8" height="14" rx="4"/>
+    <rect class="w f3" x="472" y="112" width="7" height="12" rx="3.5"/><rect class="w f1" x="556" y="108" width="7" height="12" rx="3.5"/><rect class="w f2" x="556" y="140" width="7" height="12" rx="3.5"/><rect class="w f3" x="486" y="142" width="8" height="12" rx="4"/>
+    <rect class="w f1" x="518" y="172" width="7" height="16" rx="3"/>
+  </g>
+  <!-- bare tree -->
+  <g stroke="#060b1d" fill="none" stroke-linecap="round"><path d="M426 200c1-30 2-48 0-74" stroke-width="5"/><path d="M426 160c-9-9-18-15-32-19M426 150c10-11 18-16 32-18M426 176c-12-4-20-5-30-4M426 132c-2-10-1-18 4-28" stroke-width="2.4"/><path d="M394 141c-5-2-8-6-10-12M458 132c5-2 8-6 10-12" stroke-width="1.6"/></g>
+  <path d="M0 184c90-8 190-4 320 0s230 4 320-4v20H0z" fill="#060b1d"/>
+  <rect y="150" width="640" height="50" fill="url(#fog)"/>
+  <!-- cat on the grass, button eyes -->
+  <g transform="translate(596 120)">
+    <path d="M2 80C-4 58 6 44 22 44s28 14 22 36z" fill="url(#cfur)" stroke="#2c3b7a" stroke-width="1.2" stroke-opacity=".8"/>
+    <g fill="url(#cfur)" stroke="#2c3b7a" stroke-width="1.2" stroke-opacity=".8" stroke-linejoin="round"><path d="M6 28L3 6l16 12z"/><path d="M40 28l3-22-16 12z"/><ellipse cx="23" cy="32" rx="21" ry="17"/></g>
+    <g><circle cx="14" cy="30" r="7" fill="#d2cdbb" stroke="#6f6c60" stroke-width="1"/><circle cx="33" cy="30" r="7" fill="#d2cdbb" stroke="#6f6c60" stroke-width="1"/><g stroke="#14131c" stroke-width="2" stroke-linecap="round"><path d="M11 27l6 6M17 27l-6 6M30 27l6 6M36 27l-6 6"/></g></g>
+    <path d="M20 40h6l-3 3z" fill="#4a3548"/>
+  </g>
+  <rect width="640" height="200" fill="url(#shade)"/>
+  <!-- title (system handwriting fonts: web fonts never load inside a CSS background image) -->
+  <g font-family="'Gaegu','Schoolbell','Chalkboard SE','Marker Felt','Comic Sans MS','Segoe Print',cursive" fill="#eadfc2">
+    <text x="26" y="92" font-size="58" font-weight="700" transform="rotate(-5 26 92)" stroke="#050a20" stroke-width="5" stroke-linejoin="round" paint-order="stroke">Free</text>
+    <text x="70" y="140" font-size="58" font-weight="700" transform="rotate(-5 70 140)" stroke="#050a20" stroke-width="5" stroke-linejoin="round" paint-order="stroke">Delivery</text>
+    <text x="56" y="172" font-size="18" transform="rotate(-5 56 172)" stroke="#050a20" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke">For every electronic products</text>
+  </g>
+  <g transform="translate(300 150) rotate(-14)"><circle r="12" fill="url(#gold)" stroke="#8a5c0c" stroke-width="1.2"/><circle r="8" fill="none" stroke="#b9801a" stroke-width="1.4"/><g fill="#3a2706"><circle cx="-3.2" cy="-3.2" r="1.5"/><circle cx="3.2" cy="-3.2" r="1.5"/><circle cx="-3.2" cy="3.2" r="1.5"/><circle cx="3.2" cy="3.2" r="1.5"/></g><path d="M-3.2-3.2L3.2 3.2M3.2-3.2L-3.2 3.2" stroke="#14224f" stroke-width="1.3" stroke-linecap="round"/></g>
+</svg>

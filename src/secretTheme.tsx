@@ -295,6 +295,20 @@ export const THEME_PRESETS: { id: string; label: string; swatch: string[]; cfg: 
       fontUrl: 'https://fonts.googleapis.com/css2?family=Bangers&family=Outfit:wght@400;600;700&display=swap',
     },
   },
+  {
+    id: 'coraline', label: 'Coraline moonlit house', swatch: ['#0a1230', '#f1b72e', '#dccfa9'],
+    // Full look (night sky, torn paper, denim patches, brass buttons, stitching) lives in coraline.css and turns on through `preset`.
+    // `radius` is deliberately left unset: the engine would otherwise force plain rounded corners over the hand-torn edges.
+    cfg: {
+      preset: 'coraline', background: '#0a1230', surface: '#dccfa9', text: '#2a2116', muted: '#5a4a32', border: '#c7b68a', accent: '#f1b72e', accent2: '#ffe08a',
+      font: "'Gaegu', 'Patrick Hand', 'Noto Sans Khmer', 'Kantumruy Pro', 'Chalkboard SE', 'Marker Felt', 'Comic Sans MS', system-ui, sans-serif",
+      headingFont: "'Schoolbell', 'Gaegu', 'Patrick Hand', 'Noto Sans Khmer', 'Kantumruy Pro', 'Chalkboard SE', 'Marker Felt', 'Comic Sans MS', system-ui, sans-serif",
+      fontUrl: 'https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Patrick+Hand&family=Schoolbell&display=swap',
+      bannerImage: '/coraline/banner.svg',
+      // photos fill the torn-paper frame instead of floating inside it
+      productImage: { mode: 'original', color: '#ffe0ec', palette: 'pastel', customColors: [], tolerance: 35, fillHoles: false, seed: 1, fit: 'cover', padding: 0 },
+    },
+  },
 ];
 
 /* ------------------------------ CSS generation ------------------------------ */

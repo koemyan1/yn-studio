@@ -9,7 +9,7 @@ import{SecretThemeRuntime,useThemeConfig,useThemeText,Lines,isPreviewFrame,Theme
 import{tr,isKm,useLang,LangButton,initLang}from'./lang';
 import{removeBackgroundFile,randomHex,optimizeImage}from'./imageTools';
 import{takeHomeAction}from'./themeLive';
-import'./cool.css';import'./chiikawa.css';import'./spidey.css';
+import'./cool.css';import'./chiikawa.css';import'./spidey.css';import'./coraline.css';
 import AdminAssistantTeachPage from'./AdminAssistantTeach';import AdminAssistantHost from'./AdminAssistant';import AdminSecretCodeEditor from'./AdminSecretCode';import AdminThemesPage from'./AdminThemes';import AdminProductMascotsPage from'./AdminProductMascots';import{ProductMascots}from'./ProductMascots';import'./admin.css';
 import ServicesPage,{AdminServiceRequests}from'./Services';import CvMaker from'./CvMaker';import PushToggle from'./PushToggle';import{initFx}from'./fx';import{initFit}from'./themeElements';import'./customer.css';import'./fit.css';import'./checkout.css';import'./payment.css';import'./paymentScenes.css';import PaymentScene from'./PaymentScenes';import type{SceneKind}from'./PaymentScenes';import'./orders.css';
 import L from 'leaflet';import'leaflet/dist/leaflet.css';

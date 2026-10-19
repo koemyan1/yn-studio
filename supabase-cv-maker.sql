@@ -8,7 +8,7 @@
 create table if not exists public.cv_orders (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid not null references auth.users(id) on delete cascade,
-  template       text not null,                          -- rosa | jonathan | donna | daniel | muhammad | richard | director
+  template       text not null,                          -- rosa | jonathan | donna | daniel | muhammad | richard | director | sacha | olivia | sanchez | thomas | adam | john
   lang           text not null default 'en',             -- en | km
   data           jsonb not null default '{}'::jsonb,     -- everything the customer typed (photo is stored as a small data URL)
   price          numeric(10,2) not null default 3.00,

@@ -207,7 +207,7 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
           <div className="svcBody">
             <h3>{tr('CV maker', 'បង្កើត CV')}</h3>
             <p>{tr('Pick a design, add your info in English or Khmer, pay and download your CV as a PDF.', 'ជ្រើសរើសគំរូ បញ្ចូលព័ត៌មានជាអង់គ្លេស ឬខ្មែរ ទូទាត់ ហើយទាញយក CV ជា PDF។')}</p>
-            <ul className="svcTags">{(isKm() ? ['៧ គំរូ', 'អង់គ្លេស / ខ្មែរ', 'PDF', '$3'] : ['7 designs', 'English / Khmer', 'PDF', '$3']).map(t => <li key={t}>{t}</li>)}</ul>
+            <ul className="svcTags">{(isKm() ? ['១៣ គំរូ', 'អង់គ្លេស / ខ្មែរ', 'PDF', '$3'] : ['13 designs', 'English / Khmer', 'PDF', '$3']).map(t => <li key={t}>{t}</li>)}</ul>
             <button type="button" className="svcAsk" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
           </div>
         </article>

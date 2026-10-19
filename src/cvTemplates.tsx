@@ -1,9 +1,9 @@
 import React, { createContext, useContext } from 'react';
-import { Globe, Mail, MapPin, Phone } from 'lucide-react';
+import { Briefcase, Contact as ContactCard, Globe, GraduationCap, Languages, Mail, MapPin, Phone, Settings, User } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /* ---------------------------------------------------------------------------------------------
-   CV templates (7 designs, A4 = 794 x 1123 px).
+   CV templates (13 designs, A4 = 794 x 1123 px).
    Every template renders from the same CvData. In "blank" mode (template picker) all text and the
    photo are replaced by grey placeholder bars, so the customer only sees the design.
    --------------------------------------------------------------------------------------------- */
@@ -22,16 +22,17 @@ export type CvData = {
   /** what the work-experience slot shows: 'work' (default) or 'achievements' (customer's choice) */
   expKind?: 'work' | 'achievements';
   certs: { name: string; year: string }[];
+  interests: string[];
 };
 
 export const emptyCv = (): CvData => ({
   name: '', title: '', about: '', summary: '', phone: '', email: '', address: '', website: '', photo: '',
-  skills: [], softSkills: [], languages: [], education: [], experience: [], references: [], achievements: [], certs: [], expKind: 'work',
+  skills: [], softSkills: [], languages: [], education: [], experience: [], references: [], achievements: [], certs: [], interests: [], expKind: 'work',
 });
 
 export type Section = 'photo' | 'about' | 'summary' | 'contact' | 'website' | 'skills' | 'softSkills' | 'languages'
-  | 'education' | 'experience' | 'references' | 'achievements' | 'certs';
-export type TplKey = 'rosa' | 'jonathan' | 'donna' | 'daniel' | 'muhammad' | 'richard' | 'director';
+  | 'education' | 'experience' | 'references' | 'achievements' | 'certs' | 'interests';
+export type TplKey = 'rosa' | 'jonathan' | 'donna' | 'daniel' | 'muhammad' | 'richard' | 'director' | 'sacha' | 'olivia' | 'sanchez' | 'thomas' | 'adam' | 'john';
 
 /* ------------------------------------- shared helpers ------------------------------------- */
 type Ctx = { blank: boolean; km: boolean; ach?: boolean };
@@ -46,6 +47,8 @@ const HL: Record<string, [string, string]> = {
   expertise: ['Expertise', 'ជំនាញឯកទេស'], certs: ['Certifications', 'វិញ្ញាបនបត្រ'], languages: ['Languages', 'ភាសា'],
   language: ['Language', 'ភាសា'], references: ['References', 'អ្នកផ្តល់ការយោង'], reference: ['Reference', 'អ្នកផ្តល់ការយោង'],
   achievements: ['Achievements', 'សមិទ្ធផល'], phone: ['Phone', 'ទូរស័ព្ទ'], email: ['Email', 'អ៊ីមែល'],
+  interests: ['Interests', 'ចំណូលចិត្ត'], duties: ['Duties and responsibilities:', 'ភារកិច្ច និងការទទួលខុសត្រូវ៖'],
+  cvTitle: ['Curriculum Vitae', 'ប្រវត្តិរូបសង្ខេប'], contactMe: ['Contact Me', 'ទំនាក់ទំនងខ្ញុំ'],
 };
 export const LEVEL_LANG: [string, string][] = [['Basic', 'មូលដ្ឋាន'], ['Intermediate', 'មធ្យម'], ['Fluent', 'ស្ទាត់'], ['Native', 'ភាសាកំណើត']];
 export const LEVEL_SKILL: [string, string][] = [['Beginner', 'ចាប់ផ្តើម'], ['Intermediate', 'មធ្យម'], ['Advanced', 'ខ្ពស់'], ['Expert', 'អ្នកជំនាញ']];
@@ -107,7 +110,7 @@ function Name2({ d }: { d: CvData }) {
 const lvText = (l: number | undefined, km: boolean, t = LEVEL_LANG) => t[Math.min(3, Math.max(0, (l || 3) - 1))][km ? 1 : 0];
 
 type Hf = (k: string) => string;
-const useH = (): Hf => { const { km, ach } = useC(); return (k: string) => (HL[ach && (k === 'works' || k === 'experience' || k === 'work') ? 'achievements' : k] || [k, k])[km ? 1 : 0]; };
+const useH = (): Hf => { const { km, ach } = useC(); return (k: string) => (HL[ach && (k === 'works' || k === 'experience' || k === 'work' || k === 'duties') ? 'achievements' : k] || [k, k])[km ? 1 : 0]; };
 
 /* ------------------------------------- 1. Rosa (dark sidebar) ------------------------------------- */
 function T1({ d }: { d: CvData }) {
@@ -339,23 +342,237 @@ function T7({ d }: { d: CvData }) {
   );
 }
 
+/* ------------------------------------- 8. Sacha (navy curve + timeline) ------------------------------------- */
+/** Font size that keeps a long name inside its box: `base` px up to `ref` letters in the longest word, smaller after that. */
+const fitName = (d: CvData, base: number, ref: number, min = 26) => {
+  if (!d.name) return base;
+  const L = Math.max(...nameParts(d).map(p => Array.from(p).length), 1);
+  return Math.round(Math.max(min, Math.min(base, (base * ref) / L)));
+};
+
+function T8({ d }: { d: CvData }) {
+  const { blank } = useC(); const h = useH();
+  const edu = rows(d.education, 2, blank), exp = rows(d.experience, 3, blank), sk = rows(d.skills, 6, blank), lg = rows(d.languages, 2, blank), it = rows(d.interests, 3, blank);
+  return (
+    <div className="cvPage t8">
+      <svg className="cvbg" viewBox="0 0 794 1123" aria-hidden="true"><path d="M0 0H275V95C275 190 235 262 140 290C195 318 251 370 251 460V1123H0Z" fill="#12365d" /></svg>
+      <div className="t8line" />
+      <Photo d={d} cls="t8p" />
+      <div className="t8h"><h1 style={blank ? undefined : { fontSize: fitName(d, 44, 14, 24) }}><V v={(d.name || '').toUpperCase()} w={78} /></h1><p><V v={(d.title || '').toUpperCase()} w={48} /></p></div>
+      <div className="t8l">
+        <section><h4>{h('contact')}</h4><Contact d={d} site={false} /></section>
+        <section><h4>{h('languages')}</h4>
+          <div className="t8lg">{lg.map((x, i) => <React.Fragment key={i}><span><V v={x?.name} w={70} /></span><i className="cvbar"><u style={{ width: blank ? '65%' : pct(x?.level) + '%' }} /></i></React.Fragment>)}</div>
+        </section>
+        <section><h4>{h('skills')}</h4><ul className="t8ul">{sk.map((x, i) => <li key={i}><V v={x?.name} w={70} /></li>)}</ul></section>
+        <section><h4>{h('interests')}</h4><ul className="t8ul">{it.map((x, i) => <li key={i}><V v={typeof x === 'string' ? x : ''} w={50} /></li>)}</ul></section>
+      </div>
+      <div className="t8r">
+        <section><h4>{h('education')}</h4>
+          {edu.map((x, i) => <div className="t8e" key={i}><i className="t8dot" /><div className="t8row"><b><V v={x?.degree} w={70} /></b><em><V v={x?.period} w={80} /></em></div><span><V v={x?.school} w={60} /></span></div>)}
+        </section>
+        <section><h4>{h('work')}</h4>
+          {exp.map((x, i) => <div className="t8e" key={i}><i className="t8dot" /><div className="t8row"><b><V v={x?.role} w={60} /></b><em><V v={x?.period} w={85} /></em></div><span className="t8co"><V v={x?.company} w={55} /></span><Bullets v={x?.desc} n={3} /></div>)}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------- 9. Olivia (crimson diagonal) ------------------------------------- */
+function T9({ d }: { d: CvData }) {
+  const { blank, km } = useC(); const h = useH();
+  const sk = rows(d.skills, 5, blank), lg = rows(d.languages, 2, blank), exp = rows(d.experience, 3, blank), edu = rows(d.education, 2, blank), rf = rows(d.references, 2, blank);
+  return (
+    <div className="cvPage t9">
+      <svg className="cvbg" viewBox="0 0 794 1123" aria-hidden="true"><path d="M0 0L331 300V1123H0Z" fill="#94243a" /></svg>
+      <Photo d={d} cls="t9p" />
+      <div className="t9h"><h1 style={blank ? undefined : { fontSize: fitName(d, 52, 7, 26) }}><Name2 d={d} /></h1><p><V v={d.title} w={60} /></p></div>
+      <div className="t9l">
+        <section><h4>{h('contact')}</h4><Contact d={d} site={false} /></section>
+        <section><h4>{h('skills')}</h4><ul className="cvbl">{sk.map((x, i) => <li key={i}><V v={x?.name} w={70} /></li>)}</ul></section>
+        <section><h4>{h('language')}</h4>
+          <ul className="cvbl">{lg.map((x, i) => <li key={i}>{blank ? <i className="cvsk" style={{ width: '45%' }} /> : <>{x?.name} <small>({lvText(x?.level, km).toLowerCase()})</small></>}</li>)}</ul>
+        </section>
+      </div>
+      <div className="t9r">
+        <section><h4>{h('about')}</h4><p className="t9a"><Lines v={d.summary} n={4} /></p></section>
+        <section><h4>{h('work')}</h4>
+          {exp.map((x, i) => <div className="t9ex" key={i}><div className="cvr"><b><V v={x?.role} w={50} /></b><span><V v={x?.period} w={60} /></span></div><em><V v={x?.company} w={45} /></em><p><Lines v={x?.desc} n={4} /></p></div>)}
+        </section>
+        <section><h4>{h('education')}</h4>
+          {edu.map((x, i) => <div className="t9ed" key={i}><div className="cvr"><b><V v={x?.school} w={50} /></b><span><V v={x?.period} w={60} /></span></div><em><V v={x?.degree} w={65} /></em></div>)}
+        </section>
+        <section><h4>{h('references')}</h4>
+          <div className="t9rf">{rf.map((x, i) => <div key={i}><b><V v={x?.name} w={60} /></b><span><V v={x?.role} w={70} /></span><p><b>{h('phone')}:</b> <V v={x?.phone} w={60} /></p><p><b>{h('email')}:</b> <V v={x?.email} w={80} /></p></div>)}</div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------- 10. Sanchez (slate header, arch, pill headings) ------------------------------------- */
+function T10({ d }: { d: CvData }) {
+  const { blank, km } = useC(); const h = useH();
+  const edu = rows(d.education, 2, blank), sk = rows(d.skills, 6, blank), lg = rows(d.languages, 4, blank), exp = rows(d.experience, 3, blank);
+  const cts: [LucideIcon, string, number][] = [[Mail, d.email, 85], [Phone, d.phone, 55], [MapPin, d.address, 75]];
+  const Pill = ({ k }: { k: string }) => <h4 className="t10pill"><span>{h(k)}</span></h4>;
+  return (
+    <div className="cvPage t10">
+      <div className="t10band" />
+      <div className="t10vr" /><div className="t10vl" />
+      <div className="t10cap" />
+      <Photo d={d} cls="t10p" />
+      <div className="t10h"><h1 style={blank ? undefined : { fontSize: fitName(d, 37, 15, 22) }}><V v={(d.name || '').toUpperCase()} w={85} /></h1><i className="t10ln" /><p><V v={(d.title || '').toUpperCase()} w={50} /></p></div>
+      <div className="t10ct">
+        <ul>{cts.filter(([, v]) => blank || v).map(([I, v, w], i) => <li key={i}><I /><span><V v={v} w={w} /></span></li>)}</ul>
+      </div>
+      <div className="t10l">
+        <Pill k="education" />
+        {edu.map((x, i) => <div className="t10ed" key={i}><b><V v={x?.degree} w={85} /></b><div className="t10sp"><span><V v={x?.school} w={55} /></span><span><V v={x?.period} w={30} /></span></div></div>)}
+        <Pill k="skills" />
+        <ul className="cvbl">{sk.map((x, i) => <li key={i}><V v={x?.name} w={65} /></li>)}</ul>
+        <Pill k="languages" />
+        <ul className="cvbl">{lg.map((x, i) => <li key={i}>{blank ? <i className="cvsk" style={{ width: '50%' }} /> : <>{x?.name} <small>({lvText(x?.level, km)})</small></>}</li>)}</ul>
+      </div>
+      <div className="t10r">
+        <Pill k="about" />
+        <p className="t10a"><Lines v={d.summary} n={4} /></p>
+        <Pill k="experience" />
+        {exp.map((x, i) => <div className="t10ex" key={i}><b><V v={x?.company} w={45} /></b><div className="t10rp"><span><V v={x?.role} w={70} /></span><span><V v={x?.period} w={80} /></span></div><Bullets v={x?.desc} n={3} /></div>)}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------- 11. Thomas (teal rounded panel) ------------------------------------- */
+function T11({ d }: { d: CvData }) {
+  const { blank, km } = useC(); const h = useH();
+  const exp = rows(d.experience, 1, blank), edu = rows(d.education, 1, blank), sk = rows(d.skills, 9, blank), lg = rows(d.languages, 2, blank);
+  const duties = blank ? '' : d.experience.filter(nonEmpty).map(x => x.desc || '').join('\n');
+  const cts: [LucideIcon, string, number][] = [[Phone, d.phone, 55], [Globe, d.website, 55], [Mail, d.email, 80]];
+  if (!blank && d.address) cts.push([MapPin, d.address, 70]);
+  const Sep = () => <i className="t11sep" />;
+  return (
+    <div className="cvPage t11">
+      <div className="t11tab"><span>{h('cvTitle')}</span></div>
+      <div className="t11panel" />
+      <div className="t11ring" />
+      <Photo d={d} cls="t11p" />
+      <div className="t11h"><h1 style={blank ? undefined : { fontSize: fitName(d, 88, 7, 40) }}><Name2 d={d} /></h1><p><V v={d.title} w={55} /></p></div>
+      <div className="t11l" data-limit="1040">
+        <section><h4>{h('profile')}</h4><p className="t11a"><Lines v={d.summary} n={6} /></p></section>
+        <section><h4>{h('work')}</h4>
+          {exp.map((x, i) => <div className="t11e" key={i}><b><V v={x?.company} w={60} /></b><span><V v={x?.role} w={45} />{(blank || (x?.role && x?.period)) && <Sep />}<b><V v={x?.period} w={25} /></b></span></div>)}
+        </section>
+        <section><h4>{h('education')}</h4>
+          {edu.map((x, i) => <div className="t11e" key={i}><b><V v={x?.school} w={70} /></b><span><V v={x?.degree} w={45} />{(blank || (x?.degree && x?.period)) && <Sep />}<b><V v={x?.period} w={25} /></b></span>{(blank || x?.note) && <span className="t11n"><V v={x?.note} w={25} /></span>}</div>)}
+        </section>
+        <section><h4>{h('language')}</h4>
+          <ul className="cvbl">{lg.map((x, i) => <li key={i}>{blank ? <i className="cvsk" style={{ width: '55%' }} /> : <><b>{x?.name}</b><Sep />{lvText(x?.level, km)}</>}</li>)}</ul>
+        </section>
+      </div>
+      <div className="t11r">
+        <h4 className="t11bar">{h('duties')}</h4>
+        <Bullets v={duties} n={6} />
+        <h4 className="t11bar">{h('skills')}</h4>
+        <ul className="cvbl">{sk.map((x, i) => <li key={i}><V v={x?.name} w={65} /></li>)}</ul>
+        <div className="t11ct"><ul className="cvct">{cts.map(([I, v, w], i) => <li key={i}><span className="t11ic"><I /></span><span className="cvx"><V v={v} w={w} /></span></li>)}</ul></div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------- 12. Adam (charcoal band + grey side) ------------------------------------- */
+function T12({ d }: { d: CvData }) {
+  const { blank } = useC(); const h = useH();
+  const sk = rows(d.skills, 5, blank), lg = rows(d.languages, 2, blank), edu = rows(d.education, 2, blank), exp = rows(d.experience, 2, blank);
+  const fs = blank ? 54 : fitName(d, 54, 8, 26);
+  const Hd = ({ k, I }: { k: string; I: LucideIcon }) => <h4><I />{h(k)}</h4>;
+  return (
+    <div className="cvPage t12">
+      <div className="t12g" />
+      <div className="t12band" />
+      <div className="t12sh" />
+      <Photo d={d} cls="t12p" />
+      <div className="t12h"><h1 style={{ fontSize: fs, letterSpacing: Math.round(fs / 6) }}><Name2 d={d} /></h1><p><V v={d.title} w={48} /></p></div>
+      <div className="t12l">
+        <section><Hd k="about" I={User} /><p className="t12a"><Lines v={d.summary} n={5} /></p></section>
+        <section><Hd k="contact" I={ContactCard} /><Contact d={d} site={false} /></section>
+        <section><Hd k="skills" I={Settings} /><ul className="cvbl">{sk.map((x, i) => <li key={i}><V v={x?.name} w={60} /></li>)}</ul></section>
+        <section><Hd k="language" I={Languages} /><ul className="cvbl">{lg.map((x, i) => <li key={i}><V v={x?.name} w={40} /></li>)}</ul></section>
+      </div>
+      <div className="t12r">
+        <section><Hd k="education" I={GraduationCap} />
+          {edu.map((x, i) => <div className="t12e" key={i}><i className="t12dot" /><b className="t12per"><V v={x?.period ? '(' + x.period + ')' : ''} w={42} /></b><span className="t12up"><V v={(x?.school || '').toUpperCase()} w={55} /></span><span><V v={x?.degree} w={50} /></span>{(blank || x?.note) && <b className="t12gpa"><V v={x?.note} w={14} /></b>}</div>)}
+        </section>
+        <section><Hd k="experience" I={Briefcase} />
+          {exp.map((x, i) => <div className="t12e" key={i}><i className="t12dot" /><b className="t12per"><V v={x?.period ? '(' + x.period + ')' : ''} w={42} /></b><span className="t12up"><V v={(x?.role || '').toUpperCase()} w={60} /></span><span><V v={x?.company} w={40} /></span><Bullets v={x?.desc} n={2} /></div>)}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------- 13. John (sky blue + wave) ------------------------------------- */
+function T13({ d }: { d: CvData }) {
+  const { blank, km } = useC(); const h = useH();
+  const edu = rows(d.education, 3, blank), sk = rows(d.skills, 5, blank), exp = rows(d.experience, 1, blank), lg = rows(d.languages, 3, blank);
+  return (
+    <div className="cvPage t13">
+      <svg className="cvbg" viewBox="0 0 794 1123" aria-hidden="true">
+        <polygon points="0,0 794,0 794,16 0,42" fill="#c4e9ff" />
+        <polygon points="0,42 794,16 794,239 0,239" fill="#206285" />
+        <line x1="0" y1="42" x2="794" y2="16" stroke="#000" strokeWidth="1.2" />
+        <path d="M794 531C745 590 722 680 700 800C675 930 640 1030 560 1090C535 1108 515 1118 494 1123H794Z" fill="#206285" />
+      </svg>
+      <div className="t13sh" />
+      <div className="t13panel" />
+      <Photo d={d} cls="t13p" />
+      <div className="t13h"><h1 style={blank ? undefined : { fontSize: fitName(d, 46, 8, 24) }}><Name2 d={d} /></h1><p><V v={d.title} w={30} /></p></div>
+      <div className="t13l">
+        <section><h4>{h('education')}</h4>
+          {edu.map((x, i) => <div className="t13ed" key={i}><b><V v={(x?.degree || '').toUpperCase()} w={80} /></b><span><V v={x?.school} w={85} /></span><small><V v={x?.period} w={40} /></small></div>)}
+        </section>
+        <section><h4>{h('skills')}</h4><ul className="t13sk">{sk.map((x, i) => <li key={i}><V v={x?.name} w={70} /></li>)}</ul></section>
+        <section><h4>{h('contactMe')}</h4><Contact d={d} site={false} cls="t13ct" /></section>
+      </div>
+      <div className="t13r">
+        <section><h4>{h('profile')}</h4><p className="t13a"><Lines v={d.summary} n={6} /></p></section>
+        <section><h4>{h('experience')}</h4>
+          {exp.map((x, i) => <div className="t13ex" key={i}><b><V v={(x?.company || '').toUpperCase()} w={60} /></b><span><V v={x?.role} w={25} /></span><small><V v={x?.period} w={22} /></small>{!blank && x?.desc && <p><Lines v={x.desc} n={2} /></p>}</div>)}
+        </section>
+        <section><h4>{h('language')}</h4>
+          <ul className="t13lg">{lg.map((x, i) => <li key={i}>{blank ? <i className="cvsk" style={{ width: '30%' }} /> : <>{x?.name} <small>({lvText(x?.level, km)})</small></>}</li>)}</ul>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------- registry ------------------------------------- */
-export type Tpl = { key: TplKey; en: string; km: string; sections: Section[]; skillBars?: boolean; Comp: (p: { d: CvData }) => React.ReactElement };
+export type Tpl = { key: TplKey; en: string; km: string; sections: Section[]; skillBars?: boolean; eduNote?: boolean; Comp: (p: { d: CvData }) => React.ReactElement };
 export const TEMPLATES: Tpl[] = [
   { key: 'rosa', en: 'Dark sidebar', km: 'ផ្នែកចំហៀងងងឹត', Comp: T1, skillBars: true, sections: ['photo', 'about', 'summary', 'contact', 'website', 'languages', 'education', 'experience', 'skills'] },
   { key: 'jonathan', en: 'Clean classic', km: 'បុរាណស្អាត', Comp: T2, skillBars: true, sections: ['photo', 'summary', 'contact', 'website', 'skills', 'languages', 'experience', 'education'] },
   { key: 'donna', en: 'Soft blue', km: 'ខៀវទន់', Comp: T3, sections: ['photo', 'summary', 'contact', 'skills', 'languages', 'education', 'experience', 'references'] },
   { key: 'daniel', en: 'Blue & yellow', km: 'ខៀវ និងលឿង', Comp: T4, sections: ['photo', 'summary', 'contact', 'website', 'skills', 'softSkills', 'certs', 'experience', 'education'] },
   { key: 'muhammad', en: 'Warm brown', km: 'ត្នោតកក់ក្តៅ', Comp: T5, skillBars: true, sections: ['photo', 'summary', 'contact', 'skills', 'languages', 'references', 'education', 'experience'] },
-  { key: 'richard', en: 'Navy timeline', km: 'បន្ទាត់ពេលវេលា', Comp: T6, sections: ['photo', 'summary', 'contact', 'website', 'education', 'skills', 'experience', 'references'] },
-  { key: 'director', en: 'Modern arch', km: 'ទំនើប រាងកោង', Comp: T7, sections: ['photo', 'summary', 'contact', 'website', 'education', 'skills', 'languages', 'experience', 'achievements'] },
+  { key: 'richard', en: 'Navy timeline', km: 'បន្ទាត់ពេលវេលា', Comp: T6, eduNote: true, sections: ['photo', 'summary', 'contact', 'website', 'education', 'skills', 'experience', 'references'] },
+  { key: 'director', en: 'Modern arch', km: 'ទំនើប រាងកោង', Comp: T7, eduNote: true, sections: ['photo', 'summary', 'contact', 'website', 'education', 'skills', 'languages', 'experience', 'achievements'] },
+  { key: 'sacha', en: 'Navy curve', km: 'ខៀវចាស់កោង', Comp: T8, sections: ['photo', 'contact', 'languages', 'skills', 'interests', 'education', 'experience'] },
+  { key: 'olivia', en: 'Crimson diagonal', km: 'ក្រហមទ្រេត', Comp: T9, sections: ['photo', 'summary', 'contact', 'skills', 'languages', 'experience', 'education', 'references'] },
+  { key: 'sanchez', en: 'Slate arch', km: 'ក្លោងប្រផេះខៀវ', Comp: T10, sections: ['photo', 'summary', 'contact', 'education', 'skills', 'languages', 'experience'] },
+  { key: 'thomas', en: 'Teal rounded', km: 'ខៀវបៃតងមូល', Comp: T11, eduNote: true, sections: ['photo', 'summary', 'contact', 'website', 'experience', 'education', 'skills', 'languages'] },
+  { key: 'adam', en: 'Charcoal band', km: 'ខ្សែប្រផេះខ្មៅ', Comp: T12, eduNote: true, sections: ['photo', 'summary', 'contact', 'skills', 'languages', 'education', 'experience'] },
+  { key: 'john', en: 'Sky blue wave', km: 'ខៀវមេឃរលក', Comp: T13, sections: ['photo', 'summary', 'contact', 'education', 'skills', 'experience', 'languages'] },
 ];
 export const tplOf = (k: string) => TEMPLATES.find(t => t.key === k) || TEMPLATES[0];
 
 /** When the customer chose "Achievements" for the work-experience slot, the achievements are fed to that slot (same layout, new heading). */
 function slotView(d: CvData, tpl: TplKey): CvData {
   if (d.expKind !== 'achievements') return d;
-  const titleFirst = tpl === 'daniel';   // this design puts the job title (not the company) on the bold first line
+  const titleFirst = tpl === 'daniel' || tpl === 'sacha' || tpl === 'olivia' || tpl === 'adam';   // this design puts the job title (not the company) on the bold first line
   return { ...d, experience: (d.achievements || []).map(a => ({ period: a.period, company: titleFirst ? '' : (a.title || ''), role: titleFirst ? (a.title || '') : '', desc: a.text })) };
 }
 
@@ -379,17 +596,18 @@ export function CvSheet({ tpl, data, blank = false, km = false, onFit }: { tpl: 
         const kids = Array.from(col.children) as HTMLElement[];
         if (!kids.length) continue;
         const last = kids[kids.length - 1];
+        const lim = Number(col.dataset.limit) || LIMIT;   // a column can set its own bottom (data-limit), e.g. content inside a panel that ends above the page bottom
         const setZoom = (k: number) => kids.forEach(c => { (c.style as any).zoom = k >= 1 ? '' : String(k); });
         const bottom = () => {
           const rr = rootEl.getBoundingClientRect(), sc = rr.width / rootEl.offsetWidth || 1;
           return (last.getBoundingClientRect().bottom - rr.top) / sc;
         };
         setZoom(1);
-        if (bottom() <= LIMIT) continue;
+        if (bottom() <= lim) continue;
         let lo = 0.2, hi = 1;
         setZoom(lo);
-        if (bottom() > LIMIT) { over = true; continue; }
-        for (let i = 0; i < 10; i++) { const mid = (lo + hi) / 2; setZoom(mid); if (bottom() <= LIMIT) lo = mid; else hi = mid; }
+        if (bottom() > lim) { over = true; continue; }
+        for (let i = 0; i < 10; i++) { const mid = (lo + hi) / 2; setZoom(mid); if (bottom() <= lim) lo = mid; else hi = mid; }
         setZoom(lo);
       }
       onFit?.(over);
