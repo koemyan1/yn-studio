@@ -18,3 +18,6 @@ export const supabase = createClient(
     },
   }
 );
+
+// Ask the browser not to clear the saved login when the phone is low on storage (iOS/Android home-screen app especially).
+try { if (typeof navigator !== 'undefined') navigator.storage?.persist?.().catch(() => {}); } catch { /* ignore */ }
