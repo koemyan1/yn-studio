@@ -246,22 +246,27 @@ const BK = {
   minutes: Math.min(Math.max(Number(env.BAKONG_QR_MINUTES || 10), 2), 60),
 };
 const bakongEnabled = () => !!(BK.token && BK.account && SB.url && SB.service && SB.anon);
-const bakongAmount = total => {
+const bakongAmount = (total, cur = BK.currency) => {
   const n = Number(total || 0);
-  return BK.currency === 'KHR' ? Math.round(n * BK.khrRate) : Number(n.toFixed(2));
+  return cur === 'KHR' ? Math.round(n * BK.khrRate) : Number(n.toFixed(2));
 };
+// Wallet top-ups can be paid in riel: pay.amount is then already a whole-riel amount (no conversion).
+const payCur = pay => (pay?.currency === 'KHR' ? 'KHR' : 'USD');
+const payExpected = pay => (payCur(pay) === 'KHR' ? Math.round(Number(pay.amount)) : bakongAmount(pay.amount));
+const payExpectedCur = pay => (payCur(pay) === 'KHR' ? 'KHR' : BK.currency);
 // Loaded on first use so the server still starts if the packages are not installed yet.
 let khqrLib = null, qrImageLib = null;
 const loadKhqr = () => (khqrLib ||= require('bakong-khqr'));
 const loadQrImage = () => (qrImageLib ||= require('qrcode'));
 
 /** Build a one-time KHQR for an order. */
-async function makeBakongQr(order) {
+async function makeBakongQr(order, opts = {}) {
   const { BakongKHQR, khqrData, IndividualInfo } = loadKhqr();
-  const amount = bakongAmount(order.total);
+  const cur = opts.currency || BK.currency;
+  const amount = opts.exactAmount != null ? opts.exactAmount : bakongAmount(order.total);
   const expiresAt = Date.now() + BK.minutes * 60000;
   const info = new IndividualInfo(BK.account, BK.name, BK.city, {
-    currency: BK.currency === 'KHR' ? khqrData.currency.khr : khqrData.currency.usd,
+    currency: cur === 'KHR' ? khqrData.currency.khr : khqrData.currency.usd,
     amount,
     billNumber: String(order.order_number || order.id).replace(/[^\w-]/g, '').slice(0, 25),
     expirationTimestamp: expiresAt,
@@ -271,7 +276,7 @@ async function makeBakongQr(order) {
     throw new Error(`KHQR generation failed: ${r?.status?.message || 'unknown error'}`);
   }
   const image = await loadQrImage().toDataURL(r.data.qr, { errorCorrectionLevel: 'M', margin: 1, width: 360 });
-  return { md5: r.data.md5, image, amount, expiresAt };
+  return { md5: r.data.md5, image, amount, expiresAt, currency: cur };
 }
 
 let lastBakongErrorAt = 0; // lets the status routes tell the browser "the bank check is not answering"
@@ -305,20 +310,21 @@ async function bakongCheck(md5) {
 
 /** Look through a QR's newest md5s for a confirmed Bakong payment of `total` (store currency, USD).
  *  Returns { hash } when confirmed, { mismatch: true } when money arrived but does not match, else null. */
-async function findBakongPayment(md5s, total, label) {
+async function findBakongPayment(md5s, total, label, want) {
   let mismatch = false;
   for (const md5 of [...(md5s || [])].reverse().slice(0, 5)) {
     const c = await bakongCheck(md5);
     if (c.state !== 'paid') continue;
     const d = c.data;
-    const expected = bakongAmount(total);
+    const expected = want?.amount != null ? want.amount : bakongAmount(total);
+    const expCur = want?.currency || BK.currency;
     const paid = Number(d.amount);
     const local = v => String(v || '').toLowerCase().split('@')[0];
     const toOk = !d.toAccountId || local(d.toAccountId) === local(BK.account);   // field can be missing on some responses
-    const curOk = !d.currency || String(d.currency).toUpperCase() === BK.currency;
-    const amtOk = Number.isFinite(paid) && Math.abs(paid - expected) <= (BK.currency === 'KHR' ? 0.5 : 0.009);
+    const curOk = !d.currency || String(d.currency).toUpperCase() === expCur;
+    const amtOk = Number.isFinite(paid) && Math.abs(paid - expected) <= (expCur === 'KHR' ? 0.5 : 0.009);
     if (toOk && curOk && amtOk) return { hash: String(d.hash || '') };
-    console.warn(`Bakong mismatch for ${label}: got ${paid} ${d.currency} to ${d.toAccountId}, expected ${expected} ${BK.currency} to ${BK.account}`);
+    console.warn(`Bakong mismatch for ${label}: got ${paid} ${d.currency} to ${d.toAccountId}, expected ${expected} ${expCur} to ${BK.account}`);
     mismatch = true;
   }
   return mismatch ? { mismatch: true } : null;
@@ -348,7 +354,7 @@ async function verifyBakong(order, md5s) {
 /** Wallet top-ups and debt payments: verify with Bakong, then let the database apply it exactly once. */
 async function verifyBakongPayment(pay) {
   if (pay.status === 'paid') return true;
-  const f = await findBakongPayment(pay.bakong_md5s, pay.amount, `payment ${pay.id}`);
+  const f = await findBakongPayment(pay.bakong_md5s, pay.amount, `payment ${pay.id}`, { amount: payExpected(pay), currency: payExpectedCur(pay) });
   if (!f) return false;
   if (f.mismatch) {
     await sb(`bakong_payments?id=eq.${pay.id}&status=eq.pending`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'mismatch' }) }).catch(() => {});
@@ -357,7 +363,8 @@ async function verifyBakongPayment(pay) {
   const applied = await sb('rpc/bakong_apply_payment', { method: 'POST', body: JSON.stringify({ p_payment_id: pay.id, p_hash: f.hash }) });
   if (applied === true) {
     const what = pay.kind === 'debt' ? 'a debt payment' : 'a wallet top-up';
-    await notifyAdmin('Bakong KHQR payment received', `A customer paid $${Number(pay.amount).toFixed(2)} as ${what} with Bakong KHQR.`, pay.kind === 'debt' ? '/admin/debt' : '/admin/transactions');
+    const shown = payCur(pay) === 'KHR' ? `${Math.round(Number(pay.amount)).toLocaleString('en-US')} KHR` : `$${Number(pay.amount).toFixed(2)}`;
+    await notifyAdmin('Bakong KHQR payment received', `A customer paid ${shown} as ${what} with Bakong KHQR.`, pay.kind === 'debt' ? '/admin/debt' : '/admin/transactions');
   }
   return true;
 }
@@ -384,7 +391,7 @@ app.get('/api/bakong/config', (_req, res) => {
   if (!SB.url) missing.push('SUPABASE_URL');
   if (!SB.service) missing.push('SUPABASE_SERVICE_ROLE_KEY');
   if (!SB.anon) missing.push('SUPABASE_ANON_KEY');
-  res.json({ enabled: bakongEnabled(), currency: BK.currency, merchant: BK.name, missing });
+  res.json({ enabled: bakongEnabled(), currency: BK.currency, khrRate: BK.khrRate, merchant: BK.name, missing });
 });
 
 app.post('/api/bakong/create', jsonBody, async (req, res) => {
@@ -417,7 +424,7 @@ app.post('/api/bakong/status', jsonBody, async (req, res) => {
   }
 });
 
-const PAY_FIELDS = 'id,user_id,kind,amount,status,bakong_md5s';
+const PAY_FIELDS = 'id,user_id,kind,amount,status,bakong_md5s,currency';
 async function payUser(req, res) {
   if (!bakongEnabled()) { res.status(503).json({ error: 'Bakong KHQR is not configured on the server yet.' }); return null; }
   if (limited(req, 120)) { res.status(429).json({ error: 'Too many requests. Please wait a moment.' }); return null; }
@@ -440,20 +447,26 @@ app.post('/api/bakong/pay/create', jsonBody, async (req, res) => {
     } else {
       const kind = String(req.body?.kind || '');
       if (!['wallet', 'debt'].includes(kind)) return res.status(400).json({ error: 'Invalid payment type.' });
-      const amount = Math.round(Number(req.body?.amount) * 100) / 100;
-      if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) return res.status(400).json({ error: 'Enter a valid amount.' });
-      if (bakongAmount(amount) <= 0) return res.status(400).json({ error: 'Amount is too small.' });
+      const inRiel = String(req.body?.currency || '').toUpperCase() === 'KHR';
+      if (inRiel && kind !== 'wallet') return res.status(400).json({ error: 'Riel is only available for wallet top-ups.' });
+      // Riel top-ups are whole riel (min 100 KHR, max 40,000,000 KHR); dollar payments keep cents.
+      const amount = inRiel ? Math.round(Number(req.body?.amount)) : Math.round(Number(req.body?.amount) * 100) / 100;
+      if (!Number.isFinite(amount) || amount <= 0 || amount > (inRiel ? 40000000 : 10000)) return res.status(400).json({ error: 'Enter a valid amount.' });
+      if (inRiel ? amount < 100 : bakongAmount(amount) <= 0) return res.status(400).json({ error: 'Amount is too small.' });
       if (kind === 'debt') {
         const d = (await sb(`debt_accounts?user_id=eq.${user.id}&enabled=eq.true&currency=eq.USD&select=current_balance&limit=1`))?.[0];
         if (!d || !(Number(d.current_balance) > 0)) return res.status(409).json({ error: 'You have no outstanding debt.' });
         if (amount > Number(d.current_balance) + 0.001) return res.status(400).json({ error: 'Payment cannot be greater than your current debt.' });
       }
-      pay = (await sb('bakong_payments', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ user_id: user.id, kind, amount }) }))?.[0];
+      pay = (await sb('bakong_payments', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ user_id: user.id, kind, amount, currency: inRiel ? 'KHR' : 'USD', khr_rate: BK.khrRate }) }))?.[0];
       if (!pay) throw new Error('Could not create payment row');
     }
-    const q = await makeBakongQr({ id: pay.id, total: pay.amount, order_number: (pay.kind === 'debt' ? 'DEBT-' : 'TOPUP-') + pay.id.replace(/-/g, '').slice(0, 8).toUpperCase() });
+    const q = await makeBakongQr(
+      { id: pay.id, total: pay.amount, order_number: (pay.kind === 'debt' ? 'DEBT-' : 'TOPUP-') + pay.id.replace(/-/g, '').slice(0, 8).toUpperCase() },
+      payCur(pay) === 'KHR' ? { currency: 'KHR', exactAmount: Math.round(Number(pay.amount)) } : {},
+    );
     await sb(`bakong_payments?id=eq.${pay.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_md5s: [...(pay.bakong_md5s || []), q.md5].slice(-10) }) });
-    res.json({ payment_id: pay.id, image: q.image, amount: q.amount, currency: BK.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: pay.kind === 'debt' ? 'debt' : 'wallet' });
+    res.json({ payment_id: pay.id, image: q.image, amount: q.amount, currency: q.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: pay.kind === 'debt' ? 'debt' : 'wallet' });
   } catch (e) {
     console.error('bakong pay create', e);
     res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });

@@ -23,6 +23,7 @@ type Chrome = {
   PayModal: React.ComponentType<{ cvId?: string; onClose: () => void; onPaid: (cleared?: boolean) => void }>;
   useWalletBalance: () => readonly [number | null, () => Promise<void> | void];
   useBakongEnabled: () => boolean | null;
+  walletMoney?: (usd: number) => string;
 };
 type Step = 'home' | 'language' | 'info' | 'pay' | 'generating' | 'editor';
 type CvLang = 'en' | 'km';
@@ -294,7 +295,7 @@ function CvGenerating({ tpl, data, km, onDone }: { tpl: TplKey; data: CvData; km
 }
 
 /* ================================================ MAIN ================================================ */
-export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakongEnabled }: Chrome) {
+export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakongEnabled, walletMoney }: Chrome) {
   useLang();
   const siteKm = isKm();
   const [step, setStep] = useState<Step>('home');
@@ -561,7 +562,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
               </button>
               <button type="button" role="radio" aria-checked={method === 'wallet'} className={'cvmPayOpt' + (method === 'wallet' ? ' on' : '')} disabled={bal === null || walletLow} onClick={() => setMethod('wallet')}>
                 <span className="cvmPayBadge w"><Wallet /></span>
-                <span><b>{tr('Wallet', 'កាបូប')}</b><small>{bal === null ? tr('Balance unavailable', 'មិនអាចមើលសមតុល្យបាន') : <>{tr('Balance', 'សមតុល្យ')} {money(bal)}{walletLow && <> · {tr('not enough', 'មិនគ្រប់គ្រាន់')}</>}</>}</small></span><i className="cvmRadio" />
+                <span><b>{tr('Wallet', 'កាបូប')}</b><small>{bal === null ? tr('Balance unavailable', 'មិនអាចមើលសមតុល្យបាន') : <>{tr('Balance', 'សមតុល្យ')} {(walletMoney || money)(bal)}{walletLow && <> · {tr('not enough', 'មិនគ្រប់គ្រាន់')}</>}</>}</small></span><i className="cvmRadio" />
               </button>
               {bkOn === false && <p className="cvmHint">{tr('KHQR is not available right now. You can still pay from your wallet.', 'KHQR មិនអាចប្រើបានទេឥឡូវនេះ។ អ្នកនៅតែអាចទូទាត់ពីកាបូបបាន។')}</p>}
             </div>
