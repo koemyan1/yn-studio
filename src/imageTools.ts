@@ -197,13 +197,39 @@ export function fillBehind(canvas: HTMLCanvasElement, fill: string): HTMLCanvasE
 export const canvasToBlob = (c: HTMLCanvasElement, type = 'image/png', q = 0.92): Promise<Blob> =>
   new Promise((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('Could not export image.'))), type, q));
 
-/** Admin upload helper: returns a transparent PNG File (or the original when removal is not possible). */
+/** Encode a canvas as small as possible: WebP when the browser can, otherwise JPEG (opaque) or PNG (transparent). */
+async function encodeSmall(c: HTMLCanvasElement, opaque: boolean): Promise<Blob> {
+  let blob = await canvasToBlob(c, 'image/webp', 0.86);
+  if (blob.type !== 'image/webp') blob = opaque ? await canvasToBlob(c, 'image/jpeg', 0.86) : await canvasToBlob(c, 'image/png');
+  return blob;
+}
+const extFor = (type: string) => (type === 'image/webp' ? '.webp' : type === 'image/jpeg' ? '.jpg' : '.png');
+
+/** Admin upload helper: returns a transparent File (WebP/PNG, max 1200px) or the original when removal is not possible. */
 export async function removeBackgroundFile(file: File, opts: BgRemoveOptions & { fill?: string } = {}): Promise<{ file: File; removed: boolean }> {
-  const c = await removeBackground(file, { maxSize: 2000, ...opts });
+  const c = await removeBackground(file, { maxSize: 1200, ...opts });
   if (!c) return { file, removed: false };
   const out = opts.fill ? fillBehind(c, opts.fill) : c;
-  const blob = await canvasToBlob(out, 'image/png');
-  return { file: new File([blob], file.name.replace(/\.[^.]+$/, '') + (opts.fill ? '-color' : '-transparent') + '.png', { type: 'image/png' }), removed: true };
+  const blob = await encodeSmall(out, false);
+  return { file: new File([blob], file.name.replace(/\.[^.]+$/, '') + (opts.fill ? '-color' : '-transparent') + extFor(blob.type), { type: blob.type }), removed: true };
+}
+
+/** Shrink a photo to at most `maxSide` px and re-encode it (WebP when supported) so product pages load fast. Falls back to the original file on any problem. */
+export async function optimizeImage(file: File, maxSide = 1200): Promise<File> {
+  try {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const W = Math.max(1, Math.round(bmp.width * k)), H = Math.max(1, Math.round(bmp.height * k));
+    if (k === 1 && file.type === 'image/webp' && file.size < 250_000) { bmp.close(); return file; }
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    if (!ctx) { bmp.close(); return file; }
+    ctx.drawImage(bmp, 0, 0, W, H); bmp.close();
+    const blob = await encodeSmall(c, file.type === 'image/jpeg');
+    if (k === 1 && blob.size >= file.size) return file; // no gain
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + extFor(blob.type), { type: blob.type });
+  } catch { return file; }
 }
 
 /** Shrink a picture before it is embedded in a theme (keeps the saved JSON small). */

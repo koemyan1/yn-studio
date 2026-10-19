@@ -519,18 +519,30 @@ export function ThemedImg({ src, alt = '', productId = '', className, style, loa
   const pi = cfg?.productImage;
   const mode: string = pi?.mode || 'original';
   const [url, setUrl] = useState<string>(mode === 'original' ? src : '');
+  // The (heavy) background cut-out only starts once the picture is close to the screen, not for every product at once.
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    if (mode === 'original' || near) return;
+    const el = imgRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setNear(true); return; }
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { setNear(true); io.disconnect(); } }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mode, near]);
   useEffect(() => {
     if (mode === 'original') { setUrl(src); return; }
-    let alive = true;
     setUrl('');
+    if (!near) return;
+    let alive = true;
     processedImageUrl(src, { tolerance: pi?.tolerance, fillHoles: pi?.fillHoles }).then(u => { if (alive) setUrl(u); });
     return () => { alive = false; };
-  }, [src, mode, pi?.tolerance, pi?.fillHoles]);
+  }, [src, mode, pi?.tolerance, pi?.fillHoles, near]);
   if (mode === 'original') return <img src={src} alt={alt} className={className} style={style} loading={loading} />;
   const seed = Number(pi.seed || 0) + getSeedOffset();
   const id = productId || src;
   const bg = mode === 'color' ? pi.color : mode === 'random' ? colorForProduct(id, seed, pi.palette, pi.customColors) : mode === 'gradient' ? gradientForProduct(id, seed, pi.palette, pi.customColors) : undefined;
-  return <img src={url || TRANSPARENT_GIF} alt={alt} className={className} loading={loading}
+  return <img ref={imgRef} src={url || TRANSPARENT_GIF} alt={alt} className={className} loading={loading}
     style={{ ...style, background: bg || style?.background, objectFit: pi.fit === 'contain' ? 'contain' : undefined, padding: pi.fit === 'contain' ? (pi.padding || 0) : undefined, boxSizing: 'border-box', transition: 'background .35s' }} />;
 }
 
