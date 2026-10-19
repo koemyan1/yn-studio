@@ -110,3 +110,13 @@ html:not([data-secret-theme="on"]) .shop.checkoutPage .payHint{text-align:center
   html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplyRow{flex-wrap:wrap}
   html:not([data-secret-theme="on"]) .shop.checkoutPage .couponApplyRow input{flex-basis:100%}
 }
+
+/* Payment method sits at the top of checkout, both options visible side by side (no scrolling to find them) */
+.checkoutPage .payOptGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+html:not([data-secret-theme="on"]) .shop.checkoutPage .payOptGrid .payOption{margin:0;min-width:0}
+.checkoutPage .payOptGrid .payOption{margin:0;text-align:left}
+.checkoutPage .payOptGrid .payOption small{overflow-wrap:anywhere}
+@media(max-width:560px){
+  .checkoutPage .payOptGrid .payOption{flex-direction:column;align-items:flex-start;gap:8px;padding:12px}
+  .checkoutPage .payOptGrid .payOption .payRadio{position:absolute;top:10px;right:10px;margin:0}
+}
