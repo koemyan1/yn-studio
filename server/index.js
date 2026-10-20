@@ -250,7 +250,7 @@ const bakongAmount = (total, cur = BK.currency) => {
   const n = Number(total || 0);
   return cur === 'KHR' ? Math.round(n * BK.khrRate) : Number(n.toFixed(2));
 };
-// Wallet top-ups can be paid in riel: pay.amount is then already a whole-riel amount (no conversion).
+// Wallet top-ups and debt payments can be in riel: pay.amount is then a whole-riel amount, kept in the separate riel wallet.
 const payCur = pay => (pay?.currency === 'KHR' ? 'KHR' : 'USD');
 const payExpected = pay => (payCur(pay) === 'KHR' ? Math.round(Number(pay.amount)) : bakongAmount(pay.amount));
 const payExpectedCur = pay => (payCur(pay) === 'KHR' ? 'KHR' : BK.currency);
@@ -448,13 +448,12 @@ app.post('/api/bakong/pay/create', jsonBody, async (req, res) => {
       const kind = String(req.body?.kind || '');
       if (!['wallet', 'debt'].includes(kind)) return res.status(400).json({ error: 'Invalid payment type.' });
       const inRiel = String(req.body?.currency || '').toUpperCase() === 'KHR';
-      if (inRiel && kind !== 'wallet') return res.status(400).json({ error: 'Riel is only available for wallet top-ups.' });
-      // Riel top-ups are whole riel (min 100 KHR, max 40,000,000 KHR); dollar payments keep cents.
+      // Riel payments are whole riel (min 100 KHR, max 40,000,000 KHR); dollar payments keep cents.
       const amount = inRiel ? Math.round(Number(req.body?.amount)) : Math.round(Number(req.body?.amount) * 100) / 100;
       if (!Number.isFinite(amount) || amount <= 0 || amount > (inRiel ? 40000000 : 10000)) return res.status(400).json({ error: 'Enter a valid amount.' });
       if (inRiel ? amount < 100 : bakongAmount(amount) <= 0) return res.status(400).json({ error: 'Amount is too small.' });
       if (kind === 'debt') {
-        const d = (await sb(`debt_accounts?user_id=eq.${user.id}&enabled=eq.true&currency=eq.USD&select=current_balance&limit=1`))?.[0];
+        const d = (await sb(`debt_accounts?user_id=eq.${user.id}&enabled=eq.true&currency=eq.${inRiel ? 'KHR' : 'USD'}&select=current_balance&limit=1`))?.[0];
         if (!d || !(Number(d.current_balance) > 0)) return res.status(409).json({ error: 'You have no outstanding debt.' });
         if (amount > Number(d.current_balance) + 0.001) return res.status(400).json({ error: 'Payment cannot be greater than your current debt.' });
       }
@@ -470,6 +469,26 @@ app.post('/api/bakong/pay/create', jsonBody, async (req, res) => {
   } catch (e) {
     console.error('bakong pay create', e);
     res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });
+  }
+});
+
+// Pay a RIEL debt from the RIEL wallet (separate from the dollar wallet, no conversion).
+app.post('/api/debt/wallet-khr', jsonBody, async (req, res) => {
+  try {
+    if (!(SB.url && SB.service && SB.anon)) return res.status(503).json({ error: 'Payments are not configured on the server yet.' });
+    if (limited(req, 60)) return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
+    const user = await userFromToken(req);
+    if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+    const amount = Math.round(Number(req.body?.amount));
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 40000000) return res.status(400).json({ error: 'Enter a valid amount.' });
+    const out = await sb('rpc/customer_pay_debt_khr', { method: 'POST', body: JSON.stringify({ p_user_id: user.id, p_amount: amount }) });
+    notifyAdmin('Riel debt paid from wallet', `A customer paid ${amount.toLocaleString('en-US')} KHR of their riel debt from their riel wallet.`, '/admin/debt');
+    res.json({ ok: true, balance: Number(out?.current_balance ?? 0) });
+  } catch (e) {
+    const m = String(e?.message || '');
+    const known = /Insufficient riel wallet balance|no outstanding riel debt|not enabled|greater than zero/i.exec(m);
+    if (!known) console.error('debt wallet-khr', e);
+    res.status(known ? 400 : 500).json({ error: known ? (/Insufficient/i.test(m) ? 'Insufficient riel wallet balance. Add riel to your wallet first.' : /not enabled|no outstanding/i.test(m) ? 'You have no outstanding riel debt.' : 'Enter a valid amount.') : 'Could not record the payment. Please try again.' });
   }
 });
 

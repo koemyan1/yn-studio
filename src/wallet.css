@@ -1,0 +1,49 @@
+/* Wallet page layout. Colours come from the current theme (currentColor), so Coraline / Spidey / Chiikawa / default all keep their own look. */
+
+/* hero: two balance tiles */
+html body .walletPage .walletHero.wlHero{display:block!important;min-height:0!important;padding:18px 18px 20px!important}
+.wlHeroTop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.wlBrand{font-weight:700;font-size:14px;opacity:.85}
+html body .wlHero .walletGlow{width:44px;height:44px;flex:none;border-radius:14px;transform:none;animation:none}
+.wlHero .walletGlow svg{width:22px;height:22px;transform:none}
+.wlTiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wlTile{display:flex;flex-direction:column;gap:6px;min-width:0;padding:14px;border-radius:18px;
+  background:rgba(255,255,255,.14);background:color-mix(in srgb,currentColor 9%,transparent);
+  border:1px solid rgba(255,255,255,.24);border:1px solid color-mix(in srgb,currentColor 20%,transparent)}
+.wlLabel{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;opacity:.88}
+.wlCoin{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor;font-style:normal;font-size:11px;font-weight:800;line-height:1}
+.wlAmt{font-family:var(--yn-display,inherit);font-size:clamp(21px,6.2vw,31px);font-weight:800;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+html body .wlHero .wlAdd{align-self:flex-start;margin-top:4px;display:inline-flex;align-items:center;gap:4px;padding:7px 13px;border-radius:999px;font-size:13px;font-weight:700;
+  background:color-mix(in srgb,currentColor 14%,transparent)!important;color:inherit!important;border:1px solid color-mix(in srgb,currentColor 30%,transparent)!important;box-shadow:none!important;text-shadow:none!important}
+.wlAdd svg{width:14px;height:14px}
+
+/* top-up panel */
+.wlPanel{padding:20px}
+.wlPanel>h2{margin:0 0 4px}
+.wlPanel>p{margin:0 0 14px;max-width:560px}
+.wlForm{display:grid;gap:14px;margin-top:14px}
+.wlField{display:flex;align-items:center;gap:10px;padding:4px 16px;border-radius:18px;
+  border:2px solid color-mix(in srgb,currentColor 18%,transparent);background:color-mix(in srgb,currentColor 4%,transparent)}
+.wlField:focus-within{border-color:currentColor}
+.wlPre{font-size:26px;font-weight:800;opacity:.55}
+html body .wlField input{flex:1;min-width:0;width:100%;border:0!important;outline:0;background:transparent!important;box-shadow:none!important;color:inherit;
+  font-family:var(--yn-display,inherit);font-size:30px;font-weight:800;letter-spacing:-.02em;padding:10px 0;font-variant-numeric:tabular-nums}
+.wlChips{display:flex;flex-wrap:wrap;gap:8px}
+html body .wlChip{padding:8px 14px;border-radius:999px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;
+  background:transparent!important;color:inherit!important;border:1.5px solid color-mix(in srgb,currentColor 28%,transparent)!important;box-shadow:none!important;text-shadow:none!important}
+html body .wlChip.on{background:color-mix(in srgb,currentColor 16%,transparent)!important;border-color:currentColor!important}
+.wlHint{font-size:13px;opacity:.75}
+
+/* activity */
+.wlFilters{display:flex;gap:8px;margin:2px 0 4px;flex-wrap:wrap}
+.wlGroup{margin:18px 2px 8px;font-size:13px;font-weight:700;opacity:.65}
+.wlRow{gap:12px!important}
+.wlIco{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,currentColor 10%,transparent)}
+.wlIco svg{width:18px;height:18px}
+.wlIco.in{background:rgba(22,138,87,.16);color:#168a57}
+.wlRowText{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.wlRowText b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wlTag{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid color-mix(in srgb,currentColor 30%,transparent)}
+.wlRowAmt{white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+.wlRowAmt.in{color:#168a57}
+@media(max-width:380px){.wlTiles{grid-template-columns:1fr}}
