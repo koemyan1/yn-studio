@@ -3,6 +3,11 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { createStore } from './security/store.js';
+import { createAlerts } from './security/alerts.js';
+import { createShield } from './security/shield.js';
+import { createAdminApi } from './security/adminApi.js';
+import { createIntegrity } from './security/integrity.js';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -13,11 +18,11 @@ const env = process.env;
 
 app.set('trust proxy', 1); // Render / most hosts terminate HTTPS in front of Node
 
-// Camera permission for the package scanner in the deployed app/PWA.
-app.use((_req, res, next) => {
-  res.setHeader('Permissions-Policy', 'camera=(self)');
-  next();
-});
+app.disable('x-powered-by');
+// Security shield (headers incl. the camera permission for the package scanner, honeypots, WAF-lite, rate limits,
+// auto IP blocking). It is created further down once the database helpers exist; until then requests just pass through.
+let shield = null;
+app.use((req, res, next) => (shield ? shield.middleware(req, res, next) : next()));
 // The app can be opened from more than one address (ynstudio.site, www., the old onrender.com address...). Calls to /api carry a
 // Bearer token (no cookies), so allowing any origin is safe and stops "works on one address, not on the other" payment problems.
 app.use('/api', (req, res, next) => {
@@ -65,13 +70,9 @@ const sign = s => crypto.createHmac('sha512', ABA.key).update(s, 'utf8').digest(
 const reqTime = () => new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14); // UTC YYYYMMDDHHmmss
 const cleanName = v => String(v || '').replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 20);
 
-// very small per-IP rate limit for the authenticated endpoints
-const hits = new Map();
-function limited(req, max = 30) {
-  const k = req.ip, now = Date.now(), arr = (hits.get(k) || []).filter(t => now - t < 60000);
-  arr.push(now); hits.set(k, arr);
-  return arr.length > max;
-}
+// Per-IP rate limit for the authenticated endpoints (now backed by the security shield: real client IP behind
+// Cloudflare, automatic cleanup, and repeated abuse feeds the auto-block score).
+function limited(req, max = 30) { return shield ? shield.limited(req, max) : false; }
 
 async function sb(pathAndQuery, init = {}) {
   const r = await fetch(`${SB.url}/rest/v1/${pathAndQuery}`, {
@@ -91,6 +92,18 @@ async function userFromToken(req) {
   const u = await r.json();
   return u?.id ? { id: u.id, email: u.email || '' } : null;
 }
+
+/* ------------------------------------------------------------------ *
+ *  Security layer (setup + dashboard: SECURITY-SETUP.md, /admin/security)
+ * ------------------------------------------------------------------ */
+const secStore = createStore({ sb, enabled: !!(SB.url && SB.service) });
+const secAlerts = createAlerts({ notify: (title, message, link) => notifyAdmin(title, message, link) });
+shield = createShield({ store: secStore, alerts: secAlerts });
+const integrity = createIntegrity({ sb, store: secStore, alerts: secAlerts });
+const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
+app.use('/api/admin/security', adminApi.handler);
+app.post('/api/security/csp-report', shield.limiter('csp-report', 30), express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '20kb' }), adminApi.cspReport);
+const ORDER_CHECK_MSG = 'We could not verify this order\'s price. Please go back to your cart and place the order again.';
 
 const toAmount = total => {
   const n = Number(total || 0);
@@ -129,6 +142,10 @@ async function verifyAndApply(order, tranId) {
     await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ aba_status: 'AMOUNT_MISMATCH' }) }).catch(() => {});
     return false;
   }
+  if (!(await integrity.check(order, null, 'verifyAndApply')).ok) {
+    await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ aba_status: 'INTEGRITY_FAIL' }) }).catch(() => {});
+    return false;
+  }
   const updated = await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, {
     method: 'PATCH', headers: { Prefer: 'return=representation' },
     body: JSON.stringify({ payment_status: 'paid', status: 'paid', aba_status: 'APPROVED', aba_apv: String(d.apv || ''), aba_paid_at: new Date().toISOString() }),
@@ -142,7 +159,7 @@ async function verifyAndApply(order, tranId) {
   return true;
 }
 
-app.get('/api/aba/config', (_req, res) => res.json({ enabled: abaEnabled(), env: ABA.base.includes('sandbox') ? 'sandbox' : 'production', currency: ABA.currency }));
+app.get('/api/aba/config', shield.limiter('cfg', 60), (_req, res) => res.json({ enabled: abaEnabled(), env: ABA.base.includes('sandbox') ? 'sandbox' : 'production', currency: ABA.currency }));
 
 app.post('/api/aba/purchase', jsonBody, async (req, res) => {
   try {
@@ -158,6 +175,7 @@ app.post('/api/aba/purchase', jsonBody, async (req, res) => {
     if (order.payment_status === 'paid') return res.status(409).json({ error: 'This order is already paid.' });
     if (['cancelled', 'rejected'].includes(order.status)) return res.status(409).json({ error: 'This order was cancelled.' });
     if (!(Number(order.total) > 0)) return res.status(400).json({ error: 'This order has no amount to pay.' });
+    if (!(await integrity.check(order, req, '/api/aba/purchase')).ok) return res.status(409).json({ error: ORDER_CHECK_MSG });
 
     const digits = String(order.order_number || '').replace(/\D/g, '') || order.id.replace(/-/g, '').slice(0, 8);
     const tranId = ('YN' + digits + crypto.randomBytes(3).toString('hex')).slice(0, 20); // unique per attempt, alphanumeric
@@ -192,7 +210,7 @@ app.post('/api/aba/purchase', jsonBody, async (req, res) => {
 });
 
 // PayWay "pushback". We only use the tran_id, then verify with PayWay ourselves.
-app.post('/api/aba/callback', jsonBody, formBody, async (req, res) => {
+app.post('/api/aba/callback', shield.limiter('aba-callback', 60), jsonBody, formBody, async (req, res) => {
   res.json({ ok: true });
   try {
     if (!abaEnabled()) return;
@@ -343,6 +361,10 @@ async function verifyBakong(order, md5s) {
     await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_status: 'MISMATCH' }) }).catch(() => {});
     return false;
   }
+  if (!(await integrity.check(order, null, 'verifyBakong')).ok) {
+    await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ bakong_status: 'INTEGRITY_FAIL' }) }).catch(() => {});
+    return false;
+  }
   const updated = await sb(`orders?id=eq.${order.id}&payment_status=neq.paid`, {
     method: 'PATCH', headers: { Prefer: 'return=representation' },
     body: JSON.stringify({ payment_status: 'paid', status: 'paid', bakong_status: 'PAID', bakong_hash: f.hash, bakong_paid_at: new Date().toISOString() }),
@@ -375,6 +397,7 @@ async function ownOrder(req, res) {
   if (limited(req, 120)) { res.status(429).json({ error: 'Too many requests. Please wait a moment.' }); return null; }
   const user = await userFromToken(req);
   if (!user) { res.status(401).json({ error: 'Please sign in again.' }); return null; }
+  if (shield.userLimited(user.id, 'order-pay', 90, 60000, req)) { res.status(429).json({ error: 'Too many requests. Please wait a moment.' }); return null; }
   const orderId = String(req.body?.order_id || '');
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) { res.status(400).json({ error: 'Invalid order.' }); return null; }
   const rows = await sb(`orders?id=eq.${orderId}&select=${ORDER_FIELDS}&limit=1`);
@@ -383,7 +406,7 @@ async function ownOrder(req, res) {
   return order;
 }
 
-app.get('/api/bakong/config', (_req, res) => {
+app.get('/api/bakong/config', shield.limiter('cfg', 60), (_req, res) => {
   // `missing` only lists the NAMES of unset variables (never values) so you can see why KHQR is off.
   const missing = [];
   if (!BK.token) missing.push('BAKONG_API_TOKEN');
@@ -400,6 +423,7 @@ app.post('/api/bakong/create', jsonBody, async (req, res) => {
     if (order.payment_status === 'paid') return res.json({ paid: true });
     if (['cancelled', 'rejected'].includes(order.status)) return res.status(409).json({ error: 'This order was cancelled.' });
     if (!(Number(order.total) > 0)) return res.status(400).json({ error: 'This order has no amount to pay.' });
+    if (!(await integrity.check(order, req, '/api/bakong/create')).ok) return res.status(409).json({ error: ORDER_CHECK_MSG });
     const q = await makeBakongQr(order);
     await sb(`orders?id=eq.${order.id}`, {
       method: 'PATCH', headers: { Prefer: 'return=minimal' },
@@ -437,6 +461,7 @@ async function payUser(req, res) {
 app.post('/api/bakong/pay/create', jsonBody, async (req, res) => {
   try {
     const user = await payUser(req, res); if (!user) return;
+    if (shield.userLimited(user.id, 'pay-create', 10, 60000, req)) return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
     let pay = null;
     if (req.body?.payment_id) {
       const id = String(req.body.payment_id);
@@ -569,6 +594,7 @@ app.post('/api/cv/save', bigJson, async (req, res) => {
     if (limited(req, 120)) return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
     const user = await userFromToken(req);
     if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+    if (shield.userLimited(user.id, 'cv-save', 30, 60000, req)) return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
     const b = req.body || {};
     const data = b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : null;
     if (!data || JSON.stringify(data).length > 1200000) return res.status(400).json({ error: 'The CV data is missing or too big.' });
@@ -588,7 +614,7 @@ app.post('/api/cv/save', bigJson, async (req, res) => {
     res.json({ id: row.id, price: Number(row.price), status: row.status });
   } catch (e) {
     console.error('cv save', e);
-    res.status(500).json({ error: 'Could not save your CV. ' + String(e?.message || '').slice(0, 160) });
+    res.status(500).json({ error: 'Could not save your CV. Please try again.' });
   }
 });
 
@@ -605,7 +631,7 @@ app.post('/api/bakong/cv/create', jsonBody, async (req, res) => {
     res.json({ image: q.image, amount: q.amount, currency: BK.currency, expiresAt: q.expiresAt, merchant: BK.name, order_number: cvNo(cv) });
   } catch (e) {
     console.error('bakong cv create', e);
-    res.status(500).json({ error: 'Could not create the KHQR. ' + String(e?.message || '').slice(0, 160) });
+    res.status(500).json({ error: 'Could not create the KHQR. Please try again.' });
   }
 });
 
@@ -622,7 +648,12 @@ app.post('/api/bakong/cv/status', jsonBody, async (req, res) => {
 
 /* Diagnose "the QR shows but never gets approved": open /api/bakong/health in the browser.
    It asks Bakong about a made-up MD5 and tells you whether the token, the IP or the network is the problem. */
-app.get('/api/bakong/health', async (_req, res) => {
+const healthCache = { t: 0, body: null };
+app.get('/api/bakong/health', shield.limiter('bakong-health', 6), async (_req, res) => {
+  // Each call asks Bakong a live question, so answers are cached for 30s (stops this public page being used to burn your Bakong API quota).
+  if (healthCache.body && Date.now() - healthCache.t < 30000) return res.json(healthCache.body);
+  const send = res.json.bind(res);
+  res.json = body => { healthCache.t = Date.now(); healthCache.body = body; return send(body); };
   const out = { tokenSet: !!BK.token, account: BK.account, base: BK.base, currency: BK.currency };
   if (!BK.token) return res.json({ ...out, ok: false, verdict: 'BAKONG_API_TOKEN is not set on the server.' });
   try {
@@ -648,5 +679,16 @@ app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
+// Last-resort error handler: never leak stack traces / internal messages; count malformed payloads as mild abuse.
+app.use((err, req, res, _next) => {
+  const status = Number(err?.status || err?.statusCode) || 500;
+  if (status >= 500) console.error('unhandled error', err);
+  else shield?.strike(req.sec?.ip || 'unknown', 'bad_payload', 1, { method: req.method, path: String(req.originalUrl || '').split('?')[0], ua: req.get?.('user-agent'), details: { status, type: err?.type } });
+  if (res.headersSent) return;
+  res.status(status >= 400 && status < 600 ? status : 500).json({ error: status === 413 ? 'Request too large.' : status < 500 ? 'Bad request.' : 'Server error.' });
+});
+process.on('unhandledRejection', e => console.error('unhandledRejection', e));
+
 const port = Number(process.env.PORT || 3000);
+shield.init().catch(e => console.warn('[security] init failed (shield keeps working in memory):', e?.message || e));
 app.listen(port, () => console.log(`YN Studio server listening on ${port}${abaEnabled() ? ' (ABA PayWay ' + (ABA.base.includes('sandbox') ? 'sandbox' : 'production') + ')' : ''}${bakongEnabled() ? ' (Bakong KHQR ' + BK.account + ')' : ''}`));

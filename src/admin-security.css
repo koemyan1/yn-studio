@@ -1,0 +1,23 @@
+.secPage .secBar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.secPage .secBar small{color:var(--a-mute)}
+.secPage .secBadges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.secPage .secBadge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid var(--a-line);background:var(--a-card);color:var(--a-text)}
+.secPage .secBadge.ok{color:#15803d;border-color:#86efac}
+.secPage .secBadge.warn{color:#b45309;border-color:#fcd34d}
+.secPage .secBadge.bad{color:#b91c1c;border-color:#fca5a5}
+.secPage .stats{margin-bottom:16px}
+.secPage .secGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.secPage .secGrid{grid-template-columns:1fr}}
+.secPage .secScroll{overflow-x:auto}
+.secPage table{width:100%;border-collapse:collapse;font-size:13px}
+.secPage th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--a-mute);padding:6px 8px;white-space:nowrap}
+.secPage td{padding:8px;border-top:1px solid var(--a-line);color:var(--a-text);vertical-align:top}
+.secPage td code{font-size:12px;word-break:break-all}
+.secPage .sev{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;background:var(--a-soft);color:var(--a-text)}
+.secPage .sev.high{background:#fee2e2;color:#991b1b}.secPage .sev.medium{background:#fef3c7;color:#92400e}
+.secPage .secBars{display:flex;align-items:flex-end;gap:3px;height:90px}
+.secPage .secBars i{flex:1;background:var(--a-accent);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+.secPage .secForm{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.secPage .secForm input{flex:1 1 140px;min-width:0}
+.secPage .secMuted{color:var(--a-mute);font-size:13px}
+.secPage button.small{padding:6px 12px;font-size:12px}

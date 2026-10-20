@@ -70,3 +70,6 @@ In Theme Studio, use **Customer preview** to see the actual storefront or **Drag
 
 ## v3 additions
 See `CHANGELOG-V3-THEME-STUDIO.md` (Theme Studio: categories, product picture backgrounds, buttons/elements with actions & motion, dark mode, Khmer switch) and `ABA-PAYWAY-SETUP.md`.
+
+## Security
+See `SECURITY-REPORT.md` (findings + what is still open) and `SECURITY-SETUP.md` (step by step, all free). Dashboard: `/admin/security`.

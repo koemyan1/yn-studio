@@ -11,7 +11,11 @@
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
-    "mobile:setup": "npm install && npx cap add android && npx cap add ios && npx cap sync"
+    "mobile:setup": "npm install && npx cap add android && npx cap add ios && npx cap sync",
+    "test": "node --test tests/security.test.mjs",
+    "test:e2e": "node --test tests/e2e-server.test.mjs",
+    "security:smoke": "node tools/security-smoke.mjs",
+    "dev:server": "node server/index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
