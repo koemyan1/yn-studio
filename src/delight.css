@@ -1,0 +1,33 @@
+/* Fly-to-cart, cart badge, added-checkmark and rolling numbers (see delight.tsx). */
+
+.rollNum{font-variant-numeric:tabular-nums}
+
+/* the copy of the product photo that flies into the cart */
+.flyPhoto{position:fixed;z-index:10000;margin:0;max-width:none;object-fit:cover;pointer-events:none;
+  border-radius:16px;box-shadow:0 10px 28px rgba(60,20,120,.35);will-change:transform,opacity}
+
+/* cart count bubble (bottom nav + product-page header) */
+.bottom a[data-cart-target],.cartTopButton{position:relative}
+.cartBadge{position:absolute;top:2px;left:calc(50% + 6px);z-index:2;box-sizing:border-box;min-width:17px;height:17px;
+  padding:0 4px;border-radius:999px;background:#ef3b6d;color:#fff;font:800 10px/17px Inter,system-ui,sans-serif;
+  text-align:center;box-shadow:0 0 0 2px var(--card,#fff);pointer-events:none}
+.cartTopButton .cartBadge{top:-4px;left:auto;right:-4px}
+.cartBadge.bump{animation:ynBadgeBounce .6s cubic-bezier(.28,1.6,.5,1)}
+@keyframes ynBadgeBounce{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.6) translateY(-3px)}
+  55%{transform:scale(.88)}
+  78%{transform:scale(1.15)}
+  100%{transform:scale(1)}
+}
+
+/* Add-to-cart button: briefly shows a drawn checkmark */
+.detail .stickyActions button.isAdded{background:#12a150!important;border-color:#12a150!important;color:#fff!important;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background .25s,color .25s}
+.addedCheck path{stroke-dasharray:24;stroke-dashoffset:24;animation:ynCheckDraw .38s .05s ease-out forwards}
+@keyframes ynCheckDraw{to{stroke-dashoffset:0}}
+
+@media (prefers-reduced-motion:reduce){
+  .cartBadge.bump{animation:none}
+  .addedCheck path{animation:none;stroke-dashoffset:0}
+}

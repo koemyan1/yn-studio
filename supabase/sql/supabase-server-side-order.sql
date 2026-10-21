@@ -127,7 +127,7 @@ begin
   for ci in
     select c.* from public.cart_items c join public.carts k on k.id = c.cart_id
      where c.id = any (p_cart_item_ids) and k.user_id = v_uid
-     order by c.created_at, c.id
+     order by array_position(p_cart_item_ids, c.id), c.id
   loop
     select * into p from public.products where id = ci.product_id and status = 'published';
     if not found then raise exception 'A product in your cart is no longer available.'; end if;
