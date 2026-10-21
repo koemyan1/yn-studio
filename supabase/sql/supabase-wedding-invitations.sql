@@ -59,3 +59,16 @@ create policy "invitation assets admin update" on storage.objects for update
 drop policy if exists "invitation assets admin delete" on storage.objects;
 create policy "invitation assets admin delete" on storage.objects for delete
   using (bucket_id = 'invitation-assets' and exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin'));
+
+-- 4) Admin-only notes (preferred completion date, special requests, designer instructions).
+-- Kept in their own table because guests may read the published invitation row above.
+create table if not exists public.wedding_invitation_private (
+  invitation_id uuid primary key references public.wedding_invitations(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.wedding_invitation_private enable row level security;
+drop policy if exists "invitation private admin all" on public.wedding_invitation_private;
+create policy "invitation private admin all" on public.wedding_invitation_private for all
+  using (exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin'))
+  with check (exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin'));

@@ -15,7 +15,7 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivHeroShade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.18) 40%,rgba(0,0,0,.6))}
 .ivHeroIn{position:relative;display:grid;gap:14px;justify-items:center}
 .ivKicker{margin:0;letter-spacing:.28em;text-transform:uppercase;font-size:clamp(11px,3.2cqw,14px);opacity:.92}
-.ivNames{margin:0;font-family:var(--iv-script);font-weight:400;font-size:clamp(46px,17cqw,92px);line-height:1.02;display:grid;gap:2px;text-shadow:0 4px 24px rgba(0,0,0,.4)}
+.ivNames{margin:0;font-family:var(--iv-names);font-weight:400;font-size:clamp(46px,17cqw,92px);line-height:1.02;display:grid;gap:2px;text-shadow:0 4px 24px rgba(0,0,0,.4)}
 .ivNames em{font-style:normal;font-size:.55em;opacity:.9}
 .ivHeroDate{display:flex;align-items:center;gap:8px;margin:6px 0 0;font-size:clamp(13px,3.6cqw,17px);letter-spacing:.06em;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);padding:9px 16px;border-radius:999px;flex-wrap:wrap;justify-content:center}
 .ivHeroDate svg{width:18px;height:18px}
@@ -26,7 +26,7 @@ body.ivPublicBody{background:#111;overflow:hidden}
 
 /* sections */
 .ivSec{max-width:560px;margin:0 auto;padding:46px 24px 8px;text-align:center}
-.ivSec h3{font-family:var(--iv-script);font-weight:400;font-size:clamp(30px,9cqw,42px);color:var(--iv-accent);margin:0 0 16px}
+.ivSec h3{font-family:var(--iv-title);font-weight:400;font-size:clamp(30px,9cqw,42px);color:var(--iv-accent);margin:0 0 16px}
 .ivBig{font-size:30px!important}
 .ivMessage{font-size:clamp(16px,4.4cqw,19px);line-height:1.8;margin:0;white-space:pre-line}
 .ivHost{margin:18px 0 0;font-style:italic;opacity:.8}
@@ -50,7 +50,7 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivGallery img{width:100%;display:block;border-radius:16px;margin:0 0 10px;break-inside:avoid;box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .ivEnd{padding-bottom:90px;display:grid;justify-items:center;gap:8px}
 .ivEnd svg{width:28px;height:28px;color:var(--iv-accent)}
-.ivEnd p{margin:0;font-family:var(--iv-script);font-size:clamp(24px,7cqw,32px);color:var(--iv-accent)}
+.ivEnd p{margin:0;font-family:var(--iv-title);font-size:clamp(24px,7cqw,32px);color:var(--iv-accent)}
 .ivEnd small{opacity:.55}
 .ivReveal{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
 .ivReveal.on{opacity:1;transform:none}
@@ -87,7 +87,7 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivOpenShade{position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(0,0,0,.05),rgba(0,0,0,.62))}
 .ivOpenCenter,.ivEnvStage{position:relative;z-index:5;display:grid;justify-items:center;gap:18px;text-align:center;padding:24px;max-width:100%}
 .ivOpenKicker{margin:0;letter-spacing:.34em;text-transform:uppercase;font-size:12px;opacity:.92;text-shadow:0 2px 12px rgba(0,0,0,.5)}
-.ivOpenNames{margin:0;font-family:var(--iv-script);font-weight:400;font-size:clamp(46px,16cqw,86px);line-height:1.05;text-shadow:0 4px 26px rgba(0,0,0,.55)}
+.ivOpenNames{margin:0;font-family:var(--iv-names);font-weight:400;font-size:clamp(46px,16cqw,86px);line-height:1.05;text-shadow:0 4px 26px rgba(0,0,0,.55)}
 .ivOpenBtn{background:rgba(255,255,255,.94);color:var(--iv-accent);border:0;border-radius:999px;padding:15px 30px;font:800 15px system-ui,sans-serif;letter-spacing:.04em;box-shadow:0 14px 40px rgba(0,0,0,.35);animation:ivPulse 2.2s ease-in-out infinite;gap:9px}
 .ivOpenBtn svg{width:18px;height:18px;fill:currentColor}
 @keyframes ivPulse{0%,100%{transform:scale(1);box-shadow:0 14px 40px rgba(0,0,0,.35)}50%{transform:scale(1.06);box-shadow:0 14px 50px rgba(255,255,255,.28)}}
@@ -133,7 +133,7 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivEnvFlap{z-index:4;background:color-mix(in srgb,var(--iv-accent) 40%,#fff);clip-path:polygon(0 0,100% 0,50% 58%);transform-origin:top center;transition:transform .9s ease,z-index 0s .45s;box-shadow:0 4px 10px rgba(0,0,0,.2)}
 .ivEnvCard{position:absolute;left:7%;right:7%;top:8%;bottom:8%;background:var(--iv-card);border-radius:6px;z-index:2;display:grid;place-content:center;justify-items:center;gap:4px;text-align:center;color:var(--iv-text);transition:transform 1s ease .8s,z-index 0s .8s;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
 .ivEnvCard small{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--iv-accent)}
-.ivEnvCard b{font-family:var(--iv-script);font-weight:400;font-size:clamp(20px,7cqw,28px);line-height:1.1}
+.ivEnvCard b{font-family:var(--iv-names);font-weight:400;font-size:clamp(20px,7cqw,28px);line-height:1.1}
 .ivSeal{position:absolute;z-index:6;left:50%;top:58%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;padding:0;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--iv-accent) 70%,#fff),var(--iv-accent) 60%,color-mix(in srgb,var(--iv-accent) 70%,#000));color:#fff;border:0;box-shadow:0 5px 14px rgba(0,0,0,.45);animation:ivBeat 1.6s ease-in-out infinite;transition:opacity .3s}
 .ivSeal svg{width:24px;height:24px}
 @keyframes ivBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
@@ -217,3 +217,50 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivLang{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:70;display:flex;padding:3px;gap:2px;border-radius:999px;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);box-shadow:0 6px 20px rgba(0,0,0,.25);border:0}
 .ivLang b{padding:6px 11px;border-radius:999px;font:700 12px system-ui,'Kantumruy Pro',sans-serif;color:#6b4a57;transition:all .2s}
 .ivLang b.on{background:var(--iv-accent);color:#fff}
+
+/* couple section */
+.ivCouple{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:40px}
+.ivPerson{display:grid;justify-items:center;gap:8px}
+.ivAvatar{width:min(150px,36cqw);aspect-ratio:1;border-radius:50%;background:var(--iv-soft) center/cover;border:4px solid var(--iv-card);box-shadow:0 0 0 2px var(--iv-accent),0 14px 30px rgba(0,0,0,.18);display:grid;place-items:center;color:var(--iv-accent)}
+.ivAvatar.empty svg{width:34px;height:34px;opacity:.6}
+.ivPerson b{font-family:var(--iv-names);font-weight:400;font-size:clamp(24px,7.5cqw,34px);color:var(--iv-accent);line-height:1.1}
+.ivPerson small{opacity:.78;line-height:1.55;font-size:13px}
+.ivCard b,.ivHeroDate{white-space:pre-line}
+.ivTimeline li{grid-template-columns:104px 1fr}
+.ivWhen{display:grid;gap:2px}
+.ivWhen small{opacity:.65;font-size:11px;line-height:1.3}
+.ivTimeline span{line-height:1.5}
+
+/* admin: new form pieces */
+.ivSubHead{margin:10px 0 0;padding-top:14px;border-top:1px dashed var(--line);font-size:14px;color:var(--purple)}
+.ivSubHead:first-child{border-top:0;margin-top:0;padding-top:0}
+.ivChips{display:flex;gap:8px;flex-wrap:wrap}
+.ivChip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:var(--soft);color:var(--purple);border:1px solid #d9c8ef;font-weight:700;font-size:13px}
+.ivChip svg{width:14px;height:14px}
+.ivEvent{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fcfaff}
+.ivEventRow{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.ivTemplates{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.ivTpl{display:grid;gap:5px;text-align:left;justify-items:start;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:16px;padding:10px;font-weight:600;align-items:start}
+.ivTpl small{font-weight:500;color:var(--muted);line-height:1.35}
+.ivTpl.on{border-color:var(--purple);background:var(--soft);box-shadow:0 0 0 4px #7c3aed18}
+.ivTplArt{display:block;width:100%;height:54px;border-radius:10px;border:1px solid rgba(0,0,0,.08)}
+.ivPhotoPair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ivPhotoTile{display:grid;gap:8px;justify-items:center;text-align:center;padding:12px;border:1px solid var(--line);border-radius:16px;background:#fcfaff}
+.ivPhotoTile .ivPickThumb{width:100px;height:100px;border-radius:50%}
+.ivSeg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ivSeg button{display:grid;gap:2px;padding:11px 6px;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:14px;justify-items:center}
+.ivSeg button small{color:var(--muted);font-weight:500}
+.ivSeg button.on{border-color:var(--purple);background:var(--soft);box-shadow:0 0 0 4px #7c3aed18}
+@media(max-width:600px){.ivEventRow{grid-template-columns:1fr 1fr}.ivEventRow .icon{grid-column:1/-1;justify-self:end}.ivTemplates{grid-template-columns:1fr 1fr}}
+
+/* Khmer Muol fonts are wide and tall: smaller size, roomier lines */
+.ivNames.ivKh,.ivOpenNames.ivKh{font-size:clamp(24px,8.6cqw,44px);line-height:1.75;letter-spacing:0}
+.ivNames.ivKh em{font-size:.8em}
+.ivRoot[data-kh="1"] .ivSec h3{font-size:clamp(17px,5.2cqw,23px);line-height:1.9}
+.ivRoot[data-kh="1"] .ivEnd p{font-size:clamp(16px,4.8cqw,21px);line-height:1.9}
+.ivRoot[data-kh="1"] .ivPerson b{font-size:clamp(16px,5cqw,22px);line-height:1.8}
+.ivRoot[data-kh="1"] .ivMessage,.ivRoot[data-kh="1"] .ivTimeline span,.ivRoot[data-kh="1"] .ivCard b{line-height:1.95}
+.ivRoot[data-kh="1"] .ivKicker{letter-spacing:.04em;line-height:1.8}
+.ivKhRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+.ivKhSample{padding:10px 12px;border:1px dashed #cdb8ec;border-radius:12px;background:#fcfaff;font-size:18px;line-height:1.8;text-align:center;overflow-wrap:anywhere}
+@media(max-width:600px){.ivKhRow{grid-template-columns:1fr}}
