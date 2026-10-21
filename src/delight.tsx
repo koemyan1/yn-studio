@@ -1,7 +1,7 @@
 /* Small "delight" effects for the customer storefront (all visuals live in delight.css).
    - <RollNumber n="$12.50"/>   money that rolls up/down to its new value instead of snapping
    - flyToCart(photo, button)   product photo shrinks and arcs into the cart icon
-   - <CartBadge/>               item-count bubble on the cart icon; bounces when a photo lands
+   - <CartBadge/>               small round red circle with the item count on the cart icon; bounces when a photo lands
    - <AddedCheck/>              little drawn checkmark for the Add-to-cart button
    Everything is skipped when the device asks for "reduce motion". No libraries, no cost. */
 import React, { useEffect, useRef, useState } from 'react';
@@ -121,9 +121,7 @@ export function CartBadge() {
   const [n, bump] = useCartCount();
   if (n < 1) return null;
   return (
-    <b key={bump} className={'cartBadge' + (bump ? ' bump' : '')} aria-label={n + ' in cart'}>
-      {n > 99 ? '99+' : n}
-    </b>
+    <b key={bump} className={'cartDot' + (bump ? ' bump' : '')} aria-label={n + ' in cart'}>{n > 9 ? '9+' : n}</b>
   );
 }
 
@@ -199,7 +197,10 @@ export function flyToCart(photo: HTMLImageElement | null, fromBtn?: Element | nu
     const y = (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * cy + u * u * ey;
     const sc = 1 - (1 - endScale) * Math.pow(u, 0.8);
     el.style.transform = `translate(${x - sx}px,${y - sy}px) scale(${sc}) rotate(${-14 * u}deg)`;
-    if (k < 1) raf = requestAnimationFrame(step); else finish();
+    if (k < 1) { raf = requestAnimationFrame(step); return; }
+    const hit = target.closest('[data-cart-target]');
+    if (hit) { hit.classList.add('cartHit'); window.setTimeout(() => hit.classList.remove('cartHit'), 650); }
+    finish();
   };
   raf = requestAnimationFrame(step);
   window.setTimeout(finish, D + 500); // safety net (background tabs pause animation frames)

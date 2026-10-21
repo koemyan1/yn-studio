@@ -6,13 +6,12 @@
 .flyPhoto{position:fixed;z-index:10000;margin:0;max-width:none;object-fit:cover;pointer-events:none;
   border-radius:16px;box-shadow:0 10px 28px rgba(60,20,120,.35);will-change:transform,opacity}
 
-/* cart count bubble (bottom nav + product-page header) */
+/* cart count circle (bottom nav + product-page header) */
 .bottom a[data-cart-target],.cartTopButton{position:relative}
-.cartBadge{position:absolute;top:2px;left:calc(50% + 6px);z-index:2;box-sizing:border-box;min-width:17px;height:17px;
-  padding:0 4px;border-radius:999px;background:#ef3b6d;color:#fff;font:800 10px/17px Inter,system-ui,sans-serif;
-  text-align:center;box-shadow:0 0 0 2px var(--card,#fff);pointer-events:none}
-.cartTopButton .cartBadge{top:-4px;left:auto;right:-4px}
-.cartBadge.bump{animation:ynBadgeBounce .6s cubic-bezier(.28,1.6,.5,1)}
+.cartDot{position:absolute;top:1px;left:calc(50% + 4px);z-index:2;box-sizing:border-box;width:17px;height:17px;padding:0;
+  border-radius:50%;background:#ef3b6d;color:#fff;font:800 10px/17px Inter,system-ui,sans-serif;text-align:center;
+  box-shadow:0 0 0 2px var(--card,#fff);pointer-events:none}
+.cartDot.bump{animation:ynBadgeBounce .6s cubic-bezier(.28,1.6,.5,1)}
 @keyframes ynBadgeBounce{
   0%{transform:scale(1)}
   30%{transform:scale(1.6) translateY(-3px)}
@@ -21,13 +20,38 @@
   100%{transform:scale(1)}
 }
 
-/* Add-to-cart button: briefly shows a drawn checkmark */
-.detail .stickyActions button.isAdded{background:#12a150!important;border-color:#12a150!important;color:#fff!important;
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background .25s,color .25s}
+/* cart button in the product-page header (next to the language button) */
+.cartTopButton{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;
+  padding:0;border-radius:14px;text-decoration:none;overflow:visible;
+  transition:transform .22s cubic-bezier(.3,1.5,.5,1),box-shadow .22s}
+.cartTopButton svg{width:20px;height:20px;stroke-width:2.2}
+.cartTopButton .cartDot{top:-5px;left:auto;right:-5px}
+.cartTopButton:active{transform:scale(.93)}
+html:not([data-secret-theme="on"]) .top a.icon.cartTopButton{
+  background:linear-gradient(135deg,#9d6bff 0%,#7c3aed 55%,#5b21b6 100%);color:#fff;border:0;overflow:visible;
+  box-shadow:0 8px 20px rgba(109,40,217,.38),inset 0 1px 0 rgba(255,255,255,.4)}
+html:not([data-secret-theme="on"]) .top a.icon.cartTopButton:hover{
+  transform:translateY(-2px);box-shadow:0 12px 26px rgba(109,40,217,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+html:not([data-secret-theme="on"]) .top a.icon.cartTopButton::before{ /* soft shine that sweeps across now and then */
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);
+  background-size:250% 100%;background-position:130% 0;animation:ynCartShine 4.5s ease-in-out infinite}
+@keyframes ynCartShine{0%,60%{background-position:130% 0}100%{background-position:-30% 0}}
+.cartTopButton:hover svg{animation:ynCartWiggle .5s ease}
+/* when the flying photo lands (works on both the header button and the bottom nav icon) */
+.cartHit svg{animation:ynCartCatch .55s cubic-bezier(.3,1.6,.5,1)}
+html:not([data-secret-theme="on"]) .top a.icon.cartTopButton.cartHit{box-shadow:0 0 0 6px rgba(157,107,255,.35),0 12px 28px rgba(109,40,217,.55)}
+@keyframes ynCartCatch{0%{transform:scale(1)}35%{transform:scale(1.35) rotate(-10deg)}65%{transform:scale(.92) rotate(6deg)}100%{transform:scale(1)}}
+@keyframes ynCartWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}60%{transform:rotate(9deg)}}
+
+/* Add-to-cart button: label briefly becomes a drawn checkmark (button keeps its normal look) */
+.detail .stickyActions button.isAdded{display:inline-flex;align-items:center;justify-content:center}
+.addedCheck{display:block;width:1.3em;height:1.3em}
 .addedCheck path{stroke-dasharray:24;stroke-dashoffset:24;animation:ynCheckDraw .38s .05s ease-out forwards}
 @keyframes ynCheckDraw{to{stroke-dashoffset:0}}
 
 @media (prefers-reduced-motion:reduce){
-  .cartBadge.bump{animation:none}
+  .cartDot.bump,.cartHit svg,.cartTopButton:hover svg{animation:none}
+  html:not([data-secret-theme="on"]) .top a.icon.cartTopButton::before{animation:none;display:none}
   .addedCheck path{animation:none;stroke-dashoffset:0}
 }
