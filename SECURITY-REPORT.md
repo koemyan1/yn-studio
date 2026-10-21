@@ -68,3 +68,16 @@ The log stores IP address, user agent, requested path (no query strings, no requ
 
 ## Things I deliberately did not do
 No "hack-back", no probing of attackers' machines, no cameras/photos, no fingerprinting beyond IP + user-agent. Blocking is passive, temporary and reversible.
+
+---
+
+## Progress update (repo upgrade)
+
+| Open item | Status |
+|---|---|
+| Browser writes prices/totals/fees into `orders` / `order_items` | **Addressed in code, not yet live.** `yn_place_order()` (`supabase/sql/supabase-server-side-order.sql`) rebuilds them in the database; checkout calls it. Rollout is staged: install the SQL, deploy the frontend, watch `/admin/security`, then `update public.security_settings set value='enforce' where key='order_insert_mode';`. Not run against a real database: test with `tests/sql/place-order.test.sql` first. |
+| Base tables missing from the repo | **Measured, not fixed.** `docs/SCHEMA-COVERAGE.md` lists exactly what is missing; `supabase/README.md` shows the 5-minute export. Needs your live project. |
+| Admin accounts have no second factor | Still open. |
+| `package-lock.json` / `npm audit` | Still open (needs network access to generate). |
+
+Remaining weak spot of server-side pricing: the delivery **pin** is still chosen in the browser (a customer can pick a pin near the store but give a far address). `require_delivery_pin = 'on'` only forces a pin to exist.

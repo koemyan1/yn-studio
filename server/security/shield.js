@@ -3,7 +3,7 @@
 // the request continues, so a bug here can never take your shop offline.
 //
 // What this layer is (and is not): it stops scanners, bots, brute force against YOUR server and abusive API use.
-// Large volumetric DDoS must be absorbed by Cloudflare before it reaches Render (see SECURITY-SETUP.md).
+// Large volumetric DDoS must be absorbed by Cloudflare before it reaches Render (see docs/setup/SECURITY-SETUP.md).
 import { clientIp, ipKey, isTrustedInfra, normalizeIp } from './ip.js';
 
 const MIN = 60000;

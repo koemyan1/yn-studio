@@ -1,5 +1,5 @@
 /* SPIDEY secret theme (preset id: "spidey"). Dark comic look: suit red + blue, hard offset shadows, halftone dots, web corner.
-   Only active while a customer has unlocked the code SPIDEY. Written with @H / @T shorthands, expanded into spidey.css by the sed line in CHANGELOG-SPIDEY.md. */
+   Only active while a customer has unlocked the code SPIDEY. Written with @H / @T shorthands, expanded into spidey.css by the sed line in docs/changelog/CHANGELOG-SPIDEY.md. */
 @H { --sp-red:#d6182b; --sp-blue:#0c2d78; --sp-ink:#060b1d; --sp-panel:#101a3a; --sp-web:#eef2ff; --sp-gold:#ffc83d; --sp-mut:#9aa8d6; --sp-head:'Bangers',Impact,sans-serif; --sp-hard:4px 4px 0 var(--sp-red); --sp-dots:radial-gradient(circle,rgba(255,255,255,.16) 1.5px,transparent 1.6px) 0 0/10px 10px; }
 @T body { background-color:var(--sp-ink) !important; color:var(--sp-web) !important; font-family:'Outfit',system-ui,sans-serif !important; }
 @H body::before { content:''; position:fixed; top:0; right:0; width:240px; height:240px; pointer-events:none; z-index:0; background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='white' stroke-opacity='.14'><path d='M200 0L0 90M200 0L40 200M200 0L110 200M200 0L0 20M200 0L180 200'/><path d='M150 0Q140 60 200 70M100 0Q95 90 200 120M50 0Q50 120 200 170'/></svg>") no-repeat top right/100%; }

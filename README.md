@@ -1,75 +1,73 @@
-# YN Studio Fresh — Updated
+# YN Studio
 
-## Included in this version
-- Customer cart redesign with quantity controls and order summary.
-- Customer checkout now requires payment through the YN Studio ABA/KHQR flow and a payment receipt upload.
-- Official `public/QR.PNG` KHQR included.
-- Customer orders keep `payment pending` until admin verifies the payment.
-- Admin Orders show customer name/email, payment method, payment status, and a signed receipt link.
-- Admin Wallet Deposits show the linked customer.
-- Admin Transactions show the linked customer.
-- Admin Customers show wallet balance, order count, and transaction count.
-- Admin-only dark mode. Customer pages remain light.
+A Cambodian online store: customer shop, cart and checkout, wallet and debt accounts, KHQR / ABA payments, live delivery map, a CV maker, secret themes, and a full admin panel. Web app + Android/iOS (Capacitor).
 
-## Supabase migration
-Run `supabase-order-payment.sql` in Supabase SQL Editor before deploying. It adds the order payment fields and automatically creates wallets for new/existing customers.
+**Stack:** React + Vite + TypeScript (`src/`) · Node/Express server (`server/`) · Supabase (Postgres, Auth, Storage, Realtime) · Bakong KHQR and ABA PayWay · Capacitor for mobile · hosted on Render.
 
-## Local
+## Quick start
+
 ```bash
 npm install
-npm run dev
+npm run dev          # frontend on http://localhost:5173
+npm run dev:server   # API/payment server (needs the env vars below)
+npm run build        # type-check + production build
+npm test             # security + repo-hygiene tests
+npm run test:e2e     # server end-to-end tests
 ```
 
-## Render
-Build command:
-```text
-npm install; npm run build
-```
+## Environment variables
 
-Set these Render environment variables:
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-```
+Set on Render (see `render.yaml`). Secrets must never use a `VITE_` prefix.
 
-## Rewards, Coupons & Support Chat
-- Admin coupons: `/admin/coupons`
-- Customer rewards: `/rewards`
-- Customer/admin support chat supports image messages.
-- Admin can send refund credits, gift envelopes, and coupons directly inside chat.
-- Customers can claim chat rewards and apply coupon codes at checkout.
-- Run `supabase-rewards-coupons.sql` in Supabase SQL Editor after the existing marketplace/order-payment SQL.
+| Variable | Needed for |
+|---|---|
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Frontend build (public values) |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Server: sign-up, payments, security dashboard (**service key is secret**) |
+| `PUBLIC_URL` | Payment callbacks |
+| `BAKONG_API_TOKEN`, `BAKONG_ACCOUNT_ID`, `BAKONG_MERCHANT_NAME`, `BAKONG_CURRENCY` (+ `BAKONG_KHR_RATE`, `BAKONG_QR_MINUTES`, ...) | KHQR payments |
+| `ABA_PAYWAY_MERCHANT_ID`, `ABA_PAYWAY_API_KEY`, `ABA_PAYWAY_ENV` (+ `_CURRENCY`, `_KHR_RATE`, ...) | ABA PayWay (optional) |
+| `SECURITY_SHIELD`, `RL_*`, `BLOCK_SCORE`, `ALLOW_IPS`, `TRUSTED_PROXY_CIDRS`, `CSP_*`, `HSTS_SUBDOMAINS` | Security shield tuning (all optional) |
 
+## Where things are
 
-## Customer account signup
+| Folder | Contents |
+|---|---|
+| `src/` | Frontend. `main.tsx` is the app shell and most pages; separate files for admin themes, CV maker, services, map checkout, assistant. |
+| `server/` | `index.js` (API, payments) and `security/` (rate limits, blocking, order-integrity, alerts). |
+| `supabase/sql/` | The SQL scripts you run in the Supabase SQL Editor. **Order: [`supabase/sql/RUN-ORDER.md`](supabase/sql/RUN-ORDER.md).** |
+| `supabase/` | See [`supabase/README.md`](supabase/README.md) (baseline export, migrations, edge functions). |
+| `docs/setup/` | Step-by-step setup guides (below). |
+| `docs/changelog/` | One note per feature/release. The overview is [`CHANGELOG.md`](CHANGELOG.md). |
+| `docs/SCHEMA-COVERAGE.md` | Generated: which tables/functions/buckets the app uses that no SQL file creates. |
+| `docs/archive/` | Old files kept for reference, not used. |
+| `tests/`, `tools/` | Node tests (`tests/sql/` has the database self-test) and helper scripts. |
 
-Customers create accounts using only their name, email address, and password. The Node server creates the Supabase Auth user with the email already confirmed, saves the customer profile, and signs the customer in. No email code or OTP table is used.
+## Setup guides
 
-Required server environment variables on Render:
-- `SUPABASE_URL` = your Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY` = your Supabase service-role key (server-only; never use a `VITE_` prefix)
+| Topic | Guide |
+|---|---|
+| Sign-up / login | [AUTH-SETUP](docs/setup/AUTH-SETUP.md) |
+| KHQR payments (Bakong) | [BAKONG-SETUP](docs/setup/BAKONG-SETUP.md) |
+| ABA PayWay | [ABA-PAYWAY-SETUP](docs/setup/ABA-PAYWAY-SETUP.md) |
+| Paying orders from the wallet | [WALLET-ORDER-PAYMENT-SETUP](docs/setup/WALLET-ORDER-PAYMENT-SETUP.md) |
+| Map checkout and delivery pricing | [MAP-CHECKOUT-SETUP](docs/setup/MAP-CHECKOUT-SETUP.md), [CATEGORY-DELIVERY-FEE-SETUP](docs/setup/CATEGORY-DELIVERY-FEE-SETUP.md), [CITY-PROVINCE-LOCATION-SQL-SETUP](docs/setup/CITY-PROVINCE-LOCATION-SQL-SETUP.md) |
+| Background delivery tracking (mobile) | [BACKGROUND-DELIVERY-TRACKING](docs/setup/BACKGROUND-DELIVERY-TRACKING.md) |
+| Order statuses and barcode scanning | [ORDER-BARCODE-STATUS-SETUP](docs/setup/ORDER-BARCODE-STATUS-SETUP.md) |
+| Push notifications / Telegram | [PUSH-SETUP](docs/setup/PUSH-SETUP.md), [TELEGRAM-SETUP](docs/setup/TELEGRAM-SETUP.md) |
+| Secret themes | [SECRET-THEME-SETUP](docs/setup/SECRET-THEME-SETUP.md), [CHIIKAWA-THEME-SETUP](docs/setup/CHIIKAWA-THEME-SETUP.md) |
+| Other features | [FEATURES-SETUP](docs/setup/FEATURES-SETUP.md) |
+| Security | [SECURITY-REPORT](SECURITY-REPORT.md) (findings, what is still open) and [SECURITY-SETUP](docs/setup/SECURITY-SETUP.md). Dashboard: `/admin/security` |
 
-The service must run as a Render Web Service with `npm install && npm run build` as the build command and `npm start` as the start command.
+## Deploying on Render
 
-## Purple Map, distance delivery pricing, rider avatar
+Web Service, build `npm install && npm run build`, start `npm start`. The server serves the built frontend and the API. Add the variables above in the Render dashboard.
 
-1. Open the Supabase SQL Editor and run `supabase-grab-map-delivery.sql` once. This creates the admin-controlled delivery settings row and the public delivery-avatar storage bucket.
-2. Deploy the app, then open Admin → Settings.
-3. Set the store pickup coordinates, starting delivery fee, included kilometres, and extra fee per distance step.
-4. Upload a rider avatar. The customer Map uses this picture for the rider marker when GPS coordinates are being reported. Rider tracking still needs the existing native/background tracking setup and a courier device to share location.
-5. Customers must choose their drop-off point on the purple Map in checkout. The app requests road distance from the public OSRM routing service and calculates the fee using the saved admin rules; if routing is temporarily unavailable, it estimates from straight-line distance.
+## How checkout works (important for money)
 
-## Visual theme editor
+- **Prices, delivery fee and total are calculated by the database**, function `yn_place_order()` in `supabase/sql/supabase-server-side-order.sql`. The browser only sends the cart item ids, the delivery pin and the coupon code. Until that SQL is installed the app falls back to the old browser-calculated path.
+- **Delivery fee** = starting fee for the first `base_km`, then `extra_fee` per `extra_km` step, using **straight-line distance** between the store and the pin (Admin -> Settings). A category can override the fee or make delivery free. The OSRM road route on the map is only for drawing the route and the ETA, it does not change the price.
+- A payment is only trusted if `orders.total` matches the order-integrity check (`integrity_mode`: `report` or `enforce`, in `/admin/security`).
 
-Admin → Themes includes a phone canvas with Text, Image, Button, and Widget elements. Select and drag elements, use the resize handle or Width field, and zoom the editor view in/out. Image elements can use a public image URL or upload into the `theme-assets` bucket. The preview uses published product data; saved theme elements are rendered on the customer theme home page.
+## Known gaps
 
-The theme phone preview now mounts the same customer `Shop` component used by the live storefront (with the unsaved editor configuration passed in), so it displays the actual published products and customer home layout rather than a static drawing.
-
-In Theme Studio, use **Customer preview** to see the actual storefront or **Drag & resize** to edit saved canvas elements; both views share the same unsaved theme config.
-
-
-## v3 additions
-See `CHANGELOG-V3-THEME-STUDIO.md` (Theme Studio: categories, product picture backgrounds, buttons/elements with actions & motion, dark mode, Khmer switch) and `ABA-PAYWAY-SETUP.md`.
-
-## Security
-See `SECURITY-REPORT.md` (findings + what is still open) and `SECURITY-SETUP.md` (step by step, all free). Dashboard: `/admin/security`.
+See [`SECURITY-REPORT.md`](SECURITY-REPORT.md) and [`docs/SCHEMA-COVERAGE.md`](docs/SCHEMA-COVERAGE.md). The biggest: the base tables are not in the repo yet ([`supabase/README.md`](supabase/README.md) shows how to export them), and admin accounts have no second factor.

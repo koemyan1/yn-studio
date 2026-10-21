@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 /* Phone push (web push). Works on Android (Chrome etc.) and on iPhone/iPad once the site is added to the Home Screen.
-   Needs VITE_VAPID_PUBLIC_KEY at build time. See PUSH-SETUP.md. */
+   Needs VITE_VAPID_PUBLIC_KEY at build time. See docs/setup/PUSH-SETUP.md. */
 
 export type PushState =
   | 'unsupported'   // this browser cannot do push

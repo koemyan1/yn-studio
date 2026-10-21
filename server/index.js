@@ -36,7 +36,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 /* ------------------------------------------------------------------ *
  *  ABA PayWay (hosted checkout: ABA Pay, KHQR, cards)
- *  Docs: https://developer.payway.com.kh  — setup guide: ABA-PAYWAY-SETUP.md
+ *  Docs: https://developer.payway.com.kh  — setup guide: docs/setup/ABA-PAYWAY-SETUP.md
  *
  *  1. The browser asks POST /api/aba/purchase for a signed form for one of the
  *     customer's own unpaid orders. The amount always comes from the database.
@@ -94,7 +94,7 @@ async function userFromToken(req) {
 }
 
 /* ------------------------------------------------------------------ *
- *  Security layer (setup + dashboard: SECURITY-SETUP.md, /admin/security)
+ *  Security layer (setup + dashboard: docs/setup/SECURITY-SETUP.md, /admin/security)
  * ------------------------------------------------------------------ */
 const secStore = createStore({ sb, enabled: !!(SB.url && SB.service) });
 const secAlerts = createAlerts({ notify: (title, message, link) => notifyAdmin(title, message, link) });
@@ -243,7 +243,7 @@ app.post('/api/aba/sync', jsonBody, async (req, res) => {
 
 /* ------------------------------------------------------------------ *
  *  Bakong KHQR (dynamic QR per order, any Bakong-connected banking app)
- *  Setup guide: BAKONG-SETUP.md
+ *  Setup guide: docs/setup/BAKONG-SETUP.md
  *
  *  1. POST /api/bakong/create  -> builds a one-time KHQR for one of the customer's own
  *     unpaid orders (amount comes from the database) and returns the QR image.
@@ -315,7 +315,7 @@ async function bakongCheck(md5) {
     const text = await r.text();
     let j = null; try { j = JSON.parse(text); } catch { j = null; }
     if (r.status === 401) return bakongFail('Bakong API HTTP 401: the token is invalid or expired. Renew it at https://api-bakong.nbc.gov.kh and update BAKONG_API_TOKEN.');
-    if (!j) return bakongFail(`Bakong API HTTP ${r.status} returned a non-JSON body. The API is usually restricted to Cambodian IPs and this server is probably blocked. See BAKONG-SETUP.md.`);
+    if (!j) return bakongFail(`Bakong API HTTP ${r.status} returned a non-JSON body. The API is usually restricted to Cambodian IPs and this server is probably blocked. See docs/setup/BAKONG-SETUP.md.`);
     if (j.responseCode === 0 && j.data) return { state: 'paid', data: j.data };
     const msg = String(j.responseMessage || j.message || '');
     const notFound = j.errorCode === 3 || /could not be found|not found|no transaction/i.test(msg);

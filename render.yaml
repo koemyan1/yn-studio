@@ -4,7 +4,7 @@ services:
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: npm start
-    # Optional ABA PayWay (see ABA-PAYWAY-SETUP.md). Add the secret values in the Render dashboard.
+    # Optional ABA PayWay (see docs/setup/ABA-PAYWAY-SETUP.md). Add the secret values in the Render dashboard.
     envVars:
       - key: ABA_PAYWAY_ENV
         value: sandbox
@@ -20,7 +20,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      # Bakong KHQR (see BAKONG-SETUP.md)
+      # Bakong KHQR (see docs/setup/BAKONG-SETUP.md)
       - key: BAKONG_API_TOKEN
         sync: false
       - key: BAKONG_ACCOUNT_ID

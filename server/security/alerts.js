@@ -24,7 +24,7 @@ export function createAlerts({ notify, now = Date.now, log = console } = {}) {
     },
     spike(deniedLastMinute) {
       if (!allow('spike', 15 * MIN)) return;
-      send('Security: possible DDoS / scan wave', `${deniedLastMinute} requests were refused in the last minute. If the site feels slow, turn on Cloudflare "Under Attack Mode" (see SECURITY-SETUP.md).${take('spike')}`);
+      send('Security: possible DDoS / scan wave', `${deniedLastMinute} requests were refused in the last minute. If the site feels slow, turn on Cloudflare "Under Attack Mode" (see docs/setup/SECURITY-SETUP.md).${take('spike')}`);
     },
     integrity(order, detail, mode) {
       if (!allow('integrity:' + order.id, 30 * MIN) || !allow('integrity', 2 * MIN)) return;
