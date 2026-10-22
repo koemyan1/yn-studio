@@ -28,7 +28,7 @@ type Song = { title: string; url: string };
 type CeremonyItem = { name: string; date: string; time: string };
 export type InviteData = {
   /* 1. Bride & groom */
-  groom: string; bride: string; groomParents: string; brideParents: string;
+  groom: string; bride: string; groomEn: string; brideEn: string; groomParents: string; brideParents: string;
   /* 2. Wedding details */
   date: string; weekday: string; time: string; receptionTime: string; venue: string; address: string; mapUrl: string;
   message: string; headline: string;
@@ -63,7 +63,7 @@ const loc = (value: string, key: 'headline' | 'message' | 'otitle' | 'obtn', lan
 };
 
 const DEFAULTS: InviteData = {
-  groom: '', bride: '', groomParents: '', brideParents: '',
+  groom: '', bride: '', groomEn: '', brideEn: '', groomParents: '', brideParents: '',
   date: '', weekday: '', time: '', receptionTime: '', venue: '', address: '', mapUrl: '',
   message: TXT.km.message, headline: TXT.km.headline,
   schedule: [],
@@ -282,7 +282,7 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
   const [phase, setPhase] = useState<'closed' | 'opening' | 'gone'>('closed');
   const L = labelsFor(d.lang);
   const img = d.opening.image;
-  const names = [d.groom, d.bride].filter(Boolean).join(' & ') || (d.lang === 'en' ? 'Groom & Bride' : 'កូនកំលោះ & កូនក្រមុំ');
+  const names = [nm(d.groom, d.groomEn, d.lang, ' · '), nm(d.bride, d.brideEn, d.lang, ' · ')].filter(Boolean).join(' & ') || (d.lang === 'en' ? 'Groom & Bride' : 'កូនកំលោះ & កូនក្រមុំ');
   const open = () => {
     if (phase !== 'closed') return;
     setPhase('opening');
@@ -350,6 +350,36 @@ function Reveal({ children, className = '' }: { children: React.ReactNode; class
 
 /* ------------------------------------------------------------------ Free builder: blocks ------------------------------------------------------------------ */
 /* In "free builder" mode the page is a list of blocks the admin adds, edits, reorders and deletes. Nothing is fixed. */
+
+/* A person's name: Khmer is the main one, English is optional. Shows what fits the guest's language. */
+function nm(km: string, en: string, lang: Lang, sep = '\n'): string {
+  const a = (km || '').trim(), e = (en || '').trim();
+  if (lang === 'en') return e || a;
+  if (lang === 'both') return a && e ? `${a}${sep}${e}` : a || e;
+  return a || e;
+}
+
+/* Text you can type into straight on the phone preview. Saves when you tap away. Outside the editor it is plain text. */
+function Ed({ as = 'span', value, onCommit, multi = false, ph = '', className, style }: {
+  as?: string; value: string; onCommit?: (t: string) => void; multi?: boolean; ph?: string; className?: string; style?: React.CSSProperties;
+}) {
+  const Tag = as as React.ElementType;
+  if (!onCommit) return <Tag className={className} style={style}>{value}</Tag>;
+  return (
+    <Tag key={value} className={`${className || ''} ivEd`} style={style} contentEditable suppressContentEditableWarning spellCheck={false} data-ph={ph || 'Type here'}
+      onBlur={(e: React.FocusEvent<HTMLElement>) => {
+        const raw = (e.currentTarget.innerText || '').replace(/\u00a0/g, ' ').replace(/\n+$/, '');
+        const clean = multi ? raw : raw.replace(/\n+/g, ' ');
+        if (clean !== value) onCommit(clean);
+      }}
+      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => { if (e.key === 'Escape' || (!multi && e.key === 'Enter')) { e.preventDefault(); e.currentTarget.blur(); } }}
+      onPaste={(e: React.ClipboardEvent<HTMLElement>) => {
+        e.preventDefault();
+        const t = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, multi ? t : t.replace(/\n+/g, ' '));
+      }}>{value}</Tag>
+  );
+}
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const okColor = (c: any): string => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : '');
@@ -467,7 +497,7 @@ const blockSummary = (b: Block): string => {
   }
 };
 
-function BlockCountdown({ p, lang, preview }: { p: Record<string, any>; lang: Lang; preview: boolean }) {
+function BlockCountdown({ p, lang, preview, onEdit }: { p: Record<string, any>; lang: Lang; preview: boolean; onEdit?: (t: string) => void }) {
   const target = useMemo(() => {
     if (!p.date) return null;
     const t = new Date(`${p.date}T${p.time || '09:00'}:00`).getTime();
@@ -479,7 +509,7 @@ function BlockCountdown({ p, lang, preview }: { p: Record<string, any>; lang: La
   if (!cd) return preview ? <div className="ivImgEmpty">Pick a date for the countdown</div> : null;
   return (
     <>
-      {title && <h3 className="ivBH3">{title}</h3>}
+      {(title || onEdit) && <Ed as="h3" className="ivBH3" value={title} ph="Title" onCommit={onEdit} />}
       {cd.over ? <h3 className="ivBH3">{L.soon}</h3> : (
         <div className="ivCountRow">
           {([['days', cd.days], ['hours', cd.hours], ['mins', cd.mins], ['secs', cd.secs]] as const).map(([k, v]) => (
@@ -491,9 +521,9 @@ function BlockCountdown({ p, lang, preview }: { p: Record<string, any>; lang: La
   );
 }
 
-function BlockButton({ p, lang, preview }: { p: Record<string, any>; lang: Lang; preview: boolean }) {
+function BlockButton({ p, lang, preview, onEdit }: { p: Record<string, any>; lang: Lang; preview: boolean; onEdit?: (t: string) => void }) {
   const label = pick(p.label, p.en, lang);
-  if (!label) return null;
+  if (!label && !onEdit) return null;
   const href = blockHref(p.kind, p.value);
   const Icon = BTN_ICONS[p.icon];
   const col = okColor(p.btn), txt = okColor(p.txt);
@@ -509,39 +539,43 @@ function BlockButton({ p, lang, preview }: { p: Record<string, any>; lang: Lang;
   return (
     <a className={`ivBtnX ivBtnX-${p.size === 'sm' || p.size === 'lg' ? p.size : 'md'}${p.full ? ' full' : ''}`} style={st} href={href || undefined}
       target={ext ? '_blank' : undefined} rel={ext ? 'noopener noreferrer' : undefined} onClick={onClick}>
-      {Icon && <Icon />}{label}
+      {Icon && <Icon />}<Ed value={label} ph="Button" onCommit={onEdit} />
     </a>
   );
 }
 
-function BlockBody({ b, lang, preview }: { b: Block; lang: Lang; preview: boolean }) {
+type EditFn = (patch: Record<string, any>) => void;
+function BlockBody({ b, lang, preview, onEdit }: { b: Block; lang: Lang; preview: boolean; onEdit?: EditFn }) {
   const p = b.p;
+  /* typing on the preview writes the Khmer text, or the English version while the preview is on EN */
+  const ed = onEdit && lang !== 'both' ? onEdit : undefined;
+  const fk = (a: string, e: string) => (lang === 'en' ? e : a);
   const align = b.s.align;
   const margin = align === 'left' ? '0' : align === 'right' ? '0 0 0 auto' : '0 auto';
   switch (b.type) {
     case 'cover': {
-      const kick = pick(p.kicker, p.kickerEn, lang), nm = pick(p.names, p.namesEn, lang), sub = pick(p.sub, p.subEn, lang);
+      const kick = pick(p.kicker, p.kickerEn, lang), nmText = pick(p.names, p.namesEn, lang), sub = pick(p.sub, p.subEn, lang);
       const sz = num(p.size, 64, 28, 140);
       return (
         <>
-          {kick && <p className="ivKicker">{kick}</p>}
-          <h1 className="ivBNames" style={{ fontSize: `clamp(${Math.round(sz * 0.6)}px, ${(sz / 3.9).toFixed(2)}cqw, ${sz}px)` }}>{nm}</h1>
-          {sub && <p className="ivHeroDate"><CalendarDays /> {sub}</p>}
+          {(kick || ed) && <Ed as="p" className="ivKicker" value={kick} ph="Small line" onCommit={ed && (t => ed({ [fk('kicker', 'kickerEn')]: t }))} />}
+          <Ed as="h1" className="ivBNames" multi ph="Names" value={nmText} onCommit={ed && (t => ed({ [fk('names', 'namesEn')]: t }))} style={{ fontSize: `clamp(${Math.round(sz * 0.6)}px, ${(sz / 3.9).toFixed(2)}cqw, ${sz}px)` }} />
+          {(sub || ed) && <p className="ivHeroDate"><CalendarDays /> <Ed value={sub} ph="Date" onCommit={ed && (t => ed({ [fk('sub', 'subEn')]: t }))} /></p>}
         </>
       );
     }
     case 'text': {
       const t = pick(p.text, p.en, lang);
-      if (!t) return preview ? <div className="ivImgEmpty">Empty text: type something</div> : null;
+      if (!t && !ed) return preview ? <div className="ivImgEmpty">Empty text: type something</div> : null;
       const sz = num(p.size, 20, 10, 140);
       return (
-        <p className="ivBText" style={{
+        <Ed as="p" className="ivBText" multi ph="Type your text" value={t} onCommit={ed && (v => ed({ [fk('text', 'en')]: v }))} style={{
           fontFamily: (BLOCK_FONTS[p.font] || BLOCK_FONTS.head).css,
           fontSize: `clamp(${Math.round(sz * 0.6)}px, ${(sz / 3.9).toFixed(2)}cqw, ${sz}px)`,
           fontWeight: p.weight === 700 ? 700 : 400, fontStyle: p.italic ? 'italic' : 'normal',
           letterSpacing: `${num(p.spacing, 0, 0, 40) / 100}em`, lineHeight: num(p.line, 1.7, 1, 3),
           textTransform: p.upper ? 'uppercase' : undefined, color: p.accent ? 'var(--iv-accent)' : undefined,
-        }}>{t}</p>
+        }} />
       );
     }
     case 'image': {
@@ -561,15 +595,16 @@ function BlockBody({ b, lang, preview }: { b: Block; lang: Lang; preview: boolea
       const ext = p.kind === 'url' || p.kind === 'telegram' || p.kind === 'whatsapp';
       return <a href={href} target={ext ? '_blank' : undefined} rel={ext ? 'noopener noreferrer' : undefined} onClick={e => { if (preview) e.preventDefault(); else if (p.kind === 'block') { e.preventDefault(); scrollToBlock(String(p.value)); } }}>{img}</a>;
     }
-    case 'button': return <BlockButton p={p} lang={lang} preview={preview} />;
-    case 'countdown': return <BlockCountdown p={p} lang={lang} preview={preview} />;
+    case 'button': return <BlockButton p={p} lang={lang} preview={preview} onEdit={ed && (t => ed({ [fk('label', 'en')]: t }))} />;
+    case 'countdown': return <BlockCountdown p={p} lang={lang} preview={preview} onEdit={ed && (t => ed({ [fk('title', 'en')]: t }))} />;
     case 'schedule': {
       const items: CeremonyItem[] = (Array.isArray(p.items) ? p.items : []).filter((e: any) => e && e.name);
       const title = pick(p.title, p.en, lang);
+      const edT = ed && ((t: string) => ed({ [fk('title', 'en')]: t }));
       if (!items.length) return preview ? <div className="ivImgEmpty">Add events to the programme</div> : null;
       return (
         <>
-          {title && <h3 className="ivBH3">{title}</h3>}
+          {(title || edT) && <Ed as="h3" className="ivBH3" value={title} ph="Title" onCommit={edT} />}
           <ol className="ivTimeline">{items.map((e, i) => (
             <li key={i}><div className="ivWhen"><b>{fmtTime(e.time, lang)}</b><small>{fmtShort(e.date, lang)}</small></div><span>{e.name}</span></li>
           ))}</ol>
@@ -595,7 +630,7 @@ function BlockBody({ b, lang, preview }: { b: Block; lang: Lang; preview: boolea
   }
 }
 
-function BlockView({ b, lang, preview, selected, onSelect }: { b: Block; lang: Lang; preview: boolean; selected: boolean; onSelect?: (id: string) => void }) {
+function BlockView({ b, lang, preview, selected, onSelect, onEdit }: { b: Block; lang: Lang; preview: boolean; selected: boolean; onSelect?: (id: string) => void; onEdit?: (id: string, patch: Record<string, any>) => void }) {
   const s = b.s;
   const bgi = safeImg(s.bgImage);
   const bg = okColor(s.bg), col = okColor(s.color);
@@ -610,7 +645,7 @@ function BlockView({ b, lang, preview, selected, onSelect }: { b: Block; lang: L
       onClick={onSelect ? (e: React.MouseEvent) => { e.stopPropagation(); onSelect(b.id); } : undefined}>
       {bgi && <div className="ivBlkBg" style={{ backgroundImage: `url("${bgi}")` }} />}
       {(bgi || b.type === 'cover') && s.overlay > 0 && <div className="ivBlkShade" style={{ opacity: num(s.overlay, 0, 0, 90) / 100 }} />}
-      <div className="ivBlkIn"><BlockBody b={b} lang={lang} preview={preview} /></div>
+      <div className="ivBlkIn"><BlockBody b={b} lang={lang} preview={preview} onEdit={onEdit && (patch => onEdit(b.id, patch))} /></div>
       {b.type === 'cover' && b.p.arrow && <div className="ivScrollHint" aria-hidden="true"><i /></div>}
     </section>
   );
@@ -622,25 +657,25 @@ function blocksFromClassic(d: InviteData): Block[] {
   const out: Block[] = [];
   const T = (p: Record<string, any>, s: Partial<BlockStyle> = {}) => { out.push(newBlock('text', { p, s })); };
   const isDef = (v: string, key: 'headline' | 'message') => !v || v === TXT.km[key] || v === TXT.en[key];
-  const nm = [d.groom, d.bride].filter(Boolean).join(' & ');
+  const kmNames = [d.groom, d.bride].filter(Boolean).join(' & '), enNames = [d.groomEn, d.brideEn].filter(Boolean).join(' & ');
   const dateKm = fmtDate(d.date, d.weekday, 'km'), dateEn = fmtDate(d.date, d.weekday, 'en');
   const timeKm = fmtTime(d.time, 'km'), timeEn = fmtTime(d.time, 'en');
 
   const cover = newBlock('cover', { s: { bgImage: d.gallery[0] || d.opening.image || '' } });
   cover.p = { ...cover.p,
     kicker: isDef(d.headline, 'headline') ? TXT.km.headline : d.headline, kickerEn: isDef(d.headline, 'headline') ? TXT.en.headline : '',
-    names: nm || 'Groom & Bride',
+    names: kmNames || enNames || 'Groom & Bride', namesEn: kmNames ? enNames : '',
     sub: [dateKm, timeKm].filter(Boolean).join(' · '), subEn: [dateEn, timeEn].filter(Boolean).join(' · ') };
   out.push(cover);
 
-  const people: [string, string, string, string][] = [
-    [d.groomPhoto, d.groom || L_KM.groomSide, d.groomParents, 'groom'],
-    [d.bridePhoto, d.bride || L_KM.brideSide, d.brideParents, 'bride'],
+  const people: [string, string, string, string, string][] = [
+    [d.groomPhoto, d.groom || d.groomEn || L_KM.groomSide, d.groomParents, 'groom', d.groom ? d.groomEn : ''],
+    [d.bridePhoto, d.bride || d.brideEn || L_KM.brideSide, d.brideParents, 'bride', d.bride ? d.brideEn : ''],
   ];
-  people.forEach(([photo, name, parents, who]) => {
+  people.forEach(([photo, name, parents, who, nameEn]) => {
     if (!photo && !parents) return;
     if (photo) out.push(newBlock('image', { p: { url: photo, width: 46, shape: 'round' }, s: { padTop: 36 } }));
-    T({ text: name, font: 'names', size: 26, line: 1.8 }, { padTop: photo ? 12 : 30 });
+    T({ text: name, en: nameEn, font: 'names', size: 26, line: 1.8 }, { padTop: photo ? 12 : 30 });
     if (parents) T({ text: `${who === 'groom' ? L_KM.sonOf : L_KM.daughterOf}\n${parents}`, en: `${who === 'groom' ? L_EN.sonOf : L_EN.daughterOf}\n${parents}`, font: 'body', size: 15, line: 1.9 }, { padTop: 4 });
   });
 
@@ -671,7 +706,7 @@ function blocksFromClassic(d: InviteData): Block[] {
   return out;
 }
 
-export function InvitationView({ data, preview = false, replayKey = 0, onViewed, selectedId = '', onSelectBlock }: { data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void; selectedId?: string; onSelectBlock?: (id: string) => void }) {
+export function InvitationView({ data, preview = false, replayKey = 0, onViewed, selectedId = '', onSelectBlock, onEditField, onEditBlock }: { data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void; selectedId?: string; onSelectBlock?: (id: string) => void; onEditField?: (patch: Partial<InviteData>) => void; onEditBlock?: (id: string, patch: Record<string, any>) => void }) {
   useInviteFonts();
   /* Guests start in the invitation's language (Khmer by default) and can switch, unless it is set to bilingual. */
   const [lang, setLang] = useState<Lang>(data.lang);
@@ -723,7 +758,11 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
   const timeText = fmtTime(d.time, lang);
   const recText = fmtTime(d.receptionTime, lang);
   const venueText = [d.venue, d.address].filter(Boolean);
-  const names = [d.groom, d.bride];
+  const names = [nm(d.groom, d.groomEn, lang), nm(d.bride, d.brideEn, lang)];
+  /* typing on the preview (admin only): Khmer text, or the English version while the preview is on EN; not while bilingual */
+  const ef = preview && onEditField ? onEditField : undefined;
+  const efl = ef && lang !== 'both' ? ef : undefined;
+  const enSfx = lang === 'en' ? 'En' : '';
   const heroImg = d.gallery[0] || d.opening.image;
   const hasCouple = !!(d.groomPhoto || d.bridePhoto || d.groomParents || d.brideParents);
   const tg = d.telegram.trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//i, '');
@@ -734,12 +773,12 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
   const pageBg = safeImg(d.page?.bgImage);
 
   return (
-    <div className={`ivRoot ${preview ? 'ivPreview' : ''} ${onSelectBlock ? 'ivPick' : ''}`} data-kh={lang !== 'en' ? '1' : '0'} style={themeVars(d)}>
+    <div className={`ivRoot ${preview ? 'ivPreview' : ''} ${onSelectBlock ? 'ivPick' : ''} ${ef || onEditBlock ? 'ivEdit' : ''}`} data-kh={lang !== 'en' ? '1' : '0'} style={themeVars(d)}>
       {pageBg && <div className="ivPageBg" style={{ backgroundImage: `url("${pageBg}")` }} />}
       <div className={`ivScroll ${gone ? '' : 'ivLocked'}`}>
         {custom ? (
           <>
-            {shown.map(b => <BlockView key={b.id} b={b} lang={lang} preview={preview} selected={b.id === selectedId} onSelect={onSelectBlock} />)}
+            {shown.map(b => <BlockView key={b.id} b={b} lang={lang} preview={preview} selected={b.id === selectedId} onSelect={onSelectBlock} onEdit={preview ? onEditBlock : undefined} />)}
             {!shown.length && preview && <div className="ivEmptyPage"><Heart /><b>Blank page</b><small>Add your first block from the list next to this preview.</small></div>}
             <div style={{ height: 'max(32px, env(safe-area-inset-bottom))' }} />
           </>
@@ -748,11 +787,11 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
         <section className="ivHero" style={heroImg ? { backgroundImage: `url("${heroImg}")` } : undefined}>
           <div className="ivHeroShade" />
           <div className="ivHeroIn">
-            <p className="ivKicker">{loc(d.headline, 'headline', lang)}</p>
+            <Ed as="p" className="ivKicker" value={loc(d.headline, 'headline', lang)} onCommit={efl && (t => efl({ headline: t }))} />
             <h1 className={'ivNames' + (HAS_KHMER.test(names.join('')) || (!names[0] && !names[1] && lang !== 'en') ? ' ivKh' : '')}>
-              <span>{names[0] || L.groomWord.split(' · ')[0]}</span>
+              <Ed value={names[0] || L.groomWord.split(' · ')[0]} ph="Groom" onCommit={efl && (t => efl({ [`groom${enSfx}`]: t } as Partial<InviteData>))} />
               <em>&amp;</em>
-              <span>{names[1] || L.brideWord.split(' · ')[0]}</span>
+              <Ed value={names[1] || L.brideWord.split(' · ')[0]} ph="Bride" onCommit={efl && (t => efl({ [`bride${enSfx}`]: t } as Partial<InviteData>))} />
             </h1>
             {dateHero && <p className="ivHeroDate"><CalendarDays /> {dateHero}{timeText ? ` · ${lang === 'both' ? fmtTime(d.time, 'km') : timeText}` : ''}</p>}
           </div>
@@ -761,17 +800,17 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
 
         {hasCouple && (
           <Reveal className="ivSec ivCouple">
-            {([['groom', d.groomPhoto, d.groom, d.groomParents, L.sonOf, L.groomSide], ['bride', d.bridePhoto, d.bride, d.brideParents, L.daughterOf, L.brideSide]] as const).map(([k, photo, nm, par, rel, side]) => (
+            {([['groom', d.groomPhoto, nm(d.groom, d.groomEn, lang, ' · '), d.groomParents, L.sonOf, L.groomSide], ['bride', d.bridePhoto, nm(d.bride, d.brideEn, lang, ' · '), d.brideParents, L.daughterOf, L.brideSide]] as const).map(([k, photo, pname, par, rel, side]) => (
               <div className="ivPerson" key={k}>
                 <div className={'ivAvatar' + (photo ? '' : ' empty')} style={photo ? { backgroundImage: `url("${photo}")` } : undefined}>{!photo && <Heart />}</div>
-                <b>{nm || side}</b>
-                {par && <small>{rel}<br />{par}</small>}
+                <Ed as="b" value={pname || side} ph="Name" onCommit={efl && (t => efl({ [`${k}${enSfx}`]: t } as Partial<InviteData>))} />
+                {par && <small>{rel}<br /><Ed value={par} multi ph="Parents" onCommit={ef && (t => ef({ [`${k}Parents`]: t } as Partial<InviteData>))} /></small>}
               </div>
             ))}
           </Reveal>
         )}
 
-        <Reveal className="ivSec"><p className="ivMessage">{loc(d.message, 'message', lang)}</p></Reveal>
+        <Reveal className="ivSec"><Ed as="p" className="ivMessage" multi value={loc(d.message, 'message', lang)} onCommit={efl && (t => efl({ message: t }))} /></Reveal>
 
         {cd && !cd.over && (
           <Reveal className="ivSec ivCount">
@@ -788,7 +827,7 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
             {(dateCard || timeText) && <div className="ivCard"><CalendarDays /><small>{L.when}</small><b>{dateCard}</b>{timeText && <span>{timeText}</span>}</div>}
             {recText && <div className="ivCard"><Heart /><small>{L.reception}</small><b>{recText}</b></div>}
             {venueText.length > 0 && (
-              <div className="ivCard"><MapPin /><small>{L.where}</small><b>{venueText[0]}</b>{venueText[1] && <span>{venueText[1]}</span>}
+              <div className="ivCard"><MapPin /><small>{L.where}</small><Ed as="b" value={venueText[0]} ph="Place" onCommit={ef && (t => ef({ [d.venue ? 'venue' : 'address']: t } as Partial<InviteData>))} />{venueText[1] && <Ed value={venueText[1]} ph="Address" onCommit={ef && (t => ef({ address: t }))} />}
                 <div className="ivBtnRow">
                   {d.mapUrl && <a className="ivLink" href={d.mapUrl} target="_blank" rel="noopener noreferrer">{L.map}</a>}
                 </div>
@@ -866,7 +905,7 @@ export function InvitePublic() {
       if (r.error || !r.data) { setState('missing'); return; }
       const merged = merge(r.data.data);
       setData(merged); setTitle(r.data.title || 'Wedding invitation'); setState('ok');
-      const names = [merged.groom, merged.bride].filter(Boolean).join(' & ');
+      const names = [merged.groom || merged.groomEn, merged.bride || merged.brideEn].filter(Boolean).join(' & ');
       document.title = names ? `${names} · Wedding invitation` : r.data.title || 'Wedding invitation';
     })();
     return () => { live = false; };
@@ -1020,7 +1059,7 @@ function BlockEditor({ b, blocks, onP, onS, upload, busy, setNote }: {
         <PhotoTile label="Cover picture" url={s.bgImage} busy={busy === 'bg'} onFile={f => upload(f, 'bg', u => onS({ bgImage: u }))} onClear={() => onS({ bgImage: '' })} />
         <label>Small line above the names<input value={p.kicker} onChange={e => onP({ kicker: e.target.value })} placeholder="យើងនឹងរៀបមង្គលការ" /></label>
         <label>…in English (optional)<input value={p.kickerEn} onChange={e => onP({ kickerEn: e.target.value })} placeholder="We are getting married" /></label>
-        <label>Names (press Enter for a new line)<textarea rows={2} value={p.names} onChange={e => onP({ names: e.target.value })} /></label>
+        <label>Names in Khmer (press Enter for a new line)<textarea rows={2} value={p.names} onChange={e => onP({ names: e.target.value })} /></label>
         <label>Names in English (optional)<textarea rows={2} value={p.namesEn} onChange={e => onP({ namesEn: e.target.value })} /></label>
         <label>Date line<input value={p.sub} onChange={e => onP({ sub: e.target.value })} placeholder="ថ្ងៃសៅរ៍ ទី១២ ខែមករា ឆ្នាំ២០២៧" /></label>
         <label>…in English (optional)<input value={p.subEn} onChange={e => onP({ subEn: e.target.value })} placeholder="Saturday, January 12, 2027" /></label>
@@ -1286,11 +1325,11 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
   /* suggest a link from the names until the admin edits it themselves */
   useEffect(() => {
     if (slugTouched.current) return;
-    const base = slugify([data.groom, data.bride].filter(Boolean).join('-'));
+    const base = slugify([data.groomEn || data.groom, data.brideEn || data.bride].filter(Boolean).join('-'));
     if (base) setSlug(s => (s && s.startsWith(base) ? s : `${base}-${randomTail()}`));
-  }, [data.groom, data.bride]);
+  }, [data.groom, data.bride, data.groomEn, data.brideEn]);
   useEffect(() => { if (custom && !slugTouched.current) { const base = slugify(title); if (base.length >= 3) setSlug(s => (s && s.startsWith(base) ? s : `${base}-${randomTail()}`)); } }, [title]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!title && (data.groom || data.bride)) setTitle(`${[data.groom, data.bride].filter(Boolean).join(' & ')} wedding`); }, [data.groom, data.bride]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const a = data.groomEn || data.groom, c = data.brideEn || data.bride; if (!title && (a || c)) setTitle(`${[a, c].filter(Boolean).join(' & ')} wedding`); }, [data.groom, data.bride, data.groomEn, data.brideEn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* weekday follows the date automatically until the admin types their own */
   const onDate = (date: string) => { setData(d => ({ ...d, date, weekday: isAutoWeekday(d.weekday) ? autoWeekday(date) : d.weekday })); setDirty(true); };
@@ -1379,8 +1418,12 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
         {/* 1 ----------------------------------------------------------- */}
         <Card title="1. Bride & Groom Information" icon={<Heart />} open>
           <div className="two">
-            <label>Groom's full name (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} /></label>
-            <label>Bride's full name (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} /></label>
+            <label>Groom's name in Khmer (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} placeholder="ឈ្មោះជាភាសាខ្មែរ" /></label>
+            <label>Bride's name in Khmer (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} placeholder="ឈ្មោះជាភាសាខ្មែរ" /></label>
+          </div>
+          <div className="two">
+            <label>Groom's name in English (optional)<input value={data.groomEn} onChange={e => set({ groomEn: e.target.value })} placeholder="Shown when the guest taps EN" /></label>
+            <label>Bride's name in English (optional)<input value={data.brideEn} onChange={e => set({ brideEn: e.target.value })} placeholder="Shown when the guest taps EN" /></label>
           </div>
           <div className="two">
             <label>Groom's parents' names (ឈ្មោះឪពុកម្តាយខាងកូនកំលោះ)<textarea rows={2} value={data.groomParents} onChange={e => set({ groomParents: e.target.value })} placeholder="លោក … និង លោកស្រី …" /></label>
@@ -1581,8 +1624,10 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
       </div>
 
       <aside className="ivPhoneCol">
-        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} selectedId={selected} onSelectBlock={custom ? id => selectBlock(id, 'preview') : undefined} /></div></div>
-        <small className="muted">{custom ? 'Live preview. Tap any part of the page to edit it.' : 'Live preview. Tap the opening to try it, including the music.'}</small>
+        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} selectedId={selected} onSelectBlock={custom ? id => selectBlock(id, 'preview') : undefined}
+          onEditField={custom ? undefined : patch => set(patch)}
+          onEditBlock={custom ? (id, patch) => updateBlocks(bs => bs.map(x => (x.id === id ? { ...x, p: { ...x.p, ...patch } } : x))) : undefined} /></div></div>
+        <small className="muted">{custom ? 'Live preview. Tap a part to select it, tap its text to type straight on it.' : 'Live preview. Open it, then tap the names, wording or parents to type straight on the page.'}</small>
       </aside>
     </div>
   );

@@ -337,3 +337,12 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivStyleBox{border:1px dashed #d9c8ef;border-radius:12px;padding:10px 12px}
 .ivStyleBox summary{cursor:pointer;font-weight:600;color:var(--purple)}
 .ivArt-none,.ivStyleArt.art-none{background:repeating-linear-gradient(45deg,#e9e3f3 0 8px,#fff 8px 16px)}
+
+/* ===================== Typing straight on the preview ===================== */
+.ivNames span{white-space:pre-line}
+.ivRoot.ivEdit .ivEd{cursor:text;outline:none;border-radius:6px;min-width:1ch;display:inline-block;max-width:100%}
+.ivRoot.ivEdit p.ivEd,.ivRoot.ivEdit h1.ivEd,.ivRoot.ivEdit h3.ivEd,.ivRoot.ivEdit b.ivEd{display:block}
+.ivRoot.ivEdit .ivEd:hover{outline:1px dashed rgba(124,58,237,.7);outline-offset:3px}
+.ivRoot.ivEdit .ivEd:focus{outline:2px solid #7c3aed;outline-offset:3px;background:rgba(124,58,237,.1)}
+.ivRoot.ivEdit .ivEd:empty:before{content:attr(data-ph);opacity:.5}
+.ivRoot.ivEdit .ivBtnX .ivEd{display:inline}
