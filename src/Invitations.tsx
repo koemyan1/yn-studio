@@ -3,10 +3,10 @@ import { useParams } from 'react-router-dom';
 import {
   Plus, Pencil, Trash2, Copy, ExternalLink, Save, ArrowLeft, Music2, Upload, X, Heart,
   Link2, Eye, EyeOff, RefreshCw, ImagePlus, MapPin, CalendarDays, Sparkles, Volume2, VolumeX, SkipForward,
-  Type, Image as ImageIcon, Timer, List, LayoutGrid, Minus, ArrowUpDown, ChevronUp, ChevronDown, Phone, Send,
 } from 'lucide-react';
 import { supabase } from './supabase';
 import { optimizeImage } from './imageTools';
+import { CanvasBuilder, CanvasPages, emptyCanvas, type Canvas } from './InviteCanvas';
 import './invitations.css';
 
 /* =====================================================================================================
@@ -15,20 +15,16 @@ import './invitations.css';
    - Guests: /i/<slug>          (public, no login, opens straight to the invitation)
    ===================================================================================================== */
 
-export type OpenStyle = 'envelope' | 'curtains' | 'doors' | 'cover' | 'none';
-export type BlockType = 'cover' | 'text' | 'image' | 'button' | 'countdown' | 'schedule' | 'gallery' | 'divider' | 'spacer';
-export type BlockStyle = {
-  bg: string; bgImage: string; overlay: number; padTop: number; padBottom: number; minHeight: number;
-  align: 'left' | 'center' | 'right'; color: string; anim: 'rise' | 'fade' | 'zoom' | 'none';
-};
-export type Block = { id: string; type: BlockType; hidden?: boolean; s: BlockStyle; p: Record<string, any> };
+export type OpenStyle = 'envelope' | 'curtains' | 'doors' | 'cover';
 export type Lang = 'en' | 'km' | 'both';
 export type KhFont = 'moul' | 'moulpali' | 'body';
 type Song = { title: string; url: string };
 type CeremonyItem = { name: string; date: string; time: string };
 export type InviteData = {
+  /* 'form' = guided form, 'canvas' = free-form blank canvas */
+  mode: 'form' | 'canvas'; canvas?: Canvas;
   /* 1. Bride & groom */
-  groom: string; bride: string; groomEn: string; brideEn: string; groomParents: string; brideParents: string;
+  groom: string; bride: string; groomParents: string; brideParents: string;
   /* 2. Wedding details */
   date: string; weekday: string; time: string; receptionTime: string; venue: string; address: string; mapUrl: string;
   message: string; headline: string;
@@ -39,13 +35,11 @@ export type InviteData = {
   lang: Lang;
   khFonts: { names: KhFont; title: KhFont; body: KhFont };
   look: { palette: string; accent: string; font: string };
-  opening: { style: OpenStyle; image: string; title: string; button: string };
+  opening: { style: OpenStyle; image: string; title: string; button: string; doorImage: string; bottomImage: string; buttonImage: string };
   butterflies: { enabled: boolean; count: number; size: number; color: string; mix: boolean };
   songs: Song[];
   /* 5. Contact (shown to guests as buttons) */
   phone: string; telegram: string;
-  /* 6. Free builder: when layout is 'custom' the page is just this list of blocks (everything editable, starts empty) */
-  layout: 'classic' | 'custom'; blocks: Block[]; page: { bg: string; bgImage: string; text: string };
 };
 /* Never shown to guests: kept in a separate admin-only table. */
 type Private = { completionDate: string; requests: string; designerNotes: string };
@@ -63,7 +57,8 @@ const loc = (value: string, key: 'headline' | 'message' | 'otitle' | 'obtn', lan
 };
 
 const DEFAULTS: InviteData = {
-  groom: '', bride: '', groomEn: '', brideEn: '', groomParents: '', brideParents: '',
+  mode: 'form',
+  groom: '', bride: '', groomParents: '', brideParents: '',
   date: '', weekday: '', time: '', receptionTime: '', venue: '', address: '', mapUrl: '',
   message: TXT.km.message, headline: TXT.km.headline,
   schedule: [],
@@ -71,18 +66,11 @@ const DEFAULTS: InviteData = {
   lang: 'km',
   khFonts: { names: 'moul', title: 'moulpali', body: 'body' },
   look: { palette: 'blush', accent: '', font: 'elegant' },
-  opening: { style: 'envelope', image: '', title: TXT.km.otitle, button: TXT.km.obtn },
+  opening: { style: 'envelope', image: '', title: TXT.km.otitle, button: TXT.km.obtn, doorImage: '', bottomImage: '', buttonImage: '' },
   butterflies: { enabled: true, count: 8, size: 34, color: '#f4a6c0', mix: true },
   songs: [],
   phone: '', telegram: '',
-  layout: 'classic', blocks: [], page: { bg: '', bgImage: '', text: '' },
 };
-
-/* A brand-new free-builder invitation: white page, no opening scene, no butterflies, no blocks. */
-const blankData = (): InviteData => ({
-  ...DEFAULTS, layout: 'custom', template: '', message: '', headline: '', blocks: [],
-  look: { ...DEFAULTS.look, palette: 'white' }, opening: { ...DEFAULTS.opening, style: 'none' }, butterflies: { ...DEFAULTS.butterflies, enabled: false },
-});
 
 const PALETTES: Record<string, { name: string; bg: string; card: string; accent: string; text: string; soft: string }> = {
   blush: { name: 'Blush rose', bg: '#fff5f7', card: '#ffffff', accent: '#c25b7a', text: '#4a2b36', soft: '#f9dde5' },
@@ -90,8 +78,6 @@ const PALETTES: Record<string, { name: string; bg: string; card: string; accent:
   gold: { name: 'Ivory & gold', bg: '#fbf7ee', card: '#fffdf8', accent: '#b8893b', text: '#3d3220', soft: '#f1e6cc' },
   burgundy: { name: 'Burgundy', bg: '#fbf3f3', card: '#ffffff', accent: '#8a1f3d', text: '#3b1620', soft: '#f1d5da' },
   navy: { name: 'Midnight navy', bg: '#14213d', card: '#1d2d52', accent: '#e5c07b', text: '#f5efe0', soft: '#2a3b66' },
-  white: { name: 'Clean white', bg: '#ffffff', card: '#ffffff', accent: '#c25b7a', text: '#2b2b2b', soft: '#f1f1f1' },
-  ink: { name: 'Black', bg: '#0b0b0f', card: '#16161d', accent: '#e5c07b', text: '#f5f5f5', soft: '#23232d' },
   lilac: { name: 'Lilac dream', bg: '#f7f3ff', card: '#ffffff', accent: '#7c3aed', text: '#2d2147', soft: '#e7dcfb' },
 };
 const FONTS: Record<string, { name: string; head: string; hg: string; script: string }> = {
@@ -125,7 +111,6 @@ const OPEN_STYLES: { id: OpenStyle; name: string; hint: string }[] = [
   { id: 'curtains', name: 'Curtains', hint: 'Stage curtains slide apart over your picture.' },
   { id: 'doors', name: 'Grand doors', hint: 'Your picture splits in two like double doors.' },
   { id: 'cover', name: 'Tap cover', hint: 'A full-screen picture with a button; zooms into the invitation.' },
-  { id: 'none', name: 'No opening', hint: 'The page shows straight away, nothing to tap.' },
 ];
 
 const CEREMONY_SUGGESTIONS = ['ពិធីសូត្រមន្ត', 'ពិធីជាវខាន់ស្លា', 'ពិធីហែជំនូន', 'ពិធីចងដៃ', 'ពិធីកាត់សក់', 'ពិធីពិសាភោជនាហារ'];
@@ -193,19 +178,13 @@ const merge = (raw: any): InviteData => ({
   butterflies: { ...DEFAULTS.butterflies, ...(raw?.butterflies || {}) },
   songs: Array.isArray(raw?.songs) ? raw.songs : [],
   gallery: Array.isArray(raw?.gallery) ? raw.gallery : [],
-  layout: raw?.layout === 'custom' ? 'custom' : 'classic',
-  blocks: Array.isArray(raw?.blocks) ? (raw.blocks.map(normBlock).filter(Boolean) as Block[]) : [],
-  page: { ...DEFAULTS.page, ...(raw?.page && typeof raw.page === 'object' ? raw.page : {}) },
   /* older invitations stored {time,label}; keep them working */
   schedule: Array.isArray(raw?.schedule) ? raw.schedule.map((x: any) => ({ name: x?.name ?? x?.label ?? '', date: x?.date ?? '', time: x?.time ?? '' })) : [],
 });
 
 const slugify = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
 const randomTail = () => Math.random().toString(36).slice(2, 6);
-/* Guests always get the custom-domain link, whichever address the admin is using. Change it with VITE_PUBLIC_SITE_URL if the domain ever moves. */
-const PUBLIC_ORIGIN = String((import.meta as any).env?.VITE_PUBLIC_SITE_URL || 'https://ynstudio.site').replace(/\/+$/, '');
-const PUBLIC_HOST = PUBLIC_ORIGIN.replace(/^https?:\/\//, '');
-const inviteUrl = (slug: string) => `${PUBLIC_ORIGIN}/i/${slug}`;
+const inviteUrl = (slug: string) => `${window.location.origin}/i/${slug}`;
 const safeName = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
 
 let fontsLoaded = false;
@@ -215,7 +194,7 @@ function useInviteFonts() {
     fontsLoaded = true;
     const l = document.createElement('link');
     l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&family=Cormorant+Garamond:wght@400;600;700&family=Parisienne&family=Dancing+Script:wght@500;700&family=Kantumruy+Pro:wght@400;600;700&family=Moul&family=Moulpali&family=Noto+Serif+Khmer:wght@400;600&family=Outfit:wght@400;600;700&display=swap';
+    l.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&family=Cormorant+Garamond:wght@400;600;700&family=Parisienne&family=Dancing+Script:wght@500;700&family=Kantumruy+Pro:wght@400;600;700&family=Moul&family=Moulpali&family=Noto+Serif+Khmer:wght@400;600&display=swap';
     document.head.appendChild(l);
   }, []);
 }
@@ -227,7 +206,7 @@ function themeVars(d: InviteData): React.CSSProperties {
   const kf = { ...DEFAULTS.khFonts, ...(d.khFonts || {}) };
   /* Latin font first, then the chosen Khmer font for Khmer letters, then a generic family */
   return {
-    ['--iv-bg' as any]: okColor(d.page?.bg) || p.bg, ['--iv-card' as any]: p.card, ['--iv-text' as any]: okColor(d.page?.text) || p.text, ['--iv-soft' as any]: p.soft,
+    ['--iv-bg' as any]: p.bg, ['--iv-card' as any]: p.card, ['--iv-text' as any]: p.text, ['--iv-soft' as any]: p.soft,
     ['--iv-accent' as any]: accent,
     ['--iv-head' as any]: `${f.head},${KH_FONTS[kf.body].stack},${f.hg}`,
     ['--iv-names' as any]: `${f.script},${KH_FONTS[kf.names].stack},cursive`,
@@ -282,7 +261,7 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
   const [phase, setPhase] = useState<'closed' | 'opening' | 'gone'>('closed');
   const L = labelsFor(d.lang);
   const img = d.opening.image;
-  const names = [nm(d.groom, d.groomEn, d.lang, ' · '), nm(d.bride, d.brideEn, d.lang, ' · ')].filter(Boolean).join(' & ') || (d.lang === 'en' ? 'Groom & Bride' : 'កូនកំលោះ & កូនក្រមុំ');
+  const names = [d.groom, d.bride].filter(Boolean).join(' & ') || (d.lang === 'en' ? 'Groom & Bride' : 'កូនកំលោះ & កូនក្រមុំ');
   const open = () => {
     if (phase !== 'closed') return;
     setPhase('opening');
@@ -292,6 +271,11 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
   if (phase === 'gone') return null;
   const st = d.opening.style;
   const bg: React.CSSProperties = img ? { backgroundImage: `url("${img}")` } : {};
+  const doorImg = d.opening.doorImage || img;
+  const doorBg: React.CSSProperties = doorImg ? { backgroundImage: `url("${doorImg}")` } : {};
+  const btnImg = d.opening.buttonImage;
+  const btnStyle: React.CSSProperties | undefined = btnImg ? { backgroundImage: `url("${btnImg}")` } : undefined;
+  const btnCls = 'ivOpenBtn' + (btnImg ? ' ivBtnImg' : '');
   const btn = loc(d.opening.button, 'obtn', d.lang);
   const otitle = loc(d.opening.title, 'otitle', d.lang);
   return (
@@ -300,7 +284,7 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
       <div className="ivOpenShade" />
 
       {st === 'curtains' && <><div className="ivCurtain ivCurtainL" /><div className="ivCurtain ivCurtainR" /></>}
-      {st === 'doors' && <><div className="ivDoor ivDoorL" style={bg}><i /></div><div className="ivDoor ivDoorR" style={bg}><i /></div></>}
+      {st === 'doors' && <><div className="ivDoor ivDoorL" style={doorBg}>{!d.opening.doorImage && <i />}</div><div className="ivDoor ivDoorR" style={doorBg}>{!d.opening.doorImage && <i />}</div></>}
 
       {st === 'envelope' ? (
         <div className="ivEnvStage">
@@ -312,15 +296,16 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
             <div className="ivEnvFlap" />
             <button type="button" className="ivSeal" aria-label={btn}><Heart fill="currentColor" /></button>
           </div>
-          <button type="button" className="ivOpenBtn" onClick={open}>{btn}</button>
+          <button type="button" className={btnCls} style={btnStyle} onClick={open} aria-label={btn}>{btnImg ? '' : btn}</button>
         </div>
       ) : (
         <div className="ivOpenCenter">
           <p className="ivOpenKicker">{otitle}</p>
           <h2 className={'ivOpenNames' + (HAS_KHMER.test(names) || (!d.groom && !d.bride && d.lang !== 'en') ? ' ivKh' : '')}>{names}</h2>
-          <button type="button" className="ivOpenBtn" onClick={open}><Heart /> {btn}</button>
+          <button type="button" className={btnCls} style={btnStyle} onClick={open} aria-label={btn}>{btnImg ? '' : <><Heart /> {btn}</>}</button>
         </div>
       )}
+      {d.opening.bottomImage && <img className="ivOpenBottom" src={d.opening.bottomImage} alt="" />}
     </div>
   );
 }
@@ -348,381 +333,22 @@ function Reveal({ children, className = '' }: { children: React.ReactNode; class
   return <div ref={ref} className={`ivReveal ${on ? 'on' : ''} ${className}`}>{children}</div>;
 }
 
-/* ------------------------------------------------------------------ Free builder: blocks ------------------------------------------------------------------ */
-/* In "free builder" mode the page is a list of blocks the admin adds, edits, reorders and deletes. Nothing is fixed. */
-
-/* A person's name: Khmer is the main one, English is optional. Shows what fits the guest's language. */
-function nm(km: string, en: string, lang: Lang, sep = '\n'): string {
-  const a = (km || '').trim(), e = (en || '').trim();
-  if (lang === 'en') return e || a;
-  if (lang === 'both') return a && e ? `${a}${sep}${e}` : a || e;
-  return a || e;
-}
-
-/* Text you can type into straight on the phone preview. Saves when you tap away. Outside the editor it is plain text. */
-function Ed({ as = 'span', value, onCommit, multi = false, ph = '', className, style }: {
-  as?: string; value: string; onCommit?: (t: string) => void; multi?: boolean; ph?: string; className?: string; style?: React.CSSProperties;
-}) {
-  const Tag = as as React.ElementType;
-  if (!onCommit) return <Tag className={className} style={style}>{value}</Tag>;
-  return (
-    <Tag key={value} className={`${className || ''} ivEd`} style={style} contentEditable suppressContentEditableWarning spellCheck={false} data-ph={ph || 'Type here'}
-      onBlur={(e: React.FocusEvent<HTMLElement>) => {
-        const raw = (e.currentTarget.innerText || '').replace(/\u00a0/g, ' ').replace(/\n+$/, '');
-        const clean = multi ? raw : raw.replace(/\n+/g, ' ');
-        if (clean !== value) onCommit(clean);
-      }}
-      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => { if (e.key === 'Escape' || (!multi && e.key === 'Enter')) { e.preventDefault(); e.currentTarget.blur(); } }}
-      onPaste={(e: React.ClipboardEvent<HTMLElement>) => {
-        e.preventDefault();
-        const t = e.clipboardData.getData('text/plain');
-        document.execCommand('insertText', false, multi ? t : t.replace(/\n+/g, ' '));
-      }}>{value}</Tag>
-  );
-}
-
-const uid = () => Math.random().toString(36).slice(2, 9);
-const okColor = (c: any): string => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : '');
-const num = (v: any, def: number, min: number, max: number): number => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def; };
-/* Only https pictures (or this site's own files) are used, and characters that could break out of url("…") are escaped. */
-const safeImg = (u: any): string => {
-  const v = typeof u === 'string' ? u.trim() : '';
-  if (!(/^https:\/\//i.test(v) || /^\/(?!\/)/.test(v))) return '';
-  return v.replace(/["'()\\\s<>]/g, ch => '%' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
-};
-/* Text with an optional English version: follows the guest's language switch. */
-const pick = (t: any, en: any, lang: Lang): string => {
-  const a = typeof t === 'string' ? t : '', e = typeof en === 'string' ? en : '';
-  if (!e) return a;
-  if (lang === 'en') return e;
-  if (lang === 'both') return a ? `${a}\n${e}` : e;
-  return a || e;
-};
-
-type LinkKind = 'url' | 'call' | 'telegram' | 'whatsapp' | 'email' | 'block';
-const LINK_KINDS: [LinkKind, string, string][] = [
-  ['url', 'Website / any link', 'https://…'],
-  ['call', 'Phone call', '+855 12 345 678'],
-  ['telegram', 'Telegram', '@username'],
-  ['whatsapp', 'WhatsApp', '+855 12 345 678'],
-  ['email', 'Email', 'name@example.com'],
-  ['block', 'Jump to a block on this page', ''],
-];
-/* Turns what the admin typed into a safe link. javascript: and other odd schemes are never produced. */
-function blockHref(kind: string, value: any): string {
-  const v = typeof value === 'string' ? value.trim() : '';
-  if (!v) return '';
-  switch (kind) {
-    case 'call': { const n = v.replace(/[^+\d]/g, ''); return n ? `tel:${n}` : ''; }
-    case 'telegram': { const u = v.replace(/^@/, '').replace(/^https?:\/\/(t\.me|telegram\.me)\//i, '').replace(/[^\w]/g, ''); return u ? `https://t.me/${u}` : ''; }
-    case 'whatsapp': { const n = v.replace(/\D/g, ''); return n ? `https://wa.me/${n}` : ''; }
-    case 'email': return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? `mailto:${v}` : '';
-    case 'block': return '#' + v.replace(/[^\w-]/g, '');
-    default:
-      if (/^https?:\/\//i.test(v)) return v;
-      if (/^(tel:|mailto:|sms:)[^\s]+$/i.test(v)) return v;
-      if (/^[\w-]+(\.[\w-]+)+(\/|$|\?|#)/.test(v)) return 'https://' + v;
-      return '';
-  }
-}
-function scrollToBlock(id: string) {
-  const el = document.getElementById('ivb-' + id);
-  const sc = el?.closest('.ivScroll') as HTMLElement | null;
-  if (!el || !sc) return;
-  sc.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 12), behavior: 'smooth' });
-}
-
-const BLOCK_STYLE: BlockStyle = { bg: '', bgImage: '', overlay: 0, padTop: 28, padBottom: 8, minHeight: 0, align: 'center', color: '', anim: 'rise' };
-type BlockDef = { name: string; hint: string; icon: React.ElementType; make: () => Record<string, any>; style?: Partial<BlockStyle> };
-const BLOCK_DEFS: Record<BlockType, BlockDef> = {
-  cover: { name: 'Cover photo', hint: 'Big photo with names and date', icon: Sparkles,
-    make: () => ({ kicker: '', kickerEn: '', names: 'Groom & Bride', namesEn: '', sub: '', subEn: '', size: 64, arrow: true }),
-    style: { overlay: 40, padTop: 40, padBottom: 40, minHeight: 100, color: '#ffffff' } },
-  text: { name: 'Text', hint: 'Any words, in any font and size', icon: Type,
-    make: () => ({ text: 'Your text here', en: '', font: 'head', size: 20, weight: 400, italic: false, upper: false, accent: false, spacing: 0, line: 1.7 }) },
-  image: { name: 'Picture', hint: 'A photo, logo or sticker', icon: ImageIcon,
-    make: () => ({ url: '', width: 100, shape: 'orig', radius: 16, shadow: true, alt: '', kind: 'url', value: '' }) },
-  button: { name: 'Button', hint: 'Links to a website, map, phone, Telegram…', icon: ExternalLink,
-    make: () => ({ label: 'Open map', en: '', kind: 'url', value: '', variant: 'solid', btn: '', txt: '', radius: 999, size: 'md', full: false, icon: 'none' }) },
-  countdown: { name: 'Countdown', hint: 'Days, hours, minutes to the big day', icon: Timer,
-    make: () => ({ title: 'Save the date', en: '', date: '', time: '09:00' }) },
-  schedule: { name: 'Programme', hint: 'List of ceremonies with date and time', icon: List,
-    make: () => ({ title: 'Wedding programme', en: '', items: [{ name: '', date: '', time: '' }] }) },
-  gallery: { name: 'Photo gallery', hint: 'Several photos in a grid', icon: LayoutGrid,
-    make: () => ({ images: [], cols: 2, radius: 16, gap: 10 }) },
-  divider: { name: 'Divider', hint: 'A small decorative line', icon: Minus,
-    make: () => ({ style: 'heart', color: '' }) },
-  spacer: { name: 'Space', hint: 'Empty room between blocks', icon: ArrowUpDown,
-    make: () => ({ height: 40 }) },
-};
-const BLOCK_TYPES = Object.keys(BLOCK_DEFS) as BlockType[];
-
-function newBlock(type: BlockType, patch?: { p?: Record<string, any>; s?: Partial<BlockStyle> }): Block {
-  const def = BLOCK_DEFS[type];
-  return { id: uid(), type, s: { ...BLOCK_STYLE, ...(def.style || {}), ...(patch?.s || {}) }, p: { ...def.make(), ...(patch?.p || {}) } };
-}
-/* Anything read back from the database is checked, so a bad row can never break the page. */
-function normBlock(raw: any): Block | null {
-  if (!raw || typeof raw !== 'object' || !BLOCK_TYPES.includes(raw.type)) return null;
-  const base = newBlock(raw.type as BlockType);
-  const s = { ...base.s, ...(raw.s && typeof raw.s === 'object' ? raw.s : {}) } as BlockStyle;
-  const p = { ...base.p, ...(raw.p && typeof raw.p === 'object' ? raw.p : {}) };
-  return { id: typeof raw.id === 'string' && /^[\w-]{1,24}$/.test(raw.id) ? raw.id : base.id, type: raw.type, hidden: !!raw.hidden, s, p };
-}
-
-const BLOCK_FONTS: Record<string, { name: string; css: string }> = {
-  head: { name: 'Main font', css: 'var(--iv-head)' },
-  names: { name: 'Script / names', css: 'var(--iv-names)' },
-  title: { name: 'Title font', css: 'var(--iv-title)' },
-  body: { name: 'Khmer easy-read', css: `${KH_FONTS.body.stack},'Playfair Display',serif` },
-  moul: { name: 'Khmer OS Muol Light', css: `${KH_FONTS.moul.stack},serif` },
-  moulpali: { name: 'Khmer OS Muol Pali', css: `${KH_FONTS.moulpali.stack},serif` },
-  sans: { name: 'Clean sans-serif', css: "'Outfit','Kantumruy Pro',sans-serif" },
-};
-const BTN_ICONS: Record<string, React.ElementType> = { heart: Heart, pin: MapPin, phone: Phone, send: Send, calendar: CalendarDays, link: ExternalLink };
-
-const blockSummary = (b: Block): string => {
-  const p = b.p;
-  switch (b.type) {
-    case 'cover': return String(p.names || '');
-    case 'text': return String(p.text || '').split('\n')[0];
-    case 'button': return String(p.label || '');
-    case 'image': return p.url ? 'Picture' : 'No picture yet';
-    case 'countdown': return String(p.date || 'Pick a date');
-    case 'schedule': return `${(p.items || []).length} events`;
-    case 'gallery': return `${(p.images || []).length} photos`;
-    case 'divider': return String(p.style || '');
-    case 'spacer': return `${p.height}px`;
-    default: return '';
-  }
-};
-
-function BlockCountdown({ p, lang, preview, onEdit }: { p: Record<string, any>; lang: Lang; preview: boolean; onEdit?: (t: string) => void }) {
-  const target = useMemo(() => {
-    if (!p.date) return null;
-    const t = new Date(`${p.date}T${p.time || '09:00'}:00`).getTime();
-    return Number.isFinite(t) ? t : null;
-  }, [p.date, p.time]);
-  const cd = useCountdown(target);
-  const L = labelsFor(lang);
-  const title = pick(p.title, p.en, lang);
-  if (!cd) return preview ? <div className="ivImgEmpty">Pick a date for the countdown</div> : null;
-  return (
-    <>
-      {(title || onEdit) && <Ed as="h3" className="ivBH3" value={title} ph="Title" onCommit={onEdit} />}
-      {cd.over ? <h3 className="ivBH3">{L.soon}</h3> : (
-        <div className="ivCountRow">
-          {([['days', cd.days], ['hours', cd.hours], ['mins', cd.mins], ['secs', cd.secs]] as const).map(([k, v]) => (
-            <div key={k}><b>{lang === 'km' ? khNum(String(v).padStart(2, '0')) : String(v).padStart(2, '0')}</b><small>{(L as any)[k]}</small></div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function BlockButton({ p, lang, preview, onEdit }: { p: Record<string, any>; lang: Lang; preview: boolean; onEdit?: (t: string) => void }) {
-  const label = pick(p.label, p.en, lang);
-  if (!label && !onEdit) return null;
-  const href = blockHref(p.kind, p.value);
-  const Icon = BTN_ICONS[p.icon];
-  const col = okColor(p.btn), txt = okColor(p.txt);
-  const st: React.CSSProperties = { borderRadius: num(p.radius, 999, 0, 999) };
-  if (p.variant === 'outline') { st.background = 'transparent'; st.color = txt || col || 'var(--iv-accent)'; st.border = `2px solid ${col || 'var(--iv-accent)'}`; }
-  else if (p.variant === 'soft') { st.background = 'var(--iv-soft)'; st.color = txt || col || 'var(--iv-accent)'; }
-  else { st.background = col || 'var(--iv-accent)'; st.color = txt || '#ffffff'; }
-  const ext = p.kind === 'url' || p.kind === 'telegram' || p.kind === 'whatsapp';
-  const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (preview) { e.preventDefault(); return; }
-    if (p.kind === 'block') { e.preventDefault(); scrollToBlock(String(p.value)); }
-  };
-  return (
-    <a className={`ivBtnX ivBtnX-${p.size === 'sm' || p.size === 'lg' ? p.size : 'md'}${p.full ? ' full' : ''}`} style={st} href={href || undefined}
-      target={ext ? '_blank' : undefined} rel={ext ? 'noopener noreferrer' : undefined} onClick={onClick}>
-      {Icon && <Icon />}<Ed value={label} ph="Button" onCommit={onEdit} />
-    </a>
-  );
-}
-
-type EditFn = (patch: Record<string, any>) => void;
-function BlockBody({ b, lang, preview, onEdit }: { b: Block; lang: Lang; preview: boolean; onEdit?: EditFn }) {
-  const p = b.p;
-  /* typing on the preview writes the Khmer text, or the English version while the preview is on EN */
-  const ed = onEdit && lang !== 'both' ? onEdit : undefined;
-  const fk = (a: string, e: string) => (lang === 'en' ? e : a);
-  const align = b.s.align;
-  const margin = align === 'left' ? '0' : align === 'right' ? '0 0 0 auto' : '0 auto';
-  switch (b.type) {
-    case 'cover': {
-      const kick = pick(p.kicker, p.kickerEn, lang), nmText = pick(p.names, p.namesEn, lang), sub = pick(p.sub, p.subEn, lang);
-      const sz = num(p.size, 64, 28, 140);
-      return (
-        <>
-          {(kick || ed) && <Ed as="p" className="ivKicker" value={kick} ph="Small line" onCommit={ed && (t => ed({ [fk('kicker', 'kickerEn')]: t }))} />}
-          <Ed as="h1" className="ivBNames" multi ph="Names" value={nmText} onCommit={ed && (t => ed({ [fk('names', 'namesEn')]: t }))} style={{ fontSize: `clamp(${Math.round(sz * 0.6)}px, ${(sz / 3.9).toFixed(2)}cqw, ${sz}px)` }} />
-          {(sub || ed) && <p className="ivHeroDate"><CalendarDays /> <Ed value={sub} ph="Date" onCommit={ed && (t => ed({ [fk('sub', 'subEn')]: t }))} /></p>}
-        </>
-      );
-    }
-    case 'text': {
-      const t = pick(p.text, p.en, lang);
-      if (!t && !ed) return preview ? <div className="ivImgEmpty">Empty text: type something</div> : null;
-      const sz = num(p.size, 20, 10, 140);
-      return (
-        <Ed as="p" className="ivBText" multi ph="Type your text" value={t} onCommit={ed && (v => ed({ [fk('text', 'en')]: v }))} style={{
-          fontFamily: (BLOCK_FONTS[p.font] || BLOCK_FONTS.head).css,
-          fontSize: `clamp(${Math.round(sz * 0.6)}px, ${(sz / 3.9).toFixed(2)}cqw, ${sz}px)`,
-          fontWeight: p.weight === 700 ? 700 : 400, fontStyle: p.italic ? 'italic' : 'normal',
-          letterSpacing: `${num(p.spacing, 0, 0, 40) / 100}em`, lineHeight: num(p.line, 1.7, 1, 3),
-          textTransform: p.upper ? 'uppercase' : undefined, color: p.accent ? 'var(--iv-accent)' : undefined,
-        }} />
-      );
-    }
-    case 'image': {
-      const u = safeImg(p.url);
-      if (!u) return preview ? <div className="ivImgEmpty">Choose a picture</div> : null;
-      const ratio: Record<string, string> = { sq: '1 / 1', pt: '4 / 5', wd: '16 / 9', round: '1 / 1' };
-      const img = (
-        <img src={u} alt={String(p.alt || '')} loading="lazy" style={{
-          display: 'block', width: `${num(p.width, 100, 10, 100)}%`, margin,
-          aspectRatio: ratio[p.shape] || undefined, objectFit: ratio[p.shape] ? 'cover' : undefined,
-          borderRadius: p.shape === 'round' ? '50%' : num(p.radius, 16, 0, 60),
-          boxShadow: p.shadow ? '0 12px 34px rgba(0,0,0,.18)' : undefined,
-        }} />
-      );
-      const href = blockHref(p.kind, p.value);
-      if (!href) return img;
-      const ext = p.kind === 'url' || p.kind === 'telegram' || p.kind === 'whatsapp';
-      return <a href={href} target={ext ? '_blank' : undefined} rel={ext ? 'noopener noreferrer' : undefined} onClick={e => { if (preview) e.preventDefault(); else if (p.kind === 'block') { e.preventDefault(); scrollToBlock(String(p.value)); } }}>{img}</a>;
-    }
-    case 'button': return <BlockButton p={p} lang={lang} preview={preview} onEdit={ed && (t => ed({ [fk('label', 'en')]: t }))} />;
-    case 'countdown': return <BlockCountdown p={p} lang={lang} preview={preview} onEdit={ed && (t => ed({ [fk('title', 'en')]: t }))} />;
-    case 'schedule': {
-      const items: CeremonyItem[] = (Array.isArray(p.items) ? p.items : []).filter((e: any) => e && e.name);
-      const title = pick(p.title, p.en, lang);
-      const edT = ed && ((t: string) => ed({ [fk('title', 'en')]: t }));
-      if (!items.length) return preview ? <div className="ivImgEmpty">Add events to the programme</div> : null;
-      return (
-        <>
-          {(title || edT) && <Ed as="h3" className="ivBH3" value={title} ph="Title" onCommit={edT} />}
-          <ol className="ivTimeline">{items.map((e, i) => (
-            <li key={i}><div className="ivWhen"><b>{fmtTime(e.time, lang)}</b><small>{fmtShort(e.date, lang)}</small></div><span>{e.name}</span></li>
-          ))}</ol>
-        </>
-      );
-    }
-    case 'gallery': {
-      const imgs = (Array.isArray(p.images) ? p.images : []).map(safeImg).filter(Boolean) as string[];
-      if (!imgs.length) return preview ? <div className="ivImgEmpty">Add photos to the gallery</div> : null;
-      const gap = num(p.gap, 10, 0, 30);
-      return (
-        <div className="ivBGallery" style={{ gridTemplateColumns: `repeat(${num(p.cols, 2, 1, 3)},1fr)`, gap }}>
-          {imgs.map((u, i) => <img key={u + i} src={u} alt="" loading="lazy" style={{ borderRadius: num(p.radius, 16, 0, 40) }} />)}
-        </div>
-      );
-    }
-    case 'divider': {
-      const c = okColor(p.color);
-      return <div className={`ivDiv ivDiv-${p.style === 'line' || p.style === 'dots' || p.style === 'sparkle' ? p.style : 'heart'}`} style={c ? { color: c } : undefined} aria-hidden="true"><i /><span /><i /></div>;
-    }
-    case 'spacer': return <div style={{ height: num(p.height, 40, 4, 300) }} aria-hidden="true" />;
-    default: return null;
-  }
-}
-
-function BlockView({ b, lang, preview, selected, onSelect, onEdit }: { b: Block; lang: Lang; preview: boolean; selected: boolean; onSelect?: (id: string) => void; onEdit?: (id: string, patch: Record<string, any>) => void }) {
-  const s = b.s;
-  const bgi = safeImg(s.bgImage);
-  const bg = okColor(s.bg), col = okColor(s.color);
-  const style: React.CSSProperties = {
-    ...(bg ? { background: bg } : {}), ...(col ? { color: col } : {}),
-    minHeight: num(s.minHeight, 0, 0, 100) > 0 ? `${num(s.minHeight, 0, 0, 100)}cqh` : undefined,
-    paddingTop: num(s.padTop, 28, 0, 200), paddingBottom: num(s.padBottom, 8, 0, 200), textAlign: s.align === 'left' || s.align === 'right' ? s.align : 'center',
-  };
-  const anim = s.anim === 'fade' || s.anim === 'zoom' || s.anim === 'none' ? s.anim : 'rise';
-  const body = (
-    <section id={`ivb-${b.id}`} className={`ivBlk ivBlk-${b.type}${b.type === 'cover' && !bgi ? ' noimg' : ''}${selected ? ' sel' : ''}`} style={style}
-      onClick={onSelect ? (e: React.MouseEvent) => { e.stopPropagation(); onSelect(b.id); } : undefined}>
-      {bgi && <div className="ivBlkBg" style={{ backgroundImage: `url("${bgi}")` }} />}
-      {(bgi || b.type === 'cover') && s.overlay > 0 && <div className="ivBlkShade" style={{ opacity: num(s.overlay, 0, 0, 90) / 100 }} />}
-      <div className="ivBlkIn"><BlockBody b={b} lang={lang} preview={preview} onEdit={onEdit && (patch => onEdit(b.id, patch))} /></div>
-      {b.type === 'cover' && b.p.arrow && <div className="ivScrollHint" aria-hidden="true"><i /></div>}
-    </section>
-  );
-  return anim === 'none' ? body : <Reveal className={`ivA-${anim}`}>{body}</Reveal>;
-}
-
-/* "Fill the builder with what is already typed in the guided form": names, date, place, photos, buttons. Everything stays editable. */
-function blocksFromClassic(d: InviteData): Block[] {
-  const out: Block[] = [];
-  const T = (p: Record<string, any>, s: Partial<BlockStyle> = {}) => { out.push(newBlock('text', { p, s })); };
-  const isDef = (v: string, key: 'headline' | 'message') => !v || v === TXT.km[key] || v === TXT.en[key];
-  const kmNames = [d.groom, d.bride].filter(Boolean).join(' & '), enNames = [d.groomEn, d.brideEn].filter(Boolean).join(' & ');
-  const dateKm = fmtDate(d.date, d.weekday, 'km'), dateEn = fmtDate(d.date, d.weekday, 'en');
-  const timeKm = fmtTime(d.time, 'km'), timeEn = fmtTime(d.time, 'en');
-
-  const cover = newBlock('cover', { s: { bgImage: d.gallery[0] || d.opening.image || '' } });
-  cover.p = { ...cover.p,
-    kicker: isDef(d.headline, 'headline') ? TXT.km.headline : d.headline, kickerEn: isDef(d.headline, 'headline') ? TXT.en.headline : '',
-    names: kmNames || enNames || 'Groom & Bride', namesEn: kmNames ? enNames : '',
-    sub: [dateKm, timeKm].filter(Boolean).join(' · '), subEn: [dateEn, timeEn].filter(Boolean).join(' · ') };
-  out.push(cover);
-
-  const people: [string, string, string, string, string][] = [
-    [d.groomPhoto, d.groom || d.groomEn || L_KM.groomSide, d.groomParents, 'groom', d.groom ? d.groomEn : ''],
-    [d.bridePhoto, d.bride || d.brideEn || L_KM.brideSide, d.brideParents, 'bride', d.bride ? d.brideEn : ''],
-  ];
-  people.forEach(([photo, name, parents, who, nameEn]) => {
-    if (!photo && !parents) return;
-    if (photo) out.push(newBlock('image', { p: { url: photo, width: 46, shape: 'round' }, s: { padTop: 36 } }));
-    T({ text: name, en: nameEn, font: 'names', size: 26, line: 1.8 }, { padTop: photo ? 12 : 30 });
-    if (parents) T({ text: `${who === 'groom' ? L_KM.sonOf : L_KM.daughterOf}\n${parents}`, en: `${who === 'groom' ? L_EN.sonOf : L_EN.daughterOf}\n${parents}`, font: 'body', size: 15, line: 1.9 }, { padTop: 4 });
-  });
-
-  T({ text: isDef(d.message, 'message') ? TXT.km.message : d.message, en: isDef(d.message, 'message') ? TXT.en.message : '', font: 'body', size: 18, line: 1.95 }, { padTop: 46 });
-  if (d.date) out.push(newBlock('countdown', { p: { title: L_KM.save, en: L_EN.save, date: d.date, time: d.time || '09:00' }, s: { padTop: 46 } }));
-
-  if (d.date || d.time) {
-    T({ text: L_KM.when, en: L_EN.when, size: 13, upper: true, spacing: 18, accent: true }, { padTop: 46, padBottom: 0 });
-    T({ text: [dateKm, timeKm].filter(Boolean).join('\n'), en: [dateEn, timeEn].filter(Boolean).join('\n'), font: 'body', size: 22, weight: 700, line: 1.8 }, { padTop: 6 });
-  }
-  if (d.receptionTime) {
-    T({ text: L_KM.reception, en: L_EN.reception, size: 13, upper: true, spacing: 18, accent: true }, { padTop: 30, padBottom: 0 });
-    T({ text: fmtTime(d.receptionTime, 'km'), en: fmtTime(d.receptionTime, 'en'), font: 'body', size: 22, weight: 700 }, { padTop: 6 });
-  }
-  if (d.venue || d.address) {
-    T({ text: L_KM.where, en: L_EN.where, size: 13, upper: true, spacing: 18, accent: true }, { padTop: 30, padBottom: 0 });
-    T({ text: [d.venue, d.address].filter(Boolean).join('\n'), font: 'body', size: 20, weight: 700, line: 1.8 }, { padTop: 6 });
-    if (d.mapUrl) out.push(newBlock('button', { p: { label: L_KM.map, en: L_EN.map, kind: 'url', value: d.mapUrl, icon: 'pin' }, s: { padTop: 14 } }));
-  }
-  const items = d.schedule.filter(e => e.name);
-  if (items.length) out.push(newBlock('schedule', { p: { title: L_KM.program, en: L_EN.program, items: items.map(e => ({ ...e })) }, s: { padTop: 50 } }));
-  if (d.gallery.length > 1) out.push(newBlock('gallery', { p: { images: d.gallery.slice(1) }, s: { padTop: 50 } }));
-  if (d.phone.trim()) out.push(newBlock('button', { p: { label: L_KM.call, en: L_EN.call, kind: 'call', value: d.phone, icon: 'phone' }, s: { padTop: 40 } }));
-  if (d.telegram.trim()) out.push(newBlock('button', { p: { label: 'Telegram', kind: 'telegram', value: d.telegram, variant: 'outline', icon: 'send' }, s: { padTop: 12 } }));
-  out.push(newBlock('divider', { s: { padTop: 50 } }));
-  T({ text: L_KM.thanks, en: L_EN.thanks, font: 'body', size: 17, line: 1.9 }, { padTop: 10 });
-  T({ text: L_KM.ph, en: L_EN.ph, size: 12, line: 1.5 }, { padTop: 6, padBottom: 30 });
-  return out;
-}
-
-export function InvitationView({ data, preview = false, replayKey = 0, onViewed, selectedId = '', onSelectBlock, onEditField, onEditBlock }: { data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void; selectedId?: string; onSelectBlock?: (id: string) => void; onEditField?: (patch: Partial<InviteData>) => void; onEditBlock?: (id: string, patch: Record<string, any>) => void }) {
+export function InvitationView({ data, preview = false, replayKey = 0, onViewed }: { data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void }) {
   useInviteFonts();
   /* Guests start in the invitation's language (Khmer by default) and can switch, unless it is set to bilingual. */
   const [lang, setLang] = useState<Lang>(data.lang);
   useEffect(() => { setLang(data.lang); }, [data.lang]);
   const d = useMemo(() => ({ ...data, lang }), [data, lang]);
   const L = labelsFor(lang);
-  const noOpen = data.opening.style === 'none';
-  const [opened, setOpened] = useState(noOpen);
-  const [gone, setGone] = useState(noOpen);
+  const [opened, setOpened] = useState(false);
+  const [gone, setGone] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const [track, setTrack] = useState(0);
   const [playing, setPlaying] = useState(false);
   const songs = d.songs.filter(s => s.url);
 
   /* a new "replay" resets the scene (used by the admin preview) */
-  useEffect(() => { setOpened(noOpen); setGone(noOpen); setPlaying(false); setTrack(0); audio.current?.pause(); }, [replayKey, d.opening.style]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setOpened(false); setGone(false); setPlaying(false); setTrack(0); audio.current?.pause(); }, [replayKey, d.opening.style]);
   useEffect(() => { if (onViewed) onViewed(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* keep the audio element in step with the playlist */
@@ -758,40 +384,24 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
   const timeText = fmtTime(d.time, lang);
   const recText = fmtTime(d.receptionTime, lang);
   const venueText = [d.venue, d.address].filter(Boolean);
-  const names = [nm(d.groom, d.groomEn, lang), nm(d.bride, d.brideEn, lang)];
-  /* typing on the preview (admin only): Khmer text, or the English version while the preview is on EN; not while bilingual */
-  const ef = preview && onEditField ? onEditField : undefined;
-  const efl = ef && lang !== 'both' ? ef : undefined;
-  const enSfx = lang === 'en' ? 'En' : '';
+  const names = [d.groom, d.bride];
   const heroImg = d.gallery[0] || d.opening.image;
   const hasCouple = !!(d.groomPhoto || d.bridePhoto || d.groomParents || d.brideParents);
   const tg = d.telegram.trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//i, '');
   const events = d.schedule.filter(e => e.name);
-  const custom = d.layout === 'custom';
-  const shown = custom ? d.blocks.filter(b => !b.hidden) : [];
-  const hasEn = custom && d.blocks.some(b => ['en', 'kickerEn', 'namesEn', 'subEn'].some(k => typeof b.p[k] === 'string' && b.p[k].trim()));
-  const pageBg = safeImg(d.page?.bgImage);
 
   return (
-    <div className={`ivRoot ${preview ? 'ivPreview' : ''} ${onSelectBlock ? 'ivPick' : ''} ${ef || onEditBlock ? 'ivEdit' : ''}`} data-kh={lang !== 'en' ? '1' : '0'} style={themeVars(d)}>
-      {pageBg && <div className="ivPageBg" style={{ backgroundImage: `url("${pageBg}")` }} />}
+    <div className={`ivRoot ${preview ? 'ivPreview' : ''}`} data-kh={lang !== 'en' ? '1' : '0'} style={themeVars(d)}>
       <div className={`ivScroll ${gone ? '' : 'ivLocked'}`}>
-        {custom ? (
-          <>
-            {shown.map(b => <BlockView key={b.id} b={b} lang={lang} preview={preview} selected={b.id === selectedId} onSelect={onSelectBlock} onEdit={preview ? onEditBlock : undefined} />)}
-            {!shown.length && preview && <div className="ivEmptyPage"><Heart /><b>Blank page</b><small>Add your first block from the list next to this preview.</small></div>}
-            <div style={{ height: 'max(32px, env(safe-area-inset-bottom))' }} />
-          </>
-        ) : (
-        <>
+        {data.mode === 'canvas' && data.canvas ? <CanvasPages canvas={data.canvas} date={d.date} time={d.time} labels={L} /> : <>
         <section className="ivHero" style={heroImg ? { backgroundImage: `url("${heroImg}")` } : undefined}>
           <div className="ivHeroShade" />
           <div className="ivHeroIn">
-            <Ed as="p" className="ivKicker" value={loc(d.headline, 'headline', lang)} onCommit={efl && (t => efl({ headline: t }))} />
+            <p className="ivKicker">{loc(d.headline, 'headline', lang)}</p>
             <h1 className={'ivNames' + (HAS_KHMER.test(names.join('')) || (!names[0] && !names[1] && lang !== 'en') ? ' ivKh' : '')}>
-              <Ed value={names[0] || L.groomWord.split(' · ')[0]} ph="Groom" onCommit={efl && (t => efl({ [`groom${enSfx}`]: t } as Partial<InviteData>))} />
+              <span>{names[0] || L.groomWord.split(' · ')[0]}</span>
               <em>&amp;</em>
-              <Ed value={names[1] || L.brideWord.split(' · ')[0]} ph="Bride" onCommit={efl && (t => efl({ [`bride${enSfx}`]: t } as Partial<InviteData>))} />
+              <span>{names[1] || L.brideWord.split(' · ')[0]}</span>
             </h1>
             {dateHero && <p className="ivHeroDate"><CalendarDays /> {dateHero}{timeText ? ` · ${lang === 'both' ? fmtTime(d.time, 'km') : timeText}` : ''}</p>}
           </div>
@@ -800,17 +410,17 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
 
         {hasCouple && (
           <Reveal className="ivSec ivCouple">
-            {([['groom', d.groomPhoto, nm(d.groom, d.groomEn, lang, ' · '), d.groomParents, L.sonOf, L.groomSide], ['bride', d.bridePhoto, nm(d.bride, d.brideEn, lang, ' · '), d.brideParents, L.daughterOf, L.brideSide]] as const).map(([k, photo, pname, par, rel, side]) => (
+            {([['groom', d.groomPhoto, d.groom, d.groomParents, L.sonOf, L.groomSide], ['bride', d.bridePhoto, d.bride, d.brideParents, L.daughterOf, L.brideSide]] as const).map(([k, photo, nm, par, rel, side]) => (
               <div className="ivPerson" key={k}>
                 <div className={'ivAvatar' + (photo ? '' : ' empty')} style={photo ? { backgroundImage: `url("${photo}")` } : undefined}>{!photo && <Heart />}</div>
-                <Ed as="b" value={pname || side} ph="Name" onCommit={efl && (t => efl({ [`${k}${enSfx}`]: t } as Partial<InviteData>))} />
-                {par && <small>{rel}<br /><Ed value={par} multi ph="Parents" onCommit={ef && (t => ef({ [`${k}Parents`]: t } as Partial<InviteData>))} /></small>}
+                <b>{nm || side}</b>
+                {par && <small>{rel}<br />{par}</small>}
               </div>
             ))}
           </Reveal>
         )}
 
-        <Reveal className="ivSec"><Ed as="p" className="ivMessage" multi value={loc(d.message, 'message', lang)} onCommit={efl && (t => efl({ message: t }))} /></Reveal>
+        <Reveal className="ivSec"><p className="ivMessage">{loc(d.message, 'message', lang)}</p></Reveal>
 
         {cd && !cd.over && (
           <Reveal className="ivSec ivCount">
@@ -827,7 +437,7 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
             {(dateCard || timeText) && <div className="ivCard"><CalendarDays /><small>{L.when}</small><b>{dateCard}</b>{timeText && <span>{timeText}</span>}</div>}
             {recText && <div className="ivCard"><Heart /><small>{L.reception}</small><b>{recText}</b></div>}
             {venueText.length > 0 && (
-              <div className="ivCard"><MapPin /><small>{L.where}</small><Ed as="b" value={venueText[0]} ph="Place" onCommit={ef && (t => ef({ [d.venue ? 'venue' : 'address']: t } as Partial<InviteData>))} />{venueText[1] && <Ed value={venueText[1]} ph="Address" onCommit={ef && (t => ef({ address: t }))} />}
+              <div className="ivCard"><MapPin /><small>{L.where}</small><b>{venueText[0]}</b>{venueText[1] && <span>{venueText[1]}</span>}
                 <div className="ivBtnRow">
                   {d.mapUrl && <a className="ivLink" href={d.mapUrl} target="_blank" rel="noopener noreferrer">{L.map}</a>}
                 </div>
@@ -860,12 +470,11 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
         )}
 
         <Reveal className="ivSec ivEnd"><Heart fill="currentColor" /><p>{L.thanks}</p><small>{L.ph}</small></Reveal>
-        </>
-        )}
+        </>}
       </div>
 
       <Butterflies cfg={d.butterflies} />
-      {data.lang !== 'both' && (!custom || hasEn) && (
+      {data.lang !== 'both' && data.mode !== 'canvas' && (
         <button type="button" className="ivLang" onClick={() => setLang(lang === 'km' ? 'en' : 'km')} aria-label="Change language">
           <b className={lang === 'km' ? 'on' : ''}>ខ្មែរ</b><b className={lang === 'en' ? 'on' : ''}>EN</b>
         </button>
@@ -878,7 +487,7 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
           {songs.length > 1 && <button type="button" onClick={nextSong} aria-label="Next song"><SkipForward /></button>}
         </div>
       )}
-      <audio ref={audio} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={onEnded} playsInline />
+      <audio ref={audio} preload="auto" loop={songs.length === 1} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={onEnded} playsInline />
 
       {!gone && <OpeningScene key={replayKey + d.opening.style} d={d} onOpen={() => { setOpened(true); startMusic(); }} onGone={() => setGone(true)} />}
     </div>
@@ -905,7 +514,7 @@ export function InvitePublic() {
       if (r.error || !r.data) { setState('missing'); return; }
       const merged = merge(r.data.data);
       setData(merged); setTitle(r.data.title || 'Wedding invitation'); setState('ok');
-      const names = [merged.groom || merged.groomEn, merged.bride || merged.brideEn].filter(Boolean).join(' & ');
+      const names = [merged.groom, merged.bride].filter(Boolean).join(' & ');
       document.title = names ? `${names} · Wedding invitation` : r.data.title || 'Wedding invitation';
     })();
     return () => { live = false; };
@@ -943,7 +552,7 @@ async function uploadAsset(file: File, folder: string, kind: 'image' | 'audio'):
 export function AdminInvitations({ Shell }: { Shell: Shell }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [err, setErr] = useState('');
-  const [editing, setEditing] = useState<Row | 'new' | 'blank' | null>(null);
+  const [editing, setEditing] = useState<Row | 'new' | 'new-canvas' | null>(null);
 
   const load = useCallback(async () => {
     const r = await supabase.from('wedding_invitations').select('*').order('created_at', { ascending: false });
@@ -963,16 +572,16 @@ export function AdminInvitations({ Shell }: { Shell: Shell }) {
   }
   const copy = async (slug: string) => { try { await navigator.clipboard.writeText(inviteUrl(slug)); alert('Link copied:\n' + inviteUrl(slug)); } catch { prompt('Copy this link', inviteUrl(slug)); } };
 
-  if (editing) return <Shell title="Wedding invitation"><InviteEditor row={typeof editing === 'object' ? editing : null} blank={editing === 'blank'} onClose={() => { setEditing(null); load(); }} /></Shell>;
+  if (editing) return <Shell title="Wedding invitation"><InviteEditor row={typeof editing === 'string' ? null : editing} startCanvas={editing === 'new-canvas'} onClose={() => { setEditing(null); load(); }} /></Shell>;
 
   return (
     <Shell title="Wedding Invitations">
-      <div className="toolbar"><button onClick={() => setEditing('blank')}><Plus /> New blank page</button><button className="secondary" onClick={() => setEditing('new')}><Plus /> New from guided form</button></div>
+      <div className="toolbar"><button onClick={() => setEditing('new')}><Plus /> New invitation (guided form)</button><button className="secondary" onClick={() => setEditing('new-canvas')}><Plus /> New blank canvas</button></div>
       {err && <p className="notice">{err}</p>}
       <div className="table">
         {(rows || []).map(x => (
           <div className="tr ivRow" key={x.id}>
-            <div className="ivRowThumb" style={safeImg(x.data?.opening?.image || (Array.isArray(x.data?.blocks) ? x.data.blocks.find((bk: any) => bk?.s?.bgImage)?.s?.bgImage : '')) ? { backgroundImage: `url("${safeImg(x.data?.opening?.image || x.data.blocks.find((bk: any) => bk?.s?.bgImage)?.s?.bgImage)}")` } : undefined}><Heart /></div>
+            <div className="ivRowThumb" style={x.data?.opening?.image ? { backgroundImage: `url("${x.data.opening.image}")` } : undefined}><Heart /></div>
             <div className="grow"><b>{x.title}</b><small>/i/{x.slug} · {x.views} opens</small></div>
             <span className={'status ' + (x.published ? 'published' : 'unpublished')}>{x.published ? 'live' : 'draft'}</span>
             <button className="secondary" onClick={() => copy(x.slug)} title="Copy link"><Copy /><span>Copy link</span></button>
@@ -982,21 +591,22 @@ export function AdminInvitations({ Shell }: { Shell: Shell }) {
             <button className="icon danger" onClick={() => remove(x)} title="Delete"><Trash2 /></button>
           </div>
         ))}
-        {rows && !rows.length && !err && <p className="muted" style={{ padding: 20 }}>No invitations yet. Press “New invitation” to design the first one.</p>}
+        {rows && !rows.length && !err && <p className="muted" style={{ padding: 20 }}>No invitations yet. Start with the guided form, or a blank canvas to design every piece yourself.</p>}
       </div>
     </Shell>
   );
 }
 
-function Card({ title, icon, children, open = false }: { title: string; icon?: React.ReactNode; children: React.ReactNode; open?: boolean }) {
+function Card({ title, icon, children, open = false, hide = false }: { title: string; icon?: React.ReactNode; children: React.ReactNode; open?: boolean; hide?: boolean }) {
+  if (hide) return null;
   return <details className="panel ivCardAdmin" open={open}><summary>{icon}<b>{title}</b></summary><div className="ivCardBody">{children}</div></details>;
 }
 
 function Sub({ children }: { children: React.ReactNode }) { return <h4 className="ivSubHead">{children}</h4>; }
 
-function PhotoTile({ label, url, busy, onFile, onClear }: { label: string; url: string; busy: boolean; onFile: (f: File) => void; onClear: () => void }) {
+function PhotoTile({ label, url, busy, onFile, onClear, wide = false }: { label: string; url: string; busy: boolean; onFile: (f: File) => void; onClear: () => void; wide?: boolean }) {
   return (
-    <div className="ivPhotoTile">
+    <div className={'ivPhotoTile' + (wide ? ' wide' : '')}>
       <div className="ivPickThumb" style={url ? { backgroundImage: `url("${url}")` } : undefined}>{!url && <ImagePlus />}</div>
       <b>{label}</b>
       <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1008,312 +618,25 @@ function PhotoTile({ label, url, busy, onFile, onClear }: { label: string; url: 
   );
 }
 
-/* ------------------------------------------------------------------ Free builder: admin panel ------------------------------------------------------------------ */
-
-function ColorField({ label, value, fallback, onChange }: { label: string; value: string; fallback: string; onChange: (v: string) => void }) {
-  return (
-    <label>{label}
-      <div className="row">
-        <input type="color" value={okColor(value) || fallback} onChange={e => onChange(e.target.value)} style={{ height: 44, padding: 4 }} />
-        {value && <button type="button" className="secondary" onClick={() => onChange('')}>Reset</button>}
-      </div>
-    </label>
-  );
-}
-function Range({ label, value, min, max, step = 1, unit = '', onChange }: { label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (v: number) => void }) {
-  return <label>{label}: <b>{value}{unit}</b><input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /></label>;
-}
-function Seg<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
-  return <div className="ivSegX">{options.map(([v, t]) => <button key={v} type="button" className={value === v ? 'on' : ''} onClick={() => onChange(v)}>{t}</button>)}</div>;
-}
-
-type Upload = (f: File, label: string, cb: (u: string) => void) => Promise<void>;
-type PatchP = Record<string, any> | ((p: Record<string, any>) => Record<string, any>);
-
-function BlockEditor({ b, blocks, onP, onS, upload, busy, setNote }: {
-  b: Block; blocks: Block[]; onP: (patch: PatchP) => void; onS: (patch: Partial<BlockStyle>) => void;
-  upload: Upload; busy: string; setNote: (m: string) => void;
-}) {
-  const p = b.p, s = b.s;
-  const items: CeremonyItem[] = Array.isArray(p.items) ? p.items : [];
-  const images: string[] = Array.isArray(p.images) ? p.images : [];
-  const kindInfo = LINK_KINDS.find(k => k[0] === p.kind) || LINK_KINDS[0];
-
-  const linkFields = (
-    <>
-      <label>Link type
-        <select value={p.kind} onChange={e => onP({ kind: e.target.value, value: '' })}>{LINK_KINDS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
-      {p.kind === 'block'
-        ? <label>Jump to
-            <select value={p.value} onChange={e => onP({ value: e.target.value })}>
-              <option value="">Choose a block…</option>
-              {blocks.filter(x => x.id !== b.id).map(x => <option key={x.id} value={x.id}>{BLOCK_DEFS[x.type].name}: {blockSummary(x).slice(0, 28)}</option>)}
-            </select></label>
-        : <label>Where it goes<input value={p.value} onChange={e => onP({ value: e.target.value })} placeholder={kindInfo[2]} /></label>}
-    </>
-  );
-
-  return (
-    <div className="ivBFields">
-      {b.type === 'cover' && <>
-        <PhotoTile label="Cover picture" url={s.bgImage} busy={busy === 'bg'} onFile={f => upload(f, 'bg', u => onS({ bgImage: u }))} onClear={() => onS({ bgImage: '' })} />
-        <label>Small line above the names<input value={p.kicker} onChange={e => onP({ kicker: e.target.value })} placeholder="យើងនឹងរៀបមង្គលការ" /></label>
-        <label>…in English (optional)<input value={p.kickerEn} onChange={e => onP({ kickerEn: e.target.value })} placeholder="We are getting married" /></label>
-        <label>Names in Khmer (press Enter for a new line)<textarea rows={2} value={p.names} onChange={e => onP({ names: e.target.value })} /></label>
-        <label>Names in English (optional)<textarea rows={2} value={p.namesEn} onChange={e => onP({ namesEn: e.target.value })} /></label>
-        <label>Date line<input value={p.sub} onChange={e => onP({ sub: e.target.value })} placeholder="ថ្ងៃសៅរ៍ ទី១២ ខែមករា ឆ្នាំ២០២៧" /></label>
-        <label>…in English (optional)<input value={p.subEn} onChange={e => onP({ subEn: e.target.value })} placeholder="Saturday, January 12, 2027" /></label>
-        <Range label="Names size" value={num(p.size, 64, 28, 140)} min={28} max={140} onChange={v => onP({ size: v })} />
-        <label className="ivCheck"><input type="checkbox" checked={!!p.arrow} onChange={e => onP({ arrow: e.target.checked })} /> Show the little “scroll down” hint</label>
-      </>}
-
-      {b.type === 'text' && <>
-        <label>Text<textarea rows={4} value={p.text} onChange={e => onP({ text: e.target.value })} /></label>
-        <label>English version (optional)<textarea rows={3} value={p.en || ''} onChange={e => onP({ en: e.target.value })} placeholder="Shown when the guest taps EN" /></label>
-        <div className="two">
-          <label>Font<select value={p.font} onChange={e => onP({ font: e.target.value })}>{Object.entries(BLOCK_FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}</select></label>
-          <label>Weight<select value={p.weight === 700 ? 700 : 400} onChange={e => onP({ weight: Number(e.target.value) })}><option value={400}>Normal</option><option value={700}>Bold</option></select></label>
-        </div>
-        <div className="ivFontSample" style={{ fontFamily: (BLOCK_FONTS[p.font] || BLOCK_FONTS.head).css }}>Aa សួស្តី Wedding</div>
-        <Range label="Size" value={num(p.size, 20, 10, 140)} min={10} max={140} unit="px" onChange={v => onP({ size: v })} />
-        <Range label="Letter spacing" value={num(p.spacing, 0, 0, 40)} min={0} max={40} onChange={v => onP({ spacing: v })} />
-        <Range label="Line height" value={num(p.line, 1.7, 1, 3)} min={1} max={3} step={0.1} onChange={v => onP({ line: Math.round(v * 10) / 10 })} />
-        <label className="ivCheck"><input type="checkbox" checked={!!p.italic} onChange={e => onP({ italic: e.target.checked })} /> Italic</label>
-        <label className="ivCheck"><input type="checkbox" checked={!!p.upper} onChange={e => onP({ upper: e.target.checked })} /> CAPITAL LETTERS</label>
-        <label className="ivCheck"><input type="checkbox" checked={!!p.accent} onChange={e => onP({ accent: e.target.checked })} /> Use the main (accent) colour</label>
-      </>}
-
-      {b.type === 'image' && <>
-        <PhotoTile label="Picture" url={p.url} busy={busy === 'img'} onFile={f => upload(f, 'img', u => onP({ url: u }))} onClear={() => onP({ url: '' })} />
-        <Range label="Width" value={num(p.width, 100, 10, 100)} min={10} max={100} unit="%" onChange={v => onP({ width: v })} />
-        <label>Shape
-          <select value={p.shape} onChange={e => onP({ shape: e.target.value })}>
-            <option value="orig">Original shape</option><option value="sq">Square</option><option value="pt">Portrait</option><option value="wd">Wide</option><option value="round">Circle</option>
-          </select></label>
-        {p.shape !== 'round' && <Range label="Rounded corners" value={num(p.radius, 16, 0, 60)} min={0} max={60} unit="px" onChange={v => onP({ radius: v })} />}
-        <label className="ivCheck"><input type="checkbox" checked={!!p.shadow} onChange={e => onP({ shadow: e.target.checked })} /> Soft shadow</label>
-        <label>Picture description (for screen readers)<input value={p.alt} onChange={e => onP({ alt: e.target.value })} /></label>
-        <Sub>Make the picture a link (optional)</Sub>
-        {linkFields}
-      </>}
-
-      {b.type === 'button' && <>
-        <label>Button text<input value={p.label} onChange={e => onP({ label: e.target.value })} /></label>
-        <label>…in English (optional)<input value={p.en} onChange={e => onP({ en: e.target.value })} /></label>
-        {linkFields}
-        <div className="ivField"><span>Style</span><Seg value={p.variant as 'solid' | 'outline' | 'soft'} options={[['solid', 'Filled'], ['outline', 'Outline'], ['soft', 'Soft']]} onChange={v => onP({ variant: v })} /></div>
-        <div className="ivField"><span>Size</span><Seg value={(p.size === 'sm' || p.size === 'lg' ? p.size : 'md') as 'sm' | 'md' | 'lg'} options={[['sm', 'Small'], ['md', 'Medium'], ['lg', 'Large']]} onChange={v => onP({ size: v })} /></div>
-        <div className="two">
-          <label>Corners<select value={p.radius} onChange={e => onP({ radius: Number(e.target.value) })}><option value={999}>Round (pill)</option><option value={14}>Soft</option><option value={4}>Square</option></select></label>
-          <label>Icon<select value={p.icon} onChange={e => onP({ icon: e.target.value })}>
-            <option value="none">No icon</option><option value="heart">Heart</option><option value="pin">Map pin</option><option value="phone">Phone</option><option value="send">Send / Telegram</option><option value="calendar">Calendar</option><option value="link">Link</option></select></label>
-        </div>
-        <div className="two">
-          <ColorField label="Button colour" value={p.btn} fallback="#c25b7a" onChange={v => onP({ btn: v })} />
-          <ColorField label="Text colour" value={p.txt} fallback="#ffffff" onChange={v => onP({ txt: v })} />
-        </div>
-        <label className="ivCheck"><input type="checkbox" checked={!!p.full} onChange={e => onP({ full: e.target.checked })} /> Full width</label>
-      </>}
-
-      {b.type === 'countdown' && <>
-        <label>Title<input value={p.title} onChange={e => onP({ title: e.target.value })} /></label>
-        <label>…in English (optional)<input value={p.en} onChange={e => onP({ en: e.target.value })} /></label>
-        <div className="two">
-          <label>Date<input type="date" value={p.date} onChange={e => onP({ date: e.target.value })} /></label>
-          <label>Time<input type="time" value={p.time} onChange={e => onP({ time: e.target.value })} /></label>
-        </div>
-      </>}
-
-      {b.type === 'schedule' && <>
-        <label>Title<input value={p.title} onChange={e => onP({ title: e.target.value })} /></label>
-        <label>…in English (optional)<input value={p.en} onChange={e => onP({ en: e.target.value })} /></label>
-        <div className="ivChips">{CEREMONY_SUGGESTIONS.map(n => <button key={n} type="button" className="ivChip" onClick={() => onP({ items: [...items, { name: n, date: '', time: '' }] })}><Plus /> {n}</button>)}</div>
-        {items.map((ev, i) => (
-          <div className="ivEvent" key={i}>
-            <label>Ceremony name<input value={ev.name} onChange={e => onP({ items: items.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} placeholder="ពិធី…" /></label>
-            <div className="ivEventRow">
-              <label>Date<input type="date" value={ev.date} onChange={e => onP({ items: items.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)) })} /></label>
-              <label>Time<input type="time" value={ev.time} onChange={e => onP({ items: items.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)) })} /></label>
-              <button type="button" className="icon danger" onClick={() => onP({ items: items.filter((_, j) => j !== i) })} aria-label="Remove event"><Trash2 /></button>
-            </div>
-          </div>))}
-        <button type="button" className="secondary" onClick={() => onP({ items: [...items, { name: '', date: '', time: '' }] })}><Plus /> Add an event</button>
-      </>}
-
-      {b.type === 'gallery' && <>
-        <div className="ivGalleryAdmin">
-          {images.map((u, i) => (
-            <div key={u + i} className="ivGThumb" style={{ backgroundImage: `url("${safeImg(u)}")` }}>
-              <button type="button" className="icon danger" onClick={() => onP({ images: images.filter((_, j) => j !== i) })} aria-label="Remove photo"><X /></button>
-            </div>))}
-          <label className="ivGAdd"><Plus /><span>{busy === 'gal' ? '…' : 'Add'}</span>
-            <input type="file" accept="image/*" multiple hidden onChange={async e => {
-              const fs = Array.from(e.target.files || []); e.target.value = ''; if (!fs.length) return;
-              setNote('');
-              for (const f of fs) await upload(f, 'gal', u => onP(cur => ({ images: [...(Array.isArray(cur.images) ? cur.images : []), u] })));
-            }} /></label>
-        </div>
-        <Range label="Photos per row" value={num(p.cols, 2, 1, 3)} min={1} max={3} onChange={v => onP({ cols: v })} />
-        <Range label="Rounded corners" value={num(p.radius, 16, 0, 40)} min={0} max={40} unit="px" onChange={v => onP({ radius: v })} />
-        <Range label="Gap" value={num(p.gap, 10, 0, 30)} min={0} max={30} unit="px" onChange={v => onP({ gap: v })} />
-      </>}
-
-      {b.type === 'divider' && <>
-        <div className="ivField"><span>Style</span><Seg value={(['line', 'dots', 'sparkle'].includes(p.style) ? p.style : 'heart') as 'line' | 'dots' | 'heart' | 'sparkle'} options={[['heart', '♥'], ['sparkle', '✦'], ['dots', '• • •'], ['line', '—']]} onChange={v => onP({ style: v })} /></div>
-        <ColorField label="Colour (default: accent)" value={p.color} fallback="#c25b7a" onChange={v => onP({ color: v })} />
-      </>}
-
-      {b.type === 'spacer' && <Range label="Height" value={num(p.height, 40, 4, 300)} min={4} max={300} unit="px" onChange={v => onP({ height: v })} />}
-
-      <details className="ivStyleBox">
-        <summary>Section look: background, spacing, animation</summary>
-        <div className="ivBFields">
-          <ColorField label="Background colour" value={s.bg} fallback="#ffffff" onChange={v => onS({ bg: v })} />
-          {b.type !== 'cover' && <PhotoTile label="Background picture" url={s.bgImage} busy={busy === 'bg'} onFile={f => upload(f, 'bg', u => onS({ bgImage: u }))} onClear={() => onS({ bgImage: '' })} />}
-          {(s.bgImage || b.type === 'cover') && <Range label="Dark overlay on the picture" value={num(s.overlay, 0, 0, 90)} min={0} max={90} unit="%" onChange={v => onS({ overlay: v })} />}
-          <Range label="Minimum height (% of the screen)" value={num(s.minHeight, 0, 0, 100)} min={0} max={100} unit="%" onChange={v => onS({ minHeight: v })} />
-          <div className="two">
-            <Range label="Space above" value={num(s.padTop, 28, 0, 200)} min={0} max={200} unit="px" onChange={v => onS({ padTop: v })} />
-            <Range label="Space below" value={num(s.padBottom, 8, 0, 200)} min={0} max={200} unit="px" onChange={v => onS({ padBottom: v })} />
-          </div>
-          <div className="ivField"><span>Alignment</span><Seg value={s.align} options={[['left', 'Left'], ['center', 'Centre'], ['right', 'Right']]} onChange={v => onS({ align: v })} /></div>
-          <ColorField label="Text colour in this section" value={s.color} fallback="#333333" onChange={v => onS({ color: v })} />
-          <label>When it appears
-            <select value={s.anim} onChange={e => onS({ anim: e.target.value as BlockStyle['anim'] })}>
-              <option value="rise">Rises up</option><option value="fade">Fades in</option><option value="zoom">Zooms in</option><option value="none">No animation</option>
-            </select></label>
-        </div>
-      </details>
-    </div>
-  );
-}
-
-const ADD_MENU: { key: string; type: BlockType; label: string; icon: React.ElementType; patch?: { p?: Record<string, any>; s?: Partial<BlockStyle> } }[] = [
-  { key: 'cover', type: 'cover', label: 'Cover photo', icon: Sparkles },
-  { key: 'title', type: 'text', label: 'Big title', icon: Type, patch: { p: { text: 'Big title', font: 'title', size: 40, line: 1.5, accent: true }, s: { padTop: 40 } } },
-  { key: 'text', type: 'text', label: 'Text', icon: Type },
-  { key: 'image', type: 'image', label: 'Picture', icon: ImageIcon },
-  { key: 'button', type: 'button', label: 'Button', icon: ExternalLink },
-  { key: 'countdown', type: 'countdown', label: 'Countdown', icon: Timer },
-  { key: 'schedule', type: 'schedule', label: 'Programme', icon: List },
-  { key: 'gallery', type: 'gallery', label: 'Gallery', icon: LayoutGrid },
-  { key: 'divider', type: 'divider', label: 'Divider', icon: Minus },
-  { key: 'spacer', type: 'spacer', label: 'Space', icon: ArrowUpDown },
-];
-
-function BuilderPanel({ blocks, update, selected, onSelect, setNote }: {
-  blocks: Block[]; update: (fn: (bs: Block[]) => Block[]) => void; selected: string; onSelect: (id: string) => void; setNote: (m: string) => void;
-}) {
-  const [busy, setBusy] = useState('');
-  const idx = blocks.findIndex(b => b.id === selected);
-
-  const add = (type: BlockType, patch?: { p?: Record<string, any>; s?: Partial<BlockStyle> }) => {
-    const nb = newBlock(type, patch);
-    update(bs => { const at = idx >= 0 ? Math.min(idx + 1, bs.length) : bs.length; return [...bs.slice(0, at), nb, ...bs.slice(at)]; });
-    onSelect(nb.id);
-  };
-  const patchBlock = (id: string, fn: (b: Block) => Block) => update(bs => bs.map(x => (x.id === id ? fn(x) : x)));
-  const applyP = (x: Block, patch: PatchP): Block => ({ ...x, p: { ...x.p, ...(typeof patch === 'function' ? patch(x.p) : patch) } });
-  const move = (id: string, dir: -1 | 1) => update(bs => {
-    const i = bs.findIndex(x => x.id === id), j = i + dir;
-    if (i < 0 || j < 0 || j >= bs.length) return bs;
-    const c = bs.slice(); [c[i], c[j]] = [c[j], c[i]]; return c;
-  });
-  const dup = (id: string) => {
-    const nid = uid();
-    update(bs => { const i = bs.findIndex(x => x.id === id); if (i < 0) return bs; const copy: Block = JSON.parse(JSON.stringify(bs[i])); copy.id = nid; return [...bs.slice(0, i + 1), copy, ...bs.slice(i + 1)]; });
-    onSelect(nid);
-  };
-  const del = (id: string) => { if (!confirm('Delete this block?')) return; update(bs => bs.filter(x => x.id !== id)); if (id === selected) onSelect(''); };
-
-  /* uploads add their result with an update function, so editing something else while a picture uploads is safe */
-  const upload: Upload = async (f, label, cb) => {
-    setBusy(label); setNote('');
-    try { cb(await uploadAsset(f, 'pictures', 'image')); }
-    catch (e: any) { setNote(e?.message || 'Upload failed.'); }
-    setBusy('');
-  };
-
-  return (
-    <div className="ivBld">
-      <Sub>Add a block{idx >= 0 ? ' (it goes under the selected one)' : ''}</Sub>
-      <div className="ivAddGrid">
-        {ADD_MENU.map(m => { const Icon = m.icon; return <button type="button" key={m.key} className="ivAddBtn" onClick={() => add(m.type, m.patch)}><Icon /><span>{m.label}</span></button>; })}
-      </div>
-
-      <Sub>Your page ({blocks.length} {blocks.length === 1 ? 'block' : 'blocks'})</Sub>
-      {!blocks.length && <p className="muted">The page is empty. Add a cover photo, some text, a button… you can also tap anything in the phone preview to edit it.</p>}
-      {blocks.map((b, i) => {
-        const Icon = BLOCK_DEFS[b.type].icon;
-        const open = b.id === selected;
-        return (
-          <div id={`ivbe-${b.id}`} key={b.id} className={'ivBItem' + (open ? ' open' : '') + (b.hidden ? ' off' : '')}>
-            <div className="ivBHead" onClick={() => onSelect(open ? '' : b.id)} role="button" tabIndex={0} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onSelect(open ? '' : b.id)}>
-              <Icon />
-              <div className="grow"><b>{BLOCK_DEFS[b.type].name}</b><small>{blockSummary(b).slice(0, 44)}</small></div>
-              <div className="ivBBtns" onClick={e => e.stopPropagation()}>
-                <button type="button" className="icon" disabled={i === 0} onClick={() => move(b.id, -1)} aria-label="Move up"><ChevronUp /></button>
-                <button type="button" className="icon" disabled={i === blocks.length - 1} onClick={() => move(b.id, 1)} aria-label="Move down"><ChevronDown /></button>
-                <button type="button" className="icon" onClick={() => patchBlock(b.id, x => ({ ...x, hidden: !x.hidden }))} aria-label={b.hidden ? 'Show block' : 'Hide block'} title={b.hidden ? 'Hidden: tap to show' : 'Hide from the page'}>{b.hidden ? <EyeOff /> : <Eye />}</button>
-                <button type="button" className="icon" onClick={() => dup(b.id)} aria-label="Duplicate block"><Copy /></button>
-                <button type="button" className="icon danger" onClick={() => del(b.id)} aria-label="Delete block"><Trash2 /></button>
-              </div>
-            </div>
-            {open && (
-              <div className="ivBBody">
-                <BlockEditor b={b} blocks={blocks} busy={busy} setNote={setNote} upload={upload}
-                  onP={patch => patchBlock(b.id, x => applyP(x, patch))}
-                  onS={patch => patchBlock(b.id, x => ({ ...x, s: { ...x.s, ...patch } }))} />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?: boolean; onClose: () => void }) {
+function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; onClose: () => void; startCanvas?: boolean }) {
   const [id, setId] = useState<string | null>(row?.id || null);
-  const [data, setData] = useState<InviteData>(() => (blank && !row ? blankData() : merge(row?.data)));
+  const [data, setData] = useState<InviteData>(() => { const m = merge(row?.data); return startCanvas && !row ? { ...m, mode: 'canvas', canvas: emptyCanvas() } : m; });
+  const [builder, setBuilder] = useState(false);
+  const canvasMode = data.mode === 'canvas';
   const [priv, setPriv] = useState<Private>(PRIVATE_DEFAULTS);
   const [title, setTitle] = useState(row?.title || '');
-  const [slug, setSlug] = useState(row?.slug || (blank ? `invite-${randomTail()}${randomTail()}` : ''));
+  const [slug, setSlug] = useState(row?.slug || '');
   const [published, setPublished] = useState(row?.published ?? false);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
   const [replay, setReplay] = useState(0);
   const [qr, setQr] = useState('');
   const [dirty, setDirty] = useState(false);
-  const slugTouched = useRef(!!row || blank);
-  const [selected, setSelected] = useState('');
-  const pickFrom = useRef<'list' | 'preview'>('list');
-  const custom = data.layout === 'custom';
+  const slugTouched = useRef(!!row);
 
   const set = (patch: Partial<InviteData>) => { setData(d => ({ ...d, ...patch })); setDirty(true); };
   const setIn = <K extends 'look' | 'opening' | 'butterflies'>(k: K, patch: Partial<InviteData[K]>) => { setData(d => ({ ...d, [k]: { ...d[k], ...patch } })); setDirty(true); };
   const setP = (patch: Partial<Private>) => { setPriv(p => ({ ...p, ...patch })); setDirty(true); };
-  const updateBlocks = (fn: (bs: Block[]) => Block[]) => { setData(d => ({ ...d, blocks: fn(d.blocks) })); setDirty(true); };
-  const setPage = (patch: Partial<InviteData['page']>) => { setData(d => ({ ...d, page: { ...d.page, ...patch } })); setDirty(true); };
-  const selectBlock = (id: string, from: 'list' | 'preview' = 'list') => { pickFrom.current = from; setSelected(id); };
-  /* picking a block in the list scrolls the phone preview to it; tapping it in the preview scrolls the list to it */
-  useEffect(() => {
-    if (!selected) return;
-    const t = window.setTimeout(() => {
-      if (pickFrom.current === 'list') scrollToBlock(selected);
-      else document.getElementById('ivbe-' + selected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 60);
-    return () => window.clearTimeout(t);
-  }, [selected]);
-  function switchLayout(next: 'classic' | 'custom') {
-    if (next === data.layout) return;
-    const hasInfo = !!(data.groom || data.bride || data.date || data.venue || data.gallery.length || data.groomPhoto || data.bridePhoto);
-    if (next === 'custom' && !data.blocks.length && hasInfo && confirm('Fill the free builder with what you already typed (names, date, place, photos…)?\n\nOK = fill it, you can then change everything.\nCancel = start with an empty page.')) {
-      set({ layout: 'custom', blocks: blocksFromClassic(data) });
-      return;
-    }
-    set({ layout: next });
-  }
 
   /* the private part (completion date, requests, designer notes) lives in its own admin-only table */
   useEffect(() => {
@@ -1325,11 +648,10 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
   /* suggest a link from the names until the admin edits it themselves */
   useEffect(() => {
     if (slugTouched.current) return;
-    const base = slugify([data.groomEn || data.groom, data.brideEn || data.bride].filter(Boolean).join('-'));
+    const base = slugify([data.groom, data.bride].filter(Boolean).join('-'));
     if (base) setSlug(s => (s && s.startsWith(base) ? s : `${base}-${randomTail()}`));
-  }, [data.groom, data.bride, data.groomEn, data.brideEn]);
-  useEffect(() => { if (custom && !slugTouched.current) { const base = slugify(title); if (base.length >= 3) setSlug(s => (s && s.startsWith(base) ? s : `${base}-${randomTail()}`)); } }, [title]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { const a = data.groomEn || data.groom, c = data.brideEn || data.bride; if (!title && (a || c)) setTitle(`${[a, c].filter(Boolean).join(' & ')} wedding`); }, [data.groom, data.bride, data.groomEn, data.brideEn]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data.groom, data.bride]);
+  useEffect(() => { if (!title && (data.groom || data.bride)) setTitle(`${[data.groom, data.bride].filter(Boolean).join(' & ')} wedding`); }, [data.groom, data.bride]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* weekday follows the date automatically until the admin types their own */
   const onDate = (date: string) => { setData(d => ({ ...d, date, weekday: isAutoWeekday(d.weekday) ? autoWeekday(date) : d.weekday })); setDirty(true); };
@@ -1391,39 +713,37 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
         </div>
         {note && <p className="notice">{note}</p>}
 
-        <div className="panel ivModeBox">
-          <b>How do you want to edit this invitation?</b>
-          <div className="ivSegX">
-            <button type="button" className={custom ? 'on' : ''} onClick={() => switchLayout('custom')}>Free builder (edit everything)</button>
-            <button type="button" className={!custom ? 'on' : ''} onClick={() => switchLayout('classic')}>Guided form</button>
-          </div>
-          <small className="muted">{custom ? 'Start from a blank page and add any text, picture, button or countdown you like, in any order. Tap things in the phone preview to edit them.' : 'Fill in the form and the invitation is laid out for you. Switch to the free builder any time to change every detail.'}</small>
+        <div className="ivModeSeg">
+          <button type="button" className={!canvasMode ? 'on' : ''} onClick={() => set({ mode: 'form' })}><b>Guided form</b><small>Fill in names, date, schedule… and pick a template.</small></button>
+          <button type="button" className={canvasMode ? 'on' : ''} onClick={() => set({ mode: 'canvas', canvas: data.canvas || emptyCanvas() })}><b>Blank canvas</b><small>Start empty. Place and draw everything yourself.</small></button>
         </div>
 
-        {custom && (
+        {canvasMode && (
           <>
-            <Card title="Page builder" icon={<Sparkles />} open>
-              <BuilderPanel blocks={data.blocks} update={updateBlocks} selected={selected} onSelect={id => selectBlock(id, 'list')} setNote={setNote} />
+            <Card title="Blank canvas" icon={<Sparkles />} open>
+              <div className="ivCanvasCta">
+                <small className="muted">Add text, pictures, buttons, shapes and freehand drawings, then drag, resize and rotate them right on the page. {data.canvas ? `${data.canvas.pages.length} page(s), ${data.canvas.pages.reduce((n, p) => n + p.els.length, 0)} item(s).` : ''}</small>
+                <button className="wide" onClick={() => setBuilder(true)}><Pencil /> Open the canvas builder</button>
+              </div>
             </Card>
-            <Card title="Page background" icon={<ImagePlus />}>
-              <ColorField label="Background colour" value={data.page.bg} fallback={(PALETTES[data.look.palette] || PALETTES.white).bg} onChange={v => setPage({ bg: v })} />
-              <ColorField label="Default text colour" value={data.page.text} fallback={(PALETTES[data.look.palette] || PALETTES.white).text} onChange={v => setPage({ text: v })} />
-              <PhotoTile label="Background picture (optional)" url={data.page.bgImage} busy={busy === 'Uploading background…'} onFile={f => pick(f, 'image', u => setPage({ bgImage: u }), 'Uploading background…')} onClear={() => setPage({ bgImage: '' })} />
-              <small className="muted">Each block can also have its own background in its “Section look”.</small>
+            <Card title="Names & date (for the opening scene and countdown)" icon={<CalendarDays />} open>
+              <div className="two">
+                <label>Groom (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} /></label>
+                <label>Bride (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} /></label>
+              </div>
+              <div className="two">
+                <label>Wedding date<input type="date" value={data.date} onChange={e => onDate(e.target.value)} /></label>
+                <label>Wedding time<input type="time" value={data.time} onChange={e => set({ time: e.target.value })} /></label>
+              </div>
             </Card>
           </>
         )}
 
-        {!custom && <>
         {/* 1 ----------------------------------------------------------- */}
-        <Card title="1. Bride & Groom Information" icon={<Heart />} open>
+        <Card title="1. Bride & Groom Information" icon={<Heart />} open hide={canvasMode}>
           <div className="two">
-            <label>Groom's name in Khmer (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} placeholder="ឈ្មោះជាភាសាខ្មែរ" /></label>
-            <label>Bride's name in Khmer (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} placeholder="ឈ្មោះជាភាសាខ្មែរ" /></label>
-          </div>
-          <div className="two">
-            <label>Groom's name in English (optional)<input value={data.groomEn} onChange={e => set({ groomEn: e.target.value })} placeholder="Shown when the guest taps EN" /></label>
-            <label>Bride's name in English (optional)<input value={data.brideEn} onChange={e => set({ brideEn: e.target.value })} placeholder="Shown when the guest taps EN" /></label>
+            <label>Groom's full name (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} /></label>
+            <label>Bride's full name (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} /></label>
           </div>
           <div className="two">
             <label>Groom's parents' names (ឈ្មោះឪពុកម្តាយខាងកូនកំលោះ)<textarea rows={2} value={data.groomParents} onChange={e => set({ groomParents: e.target.value })} placeholder="លោក … និង លោកស្រី …" /></label>
@@ -1432,7 +752,7 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
         </Card>
 
         {/* 2 ----------------------------------------------------------- */}
-        <Card title="2. Wedding Details" icon={<CalendarDays />} open>
+        <Card title="2. Wedding Details" icon={<CalendarDays />} open hide={canvasMode}>
           <div className="two">
             <label>Wedding date (ថ្ងៃខែឆ្នាំរៀបការ)<input type="date" value={data.date} onChange={e => onDate(e.target.value)} /></label>
             <label>Wedding day of the week (ថ្ងៃ)<input value={data.weekday} onChange={e => set({ weekday: e.target.value })} placeholder="auto from the date" /></label>
@@ -1450,7 +770,7 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
         </Card>
 
         {/* 3 ----------------------------------------------------------- */}
-        <Card title="3. Ceremony Schedule (កម្មវិធីមង្គលការ)" icon={<CalendarDays />} open>
+        <Card title="3. Ceremony Schedule (កម្មវិធីមង្គលការ)" icon={<CalendarDays />} open hide={canvasMode}>
           <small className="muted">Add as many events as the wedding program needs. Tap a suggestion to add it, then set its date and time.</small>
           <div className="ivChips">{CEREMONY_SUGGESTIONS.map(n => <button key={n} type="button" className="ivChip" onClick={() => addEv(n)}><Plus /> {n}</button>)}</div>
           {data.schedule.map((ev, i) => (
@@ -1464,11 +784,10 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
             </div>))}
           <button className="secondary" onClick={() => addEv()}><Plus /> Add another event</button>
         </Card>
-        </>}
 
         {/* 4 ----------------------------------------------------------- */}
-        <Card title={custom ? 'Look, language, opening, butterflies & music' : '4. Invitation Design'} icon={<Sparkles />} open={!custom}>
-          {!custom && <>
+        <Card title={canvasMode ? 'Opening scene, butterflies & music' : '4. Invitation Design'} icon={<Sparkles />} open>
+          {!canvasMode && <>
           <Sub>Selected invitation template</Sub>
           <div className="ivTemplates">
             {TEMPLATES.map(t => {
@@ -1506,8 +825,6 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
               }} /></label>
           </div>
 
-          </>}
-
           <Sub>Preferred colors</Sub>
           <div className="ivSwatches">
             {Object.entries(PALETTES).map(([k, p]) => (
@@ -1538,6 +855,8 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
               <div className="ivKhSample" style={{ fontFamily: KH_FONTS[data.khFonts[k]].stack + ',serif' }}>{KH_FONTS[data.khFonts[k]].sample}</div>
             </div>))}
 
+          </>}
+
           <Sub>Opening scene (click to open)</Sub>
           <div className="ivStyles">
             {OPEN_STYLES.map(o => (
@@ -1556,6 +875,12 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
               </div>
             </div>
           </div>
+          <div className="ivPhotoPair three">
+            {data.opening.style === 'doors' && <PhotoTile wide label="Door picture (both doors, closed)" url={data.opening.doorImage} busy={busy === 'door'} onFile={f => pick(f, 'image', u => { setIn('opening', { doorImage: u }); setReplay(n => n + 1); }, 'door')} onClear={() => setIn('opening', { doorImage: '' })} />}
+            <PhotoTile wide label="Bottom picture (flowers / decoration at the bottom)" url={data.opening.bottomImage} busy={busy === 'bottom'} onFile={f => pick(f, 'image', u => { setIn('opening', { bottomImage: u }); setReplay(n => n + 1); }, 'bottom')} onClear={() => setIn('opening', { bottomImage: '' })} />
+            <PhotoTile wide label="Button picture (replaces the open button)" url={data.opening.buttonImage} busy={busy === 'btn'} onFile={f => pick(f, 'image', u => { setIn('opening', { buttonImage: u }); setReplay(n => n + 1); }, 'btn')} onClear={() => setIn('opening', { buttonImage: '' })} />
+          </div>
+          <small className="muted">PNG with a transparent background works best for the bottom and button pictures. If you add no door picture, the opening picture is split into two doors.</small>
           <div className="two"><label>Small title<input value={data.opening.title} onChange={e => setIn('opening', { title: e.target.value })} /></label>
             <label>Button text<input value={data.opening.button} onChange={e => setIn('opening', { button: e.target.value })} /></label></div>
           <button className="secondary" onClick={() => setReplay(n => n + 1)}><RefreshCw /> Replay opening in preview</button>
@@ -1570,7 +895,7 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
           </>}
 
           <Sub>Music selection</Sub>
-          <small className="muted">Music starts when the guest taps the opening button (phones only allow sound after a tap). Several songs play one after another.</small>
+          <small className="muted">The song starts the moment the guest opens the invitation (phones only allow sound after a tap) and keeps looping: one song repeats forever, several songs play in order and start over.</small>
           {data.songs.map((s, i) => (
             <div className="ivSong" key={i}>
               <div className="ivMini"><input value={s.title} onChange={e => updSong(i, { title: e.target.value })} placeholder="Song name" />
@@ -1588,14 +913,12 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
         </Card>
 
         {/* 5 ----------------------------------------------------------- */}
-        <Card title={custom ? 'Private notes (only you)' : '5. Other Information'} icon={<Link2 />} open={!custom}>
-          {!custom && <>
+        <Card title="5. Other Information" icon={<Link2 />} open>
           <div className="two">
             <label>Contact phone number (ទូរស័ព្ទ)<input value={data.phone} onChange={e => set({ phone: e.target.value })} placeholder="+855 …" /></label>
             <label>Telegram username (optional)<input value={data.telegram} onChange={e => set({ telegram: e.target.value })} placeholder="@username" /></label>
           </div>
           <small className="muted">The phone and Telegram become “Call us” and “Telegram” buttons for guests.</small>
-          </>}
           <label>Preferred completion date<input type="date" value={priv.completionDate} onChange={e => setP({ completionDate: e.target.value })} /></label>
           <label>Special instructions for the designer<textarea rows={3} value={priv.designerNotes} onChange={e => setP({ designerNotes: e.target.value })} placeholder="Only you can see this. It is never shown to guests." /></label>
         </Card>
@@ -1604,7 +927,7 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
         <Card title="Publish & share link" icon={<Link2 />} open>
           <label>Name for this invitation (only you see it)<input value={title} onChange={e => { setTitle(e.target.value); setDirty(true); }} placeholder="Sokha & Dara wedding" /></label>
           <label>Link ending
-            <div className="ivSlug"><span>{PUBLIC_HOST}/i/</span><input value={slug} onChange={e => { slugTouched.current = true; setSlug(slugify(e.target.value)); setDirty(true); }} placeholder="sokha-dara" /></div></label>
+            <div className="ivSlug"><span>{window.location.host}/i/</span><input value={slug} onChange={e => { slugTouched.current = true; setSlug(slugify(e.target.value)); setDirty(true); }} placeholder="sokha-dara" /></div></label>
           <label className="ivCheck"><input type="checkbox" checked={published} onChange={e => { setPublished(e.target.checked); setDirty(true); }} /> Published (anyone with the link can open it, no login)</label>
           {id && link ? (
             <div className="ivShare">
@@ -1624,11 +947,13 @@ function InviteEditor({ row, blank = false, onClose }: { row: Row | null; blank?
       </div>
 
       <aside className="ivPhoneCol">
-        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} selectedId={selected} onSelectBlock={custom ? id => selectBlock(id, 'preview') : undefined}
-          onEditField={custom ? undefined : patch => set(patch)}
-          onEditBlock={custom ? (id, patch) => updateBlocks(bs => bs.map(x => (x.id === id ? { ...x, p: { ...x.p, ...patch } } : x))) : undefined} /></div></div>
-        <small className="muted">{custom ? 'Live preview. Tap a part to select it, tap its text to type straight on it.' : 'Live preview. Open it, then tap the names, wording or parents to type straight on the page.'}</small>
+        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} /></div></div>
+        <small className="muted">Live preview. Tap the opening to try it, including the music.</small>
       </aside>
+      {builder && data.canvas && (
+        <CanvasBuilder canvas={data.canvas} onChange={c => set({ canvas: c })} onClose={() => setBuilder(false)} onSave={() => save()} saving={!!busy}
+          upload={f => uploadAsset(f, 'pictures', 'image')} date={data.date} time={data.time} labels={labelsFor(data.lang)} />
+      )}
     </div>
   );
 }

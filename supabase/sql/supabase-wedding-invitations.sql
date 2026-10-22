@@ -13,6 +13,17 @@ create table if not exists public.wedding_invitations (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- If a table with this name already existed (an older or partial version), the block above is skipped,
+-- so make sure every column this feature needs is there. Safe to run any number of times.
+alter table public.wedding_invitations add column if not exists slug text;
+alter table public.wedding_invitations add column if not exists title text not null default 'Wedding invitation';
+alter table public.wedding_invitations add column if not exists published boolean not null default false;
+alter table public.wedding_invitations add column if not exists data jsonb not null default '{}'::jsonb;
+alter table public.wedding_invitations add column if not exists views integer not null default 0;
+alter table public.wedding_invitations add column if not exists created_by uuid references auth.users(id) on delete set null;
+alter table public.wedding_invitations add column if not exists created_at timestamptz not null default now();
+alter table public.wedding_invitations add column if not exists updated_at timestamptz not null default now();
+create unique index if not exists wedding_invitations_slug_key on public.wedding_invitations(slug);
 create index if not exists wedding_invitations_created_idx on public.wedding_invitations(created_at desc);
 alter table public.wedding_invitations enable row level security;
 

@@ -13,6 +13,15 @@ Plus **Publish & share link**: link, copy, open, QR code, open counter.
 
 Preferred completion date, special requests and designer instructions are stored in a separate admin-only table (`wedding_invitation_private`) and are never sent to guests.
 
+## Blank canvas (new: `src/InviteCanvas.tsx`)
+"New blank canvas" in the list, or the Guided form / Blank canvas switch at the top of the editor. Opens a full-screen builder:
+- Add text (Khmer fonts incl. Muol Light / Muol Pali, and English scripts), images, buttons (link / map / call / Telegram), shapes, a countdown, and **freehand drawings**.
+- Drag, resize (corner handles keep proportions; text corners scale the font), rotate, snap to page centre/edges, arrow-key nudge, double-click text to type on the page.
+- Layers (front/back/forward/backward), lock, duplicate, copy/paste, undo/redo, zoom, multiple pages, page background colour/picture, per-item entrance animations (fade, slide, zoom) and loops (float, pulse, spin).
+- Pages are 390 px wide and scale to each guest's screen. The opening scene, butterflies, music loop and share link work exactly as in the guided form.
+- Buttons can also **go to another page** of the invitation. A page marked "Hidden page" is left out of the normal scroll and opens as its own screen (with a back arrow) when a button points to it; a normal page is scrolled to.
+- Stored inside the existing `data` column (`data.mode = 'canvas'`, `data.canvas`), so no new SQL.
+
 ## Guests (`/i/:slug`)
 - Public, no login. Only **published** invitations load (enforced by row level security, not just by the page).
 - The YN Studio splash, install prompt, theme runtime and admin assistant are switched off on these pages.
