@@ -83,3 +83,78 @@ drop policy if exists "invitation private admin all" on public.wedding_invitatio
 create policy "invitation private admin all" on public.wedding_invitation_private for all
   using (exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin'))
   with check (exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin'));
+
+-- 5) Sending an invitation to a customer + personal guest links (a name per link, unlimited).
+-- The admin picks the customer in the editor; the invitation then shows on that customer's Services page,
+-- where they can use the original link or add names. Every name gets its own link that fills the
+-- guest-name space on the opening page.
+alter table public.wedding_invitations add column if not exists customer_id uuid references auth.users(id) on delete set null;
+create index if not exists wedding_invitations_customer_idx on public.wedding_invitations(customer_id);
+
+create or replace function public.yn_inv_is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists(select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'admin');
+$$;
+create or replace function public.yn_inv_owns(p_invitation uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.yn_inv_is_admin() or exists(select 1 from public.wedding_invitations i where i.id = p_invitation and i.customer_id = auth.uid());
+$$;
+grant execute on function public.yn_inv_is_admin() to anon, authenticated;
+grant execute on function public.yn_inv_owns(uuid) to authenticated;
+
+-- A customer can read their own invitation (even while it is still a draft). Everyone can read published ones.
+drop policy if exists "invitations public read" on public.wedding_invitations;
+create policy "invitations public read" on public.wedding_invitations for select
+  using (published = true or customer_id = auth.uid() or public.yn_inv_is_admin());
+
+create table if not exists public.wedding_invitation_guests (
+  id uuid primary key default gen_random_uuid(),
+  invitation_id uuid not null references public.wedding_invitations(id) on delete cascade,
+  code text not null unique check (code ~ '^[a-z0-9]{6,16}$'),
+  name text not null check (char_length(btrim(name)) between 1 and 80),
+  opens integer not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists wedding_invitation_guests_inv_idx on public.wedding_invitation_guests(invitation_id, created_at desc);
+alter table public.wedding_invitation_guests enable row level security;
+
+drop policy if exists "guests owner read" on public.wedding_invitation_guests;
+create policy "guests owner read" on public.wedding_invitation_guests for select using (public.yn_inv_owns(invitation_id));
+drop policy if exists "guests owner insert" on public.wedding_invitation_guests;
+create policy "guests owner insert" on public.wedding_invitation_guests for insert with check (public.yn_inv_owns(invitation_id));
+drop policy if exists "guests owner update" on public.wedding_invitation_guests;
+create policy "guests owner update" on public.wedding_invitation_guests for update using (public.yn_inv_owns(invitation_id)) with check (public.yn_inv_owns(invitation_id));
+drop policy if exists "guests owner delete" on public.wedding_invitation_guests;
+create policy "guests owner delete" on public.wedding_invitation_guests for delete using (public.yn_inv_owns(invitation_id));
+
+-- Owners may only rename a guest; the code and the open counter cannot be changed from the app.
+revoke update on public.wedding_invitation_guests from anon, authenticated;
+grant update (name) on public.wedding_invitation_guests to authenticated;
+revoke all on public.wedding_invitation_guests from anon;
+
+-- Safety net against runaway scripts: 10,000 names per invitation (far more than any wedding).
+create or replace function public.yn_inv_guest_cap() returns trigger language plpgsql as $$
+begin
+  if (select count(*) from public.wedding_invitation_guests where invitation_id = new.invitation_id) >= 10000 then
+    raise exception 'Guest limit reached for this invitation';
+  end if;
+  return new;
+end $$;
+drop trigger if exists yn_inv_guest_cap on public.wedding_invitation_guests;
+create trigger yn_inv_guest_cap before insert on public.wedding_invitation_guests for each row execute function public.yn_inv_guest_cap();
+
+-- The public page asks for the name that belongs to a link. Only a matching (published invitation + code) answers.
+create or replace function public.invitation_guest_name(p_slug text, p_code text, p_count boolean default false) returns text
+language plpgsql security definer set search_path = public as $$
+declare v text;
+begin
+  select g.name into v
+  from public.wedding_invitation_guests g join public.wedding_invitations i on i.id = g.invitation_id
+  where i.slug = lower(p_slug) and i.published and g.code = lower(p_code);
+  if v is not null and p_count then
+    update public.wedding_invitation_guests set opens = opens + 1 where code = lower(p_code);
+  end if;
+  return v;
+end $$;
+revoke all on function public.invitation_guest_name(text, text, boolean) from public;
+grant execute on function public.invitation_guest_name(text, text, boolean) to anon, authenticated;

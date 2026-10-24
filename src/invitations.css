@@ -407,3 +407,72 @@ body.ivPublicBody{background:#111;overflow:hidden}
 @keyframes cvOv{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 .cvCheck{display:flex!important;gap:8px!important;align-items:flex-start;line-height:1.4}
 .cvCheck input{width:auto!important;margin-top:2px}
+
+/* ===================== opening page: movable open button + guest-name space ===================== */
+.ivPos{position:absolute;z-index:9;transform:translate(-50%,-50%);max-width:92%;display:grid;justify-items:center;text-align:center}
+.ivPos .ivOpenBtn{margin:0}
+.ivPosName{pointer-events:none}
+.ivGuestName{display:block;line-height:1.9;text-shadow:0 2px 14px rgba(0,0,0,.55);overflow-wrap:anywhere;min-width:60px;min-height:1.2em}
+.ivOpen.go .ivPos{opacity:0;transition:opacity .5s ease}
+.ivPos.edit{outline:2px dashed #fff;outline-offset:6px;border-radius:14px;cursor:grab;touch-action:none;pointer-events:auto;background:rgba(124,58,237,.28)}
+.ivPos.edit:active{cursor:grabbing}
+.ivPos.edit>*{pointer-events:none}
+.ivPos.edit:after{content:attr(data-label);position:absolute;left:50%;top:-30px;transform:translateX(-50%);background:#7c3aed;color:#fff;font:700 10px system-ui;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.ivPosName.edit .ivGuestName{min-width:120px;border-radius:8px}
+
+/* ===================== guest names & personal links ===================== */
+.gl{display:grid;gap:12px;padding:4px 2px 2px}
+.gl .glRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gl .glRow input{flex:1;min-width:140px}
+.gl code{flex:1;min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:700;color:var(--purple,#7c3aed);background:var(--soft,#f4efff);padding:9px 11px;border-radius:11px}
+.glOrig{display:grid;gap:6px;padding:12px;border-radius:14px;background:var(--soft,#f4efff)}
+.glOrig code{background:#fff}
+.glHead{display:flex;align-items:center;gap:7px;margin-top:4px;font-size:14px}
+.glHead svg{width:16px;height:16px;color:var(--purple,#7c3aed)}
+.glBulk{display:grid;gap:8px}
+.glLink{justify-self:start;background:none;border:0;box-shadow:none;color:var(--purple,#7c3aed);font-weight:700;padding:0;min-height:0;height:auto;text-decoration:underline}
+.glSearch{display:flex;align-items:center;gap:8px;border:1px solid var(--line,#e5dcf3);border-radius:12px;padding:0 12px;background:#fff}
+.glSearch svg{width:16px;height:16px;opacity:.55;flex:0 0 auto}
+.glSearch input{border:0!important;box-shadow:none!important;padding-left:0!important}
+.glList{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:520px;overflow-y:auto}
+.glList li{display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--line,#e5dcf3);border-radius:14px;background:#fff;flex-wrap:wrap}
+.glName{flex:1;min-width:150px;display:grid;gap:2px}
+.glName b{font-family:'Khmer OS Muol Light','Moul','Kantumruy Pro',serif;font-weight:400;line-height:1.7;overflow-wrap:anywhere}
+.glName small{color:var(--muted,#7a6c93);font-size:11px}
+.glList .secondary,.glList .icon{min-height:0;height:auto;padding:8px 10px}
+.glList .secondary svg,.glList .icon svg{width:15px;height:15px}
+.cpick{display:grid;gap:8px}
+.cpickCur{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#e9f9ef;color:#146c3a;font-weight:700;flex-wrap:wrap}
+.cpickCur span{flex:1;min-width:0;overflow-wrap:anywhere}
+.cpickCur svg{width:16px;height:16px}
+.cpickHit{display:grid;gap:1px;text-align:left;padding:10px 12px;border-radius:12px;background:#fff;color:var(--ink,#2d2147);border:1px solid var(--line,#e5dcf3);box-shadow:none;min-height:0;height:auto}
+.cpickHit small{color:var(--muted,#7a6c93);font-weight:500}
+
+/* customer's page */
+.myInv{display:grid;gap:10px;margin:18px 0}
+.myInvCard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px;border-radius:18px;background:var(--card,#fff);color:inherit;border:1px solid var(--line,#e5dcf3);box-shadow:0 6px 18px rgba(80,40,140,.08);cursor:pointer;min-height:0;height:auto;transition:transform .15s}
+.myInvCard:active{transform:scale(.985)}
+.myInvIcon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:var(--soft,#f4efff);color:var(--purple,#7c3aed);flex:0 0 auto}
+.myInvIcon svg{width:21px;height:21px}
+.myInvTitle{display:grid;gap:2px;flex:1;min-width:0}
+.myInvTitle small{color:var(--muted,#7a6c93);font-weight:500}
+.myInvOverlay{position:fixed;inset:0;z-index:3000;background:rgba(20,10,40,.55);display:flex;align-items:flex-end;justify-content:center;animation:myInvFade .2s ease both}
+.myInvSheet{width:100%;max-width:620px;max-height:92vh;overflow-y:auto;background:var(--card,#fff);color:var(--ink,#2d2147);border-radius:26px 26px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom));display:grid;gap:12px;animation:myInvUp .28s ease both}
+.myInvHead{display:flex;align-items:center;gap:12px}
+.myInvSheet .muted{margin:0;line-height:1.5}
+@keyframes myInvUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes myInvFade{from{opacity:0}to{opacity:1}}
+@media(min-width:700px){.myInvOverlay{align-items:center}.myInvSheet{border-radius:26px}}
+.myInvCard .status{padding:4px 10px;border-radius:99px;font:800 11px system-ui;white-space:nowrap}
+.myInvCard .status.published{background:#e6f8ec;color:#146c3a}
+.myInvCard .status.unpublished{background:#fff1d6;color:#8a5a00}
+
+/* admin: send to customer */
+.ivSendBox{display:grid;gap:10px;padding:12px;border-radius:14px;background:var(--soft,#f4efff)}
+.ivSendState{display:inline-flex;align-items:center;gap:7px;font-weight:800;color:#8a5a00}
+.ivSendState.sent{color:#146c3a}
+.ivSendState svg{width:16px;height:16px}
+
+/* three-way mode chooser (guided form / cinematic / blank canvas) */
+.ivModeSeg3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:640px){.ivModeSeg3{grid-template-columns:1fr}}

@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="cinematic.css">
+<style>
+/* stand-in fonts for this sandbox only (the real site loads Moul / Moulpali / Kantumruy Pro / Pinyon Script / Cormorant from Google Fonts) */
+@font-face{font-family:'Pinyon Script';src:local('FreeSerif Italic'),local('FreeSerif')}
+@font-face{font-family:'Cormorant Garamond';src:local('GFS Baskerville'),local('FreeSerif')}
+@font-face{font-family:'Moulpali';src:local('DejaVu Serif Bold'),local('FreeSerif Bold')}
+@font-face{font-family:'Moul';src:local('DejaVu Serif Bold'),local('FreeSerif Bold')}
+@font-face{font-family:'Kantumruy Pro';src:local('Carlito'),local('DejaVu Sans')}
+html,body{margin:0;height:100%;background:#000;overflow:hidden}#host{position:fixed;inset:0}
+</style></head><body><div id="host"></div>
+<script type="module">
+import { mountCinematic } from './js/cinematic.js';
+const q = new URLSearchParams(location.search);
+const lang = q.get('lang') || 'en';
+const full = q.get('full') === '1';
+const km = lang === 'km';
+const T = (en, kh) => km ? kh : en;
+const cfg = {
+  lang, groomShort: q.get('g') || 'Groom', brideShort: q.get('b') || 'Bride',
+  groomKh: '', brideKh: '', groomEn: q.get('gen') || 'Groom Name', brideEn: q.get('ben') || 'Bride Name',
+  groomFather: full ? 'Father Name' : '', groomMother: full ? 'Mother Name' : '', brideFather: full ? 'Father Name' : '', brideMother: full ? 'Mother Name' : '',
+  dateParts: q.get('nodate') ? null : { wd: km?'ថ្ងៃ':'Day', d: '00', m: km?'ខែ':'Month', y: '0000' },
+  dateLong: full ? 'Date placeholder' : '',
+  lunar: q.get('nolunar') ? '' : (km ? 'ថ្ងៃខែចន្ទគតិ' : 'Lunar date goes here'),
+  venue: q.get('novenue') ? '' : (km ? 'ទីតាំងកម្មវិធី' : 'Venue name and address goes here'),
+  lat: full ? '11.5564' : '', lng: full ? '104.9282' : '', mapUrl: full ? 'https://www.google.com/maps' : '',
+  target: full ? Date.now() + 1000*60*60*24*37 + 1000*60*60*5 : null,
+  ics: full ? { title: 'Wedding', start: '2030-01-01T09:00:00', end: '2030-01-01T13:00:00', location: 'Venue' } : null,
+  words: '', blessing: '', thanks: '',
+  photo: q.get('photo') ? 'photo.svg' : '', archPhoto: full ? 'g1.svg' : '', groomPhoto: full ? 'g2.svg' : '', bridePhoto: full ? 'g3.svg' : '', candlePhoto: full ? 'g4.svg' : '',
+  gallery: full ? ['g1.svg','g2.svg','g3.svg','g4.svg','g5.svg','g6.svg'] : [],
+  story: full ? [1,2,3].map(i => ({ photo: 'g'+i+'.svg', caption: T('Story caption '+i+' goes here', 'ចំណងជើងរឿង '+i)})) : [],
+  qrs: full ? [{ label: T('Account name', 'ឈ្មោះគណនី'), url: 'qr1.svg' }] : [],
+  schedule: full ? [0,1,2,3,4,5].map(i => ({ time: T('Time '+(i+1), 'ម៉ោង'), name: T('Ceremony '+(i+1), 'ពិធី '+(i+1)), date: '' })) : [],
+  guestName: q.get('guest') || '', shareUrl: 'https://example.invalid/i/test', shareTitle: 'Invitation',
+  palette: { paper: q.get('paper') || '#5b6430', cream: '#f6efe0', night: '#14160c', foil: q.get('foil') || 'gold' }, preview: q.get('pv') !== '0',
+};
+window.cine = mountCinematic(document.getElementById('host'), cfg, { onOpen(){ window.__opened = true }, onOpened(){ window.__done = true } });
+window.__ready = true;
+</script></body></html>

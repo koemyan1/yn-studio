@@ -3,8 +3,12 @@ import { useParams } from 'react-router-dom';
 import {
   Plus, Pencil, Trash2, Copy, ExternalLink, Save, ArrowLeft, Music2, Upload, X, Heart,
   Link2, Eye, EyeOff, RefreshCw, ImagePlus, MapPin, CalendarDays, Sparkles, Volume2, VolumeX, SkipForward,
+  Move, Users, Share2, Search, UserPlus, Check, Send,
 } from 'lucide-react';
 import { supabase } from './supabase';
+import { tr, useLang } from './lang';
+import { CinematicView } from './Cinematic';
+import type { CineCfg } from './cinematic/types';
 import { optimizeImage } from './imageTools';
 import { CanvasBuilder, CanvasPages, emptyCanvas, type Canvas } from './InviteCanvas';
 import './invitations.css';
@@ -22,7 +26,7 @@ type Song = { title: string; url: string };
 type CeremonyItem = { name: string; date: string; time: string };
 export type InviteData = {
   /* 'form' = guided form, 'canvas' = free-form blank canvas */
-  mode: 'form' | 'canvas'; canvas?: Canvas;
+  mode: 'form' | 'canvas' | 'cinematic'; canvas?: Canvas; cine: CineData;
   /* 1. Bride & groom */
   groom: string; bride: string; groomParents: string; brideParents: string;
   /* 2. Wedding details */
@@ -35,7 +39,9 @@ export type InviteData = {
   lang: Lang;
   khFonts: { names: KhFont; title: KhFont; body: KhFont };
   look: { palette: string; accent: string; font: string };
-  opening: { style: OpenStyle; image: string; title: string; button: string; doorImage: string; bottomImage: string; buttonImage: string };
+  opening: { style: OpenStyle; image: string; title: string; button: string; doorImage: string; bottomImage: string; buttonImage: string;
+    /* where the open button and the guest-name space sit on the opening page, in % of the screen (null = default spot) */
+    btnPos: { x: number; y: number } | null; nameEnabled: boolean; namePos: { x: number; y: number } | null; nameSize: number; nameColor: string };
   butterflies: { enabled: boolean; count: number; size: number; color: string; mix: boolean };
   songs: Song[];
   /* 5. Contact (shown to guests as buttons) */
@@ -45,6 +51,25 @@ export type InviteData = {
 type Private = { completionDate: string; requests: string; designerNotes: string };
 const PRIVATE_DEFAULTS: Private = { completionDate: '', requests: '', designerNotes: '' };
 
+/* Cinematic mode: the extra details it needs (everything else reuses the fields the guided form already has). */
+export type CineData = {
+  groomEn: string; brideEn: string; groomShort: string; brideShort: string;
+  groomFather: string; groomMother: string; brideFather: string; brideMother: string;
+  lunar: string; lat: string; lng: string; words: string; blessing: string; thanks: string;
+  archPhoto: string; groomPhoto: string; bridePhoto: string; candlePhoto: string;
+  story: { photo: string; caption: string }[]; qrs: { label: string; url: string }[];
+  palette: 'olive' | 'rose' | 'navy' | 'custom'; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; ogImage: string;
+};
+const CINE_PALETTES: Record<string, { name: string; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver' }> = {
+  olive: { name: 'Olive + gold foil', paper: '#5b6430', cream: '#f6efe0', night: '#14160c', foil: 'gold' },
+  rose: { name: 'Cream + rose gold', paper: '#e6cfc3', cream: '#fbf6ef', night: '#2a1d1c', foil: 'rose' },
+  navy: { name: 'Navy + silver', paper: '#22355a', cream: '#eef2f7', night: '#0b1222', foil: 'silver' },
+};
+const CINE_DEFAULTS: CineData = {
+  groomEn: '', brideEn: '', groomShort: '', brideShort: '', groomFather: '', groomMother: '', brideFather: '', brideMother: '',
+  lunar: '', lat: '', lng: '', words: '', blessing: '', thanks: '', archPhoto: '', groomPhoto: '', bridePhoto: '', candlePhoto: '',
+  story: [], qrs: [], palette: 'olive', paper: CINE_PALETTES.olive.paper, cream: CINE_PALETTES.olive.cream, night: CINE_PALETTES.olive.night, foil: 'gold', ogImage: '',
+};
 /* Texts the admin has not changed follow the guest's language; texts the admin typed are shown as typed. */
 const TXT = {
   km: { headline: 'យើងនឹងរៀបមង្គលការ', message: 'ជាមួយក្រុមគ្រួសារទាំងសងខាង យើងខ្ញុំមានសេចក្តីសោមនស្សរីករាយ សូមអញ្ជើញលោក លោកស្រី អ្នកនាង ចូលរួមជាភ្ញៀវកិត្តិយសក្នុងពិធីមង្គលការរបស់យើងខ្ញុំ។', otitle: 'សូមអញ្ជើញ', obtn: 'បើកសំបុត្រអញ្ជើញ' },
@@ -57,7 +82,7 @@ const loc = (value: string, key: 'headline' | 'message' | 'otitle' | 'obtn', lan
 };
 
 const DEFAULTS: InviteData = {
-  mode: 'form',
+  mode: 'form', cine: CINE_DEFAULTS,
   groom: '', bride: '', groomParents: '', brideParents: '',
   date: '', weekday: '', time: '', receptionTime: '', venue: '', address: '', mapUrl: '',
   message: TXT.km.message, headline: TXT.km.headline,
@@ -66,7 +91,7 @@ const DEFAULTS: InviteData = {
   lang: 'km',
   khFonts: { names: 'moul', title: 'moulpali', body: 'body' },
   look: { palette: 'blush', accent: '', font: 'elegant' },
-  opening: { style: 'envelope', image: '', title: TXT.km.otitle, button: TXT.km.obtn, doorImage: '', bottomImage: '', buttonImage: '' },
+  opening: { style: 'envelope', image: '', title: TXT.km.otitle, button: TXT.km.obtn, doorImage: '', bottomImage: '', buttonImage: '', btnPos: null, nameEnabled: false, namePos: null, nameSize: 22, nameColor: '#ffffff' },
   butterflies: { enabled: true, count: 8, size: 34, color: '#f4a6c0', mix: true },
   songs: [],
   phone: '', telegram: '',
@@ -174,6 +199,7 @@ const merge = (raw: any): InviteData => ({
   ...DEFAULTS, ...(raw || {}),
   look: { ...DEFAULTS.look, ...(raw?.look || {}) },
   khFonts: { ...DEFAULTS.khFonts, ...(raw?.khFonts || {}) },
+  cine: { ...CINE_DEFAULTS, ...(raw?.cine || {}), story: Array.isArray(raw?.cine?.story) ? raw.cine.story : [], qrs: Array.isArray(raw?.cine?.qrs) ? raw.cine.qrs : [] },
   opening: { ...DEFAULTS.opening, ...(raw?.opening || {}) },
   butterflies: { ...DEFAULTS.butterflies, ...(raw?.butterflies || {}) },
   songs: Array.isArray(raw?.songs) ? raw.songs : [],
@@ -184,7 +210,7 @@ const merge = (raw: any): InviteData => ({
 
 const slugify = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
 const randomTail = () => Math.random().toString(36).slice(2, 6);
-const inviteUrl = (slug: string) => `${window.location.origin}/i/${slug}`;
+const inviteUrl = (slug: string, code?: string) => `${window.location.origin}/i/${slug}${code ? '/' + code : ''}`;
 const safeName = (n: string) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
 
 let fontsLoaded = false;
@@ -194,7 +220,7 @@ function useInviteFonts() {
     fontsLoaded = true;
     const l = document.createElement('link');
     l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&family=Cormorant+Garamond:wght@400;600;700&family=Parisienne&family=Dancing+Script:wght@500;700&family=Kantumruy+Pro:wght@400;600;700&family=Moul&family=Moulpali&family=Noto+Serif+Khmer:wght@400;600&display=swap';
+    l.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&family=Cormorant+Garamond:wght@400;600;700&family=Parisienne&family=Dancing+Script:wght@500;700&family=Kantumruy+Pro:wght@400;600;700&family=Moul&family=Moulpali&family=Noto+Serif+Khmer:wght@400;600&family=Pinyon+Script&display=swap';
     document.head.appendChild(l);
   }, []);
 }
@@ -257,13 +283,36 @@ function Butterflies({ cfg }: { cfg: InviteData['butterflies'] }) {
 
 /* ------------------------------------------------------------------ Opening scene ------------------------------------------------------------------ */
 
-function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void; onGone: () => void }) {
+type Pos = { x: number; y: number };
+const pct = (v: number, lo: number, hi: number) => Math.round(Math.min(hi, Math.max(lo, v)) * 10) / 10;
+
+function OpeningScene({ d, guestName, preview, layoutEdit, onLayout, onOpen, onGone }: {
+  d: InviteData; guestName: string; preview: boolean; layoutEdit: boolean;
+  onLayout?: (patch: { btnPos?: Pos; namePos?: Pos }) => void; onOpen: () => void; onGone: () => void;
+}) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'gone'>('closed');
+  const root = useRef<HTMLDivElement | null>(null);
+  const dragging = useRef<'btn' | 'name' | null>(null);
+
+  /* admin: drag the button / name straight on the preview */
+  useEffect(() => {
+    if (!layoutEdit) return;
+    const move = (e: PointerEvent) => {
+      const k = dragging.current, el = root.current; if (!k || !el || !onLayout) return;
+      const r = el.getBoundingClientRect();
+      const pos = { x: pct(((e.clientX - r.left) / r.width) * 100, 4, 96), y: pct(((e.clientY - r.top) / r.height) * 100, 3, 97) };
+      onLayout(k === 'btn' ? { btnPos: pos } : { namePos: pos });
+    };
+    const up = () => { dragging.current = null; };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
+  });
+
   const L = labelsFor(d.lang);
   const img = d.opening.image;
   const names = [d.groom, d.bride].filter(Boolean).join(' & ') || (d.lang === 'en' ? 'Groom & Bride' : 'កូនកំលោះ & កូនក្រមុំ');
   const open = () => {
-    if (phase !== 'closed') return;
+    if (phase !== 'closed' || layoutEdit) return;
     setPhase('opening');
     onOpen();
     window.setTimeout(() => { setPhase('gone'); onGone(); }, d.opening.style === 'envelope' ? 2600 : 2100);
@@ -278,8 +327,14 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
   const btnCls = 'ivOpenBtn' + (btnImg ? ' ivBtnImg' : '');
   const btn = loc(d.opening.button, 'obtn', d.lang);
   const otitle = loc(d.opening.title, 'otitle', d.lang);
+
+  const btnPos = d.opening.btnPos || { x: 50, y: st === 'envelope' ? 86 : 78 };
+  const namePos = d.opening.namePos || { x: 50, y: st === 'envelope' ? 18 : 64 };
+  const shownName = d.opening.nameEnabled ? (guestName || (preview ? 'ឈ្មោះភ្ញៀវ' : '')) : '';
+  const grab = (k: 'btn' | 'name') => layoutEdit ? { onPointerDown: (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); dragging.current = k; } } : {};
+
   return (
-    <div className={`ivOpen ivOpen-${st} ${phase === 'opening' ? 'go' : ''}`} role="dialog" aria-label="Invitation cover">
+    <div ref={root} className={`ivOpen ivOpen-${st} ${phase === 'opening' ? 'go' : ''}`} role="dialog" aria-label="Invitation cover">
       <div className="ivOpenBg" style={bg} />
       <div className="ivOpenShade" />
 
@@ -296,18 +351,54 @@ function OpeningScene({ d, onOpen, onGone }: { d: InviteData; onOpen: () => void
             <div className="ivEnvFlap" />
             <button type="button" className="ivSeal" aria-label={btn}><Heart fill="currentColor" /></button>
           </div>
-          <button type="button" className={btnCls} style={btnStyle} onClick={open} aria-label={btn}>{btnImg ? '' : btn}</button>
         </div>
       ) : (
         <div className="ivOpenCenter">
           <p className="ivOpenKicker">{otitle}</p>
           <h2 className={'ivOpenNames' + (HAS_KHMER.test(names) || (!d.groom && !d.bride && d.lang !== 'en') ? ' ivKh' : '')}>{names}</h2>
-          <button type="button" className={btnCls} style={btnStyle} onClick={open} aria-label={btn}>{btnImg ? '' : <><Heart /> {btn}</>}</button>
         </div>
       )}
+
+      {/* the guest-name space (optional) and the open button can sit anywhere on the page */}
+      {(shownName || (layoutEdit && d.opening.nameEnabled)) && (
+        <div className={'ivPos ivPosName' + (layoutEdit ? ' edit' : '')} data-label="Guest name" style={{ left: `${namePos.x}%`, top: `${namePos.y}%` }} {...grab('name')}>
+          <span className="ivGuestName" style={{ fontSize: d.opening.nameSize || 22, color: d.opening.nameColor || '#ffffff', fontFamily: KH_FONTS.moul.stack + ',serif' }}>{shownName}</span>
+        </div>
+      )}
+      <div className={'ivPos ivPosBtn' + (layoutEdit ? ' edit' : '')} data-label="Open button" style={{ left: `${btnPos.x}%`, top: `${btnPos.y}%` }} {...grab('btn')}>
+        <button type="button" className={btnCls} style={btnStyle} onClick={open} aria-label={btn}>{btnImg ? '' : <><Heart /> {btn}</>}</button>
+      </div>
+
       {d.opening.bottomImage && <img className="ivOpenBottom" src={d.opening.bottomImage} alt="" />}
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ cinematic config ------------------------------------------------------------------ */
+function buildCineCfg(d: InviteData, lang: Lang, guestName: string, preview: boolean, shareUrl: string): CineCfg {
+  const L: 'km' | 'en' = lang === 'en' ? 'en' : 'km';
+  const c = d.cine, p = parseDate(d.date);
+  const pal = c.palette === 'custom' ? { paper: c.paper, cream: c.cream, night: c.night, foil: c.foil } : CINE_PALETTES[c.palette] || CINE_PALETTES.olive;
+  const when = d.date ? new Date(`${d.date}T${d.time || '09:00'}:00`) : null;
+  const ok = when && Number.isFinite(when.getTime()) ? when : null;
+  const iso = (t: Date) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}T${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:00`;
+  const names = [d.groom || c.groomEn, d.bride || c.brideEn].filter(Boolean).join(' & ');
+  return {
+    lang: L,
+    groomShort: c.groomShort, brideShort: c.brideShort, groomKh: d.groom, brideKh: d.bride, groomEn: c.groomEn, brideEn: c.brideEn,
+    groomFather: c.groomFather, groomMother: c.groomMother, brideFather: c.brideFather, brideMother: c.brideMother,
+    dateParts: p ? { wd: L === 'km' ? KH_WD[p.wd] : EN_WD[p.wd], d: L === 'km' ? khNum(p.d) : String(p.d), m: L === 'km' ? KH_MONTHS[p.mo - 1] : EN_MONTHS[p.mo - 1], y: L === 'km' ? khNum(p.y) : String(p.y) } : null,
+    dateLong: [fmtDate(d.date, d.weekday, L), fmtTime(d.time, L)].filter(Boolean).join(' · '),
+    lunar: c.lunar, venue: d.venue, lat: c.lat.trim(), lng: c.lng.trim(), mapUrl: d.mapUrl,
+    target: ok ? ok.getTime() : null,
+    ics: ok ? { title: names || 'Wedding', start: iso(ok), end: iso(new Date(ok.getTime() + 4 * 3600 * 1000)), location: d.venue.replace(/\n/g, ', ') } : null,
+    words: c.words, blessing: c.blessing, thanks: c.thanks,
+    photo: d.opening.image || d.gallery[0] || '', archPhoto: c.archPhoto || d.gallery[0] || '', groomPhoto: c.groomPhoto, bridePhoto: c.bridePhoto, candlePhoto: c.candlePhoto,
+    gallery: d.gallery, story: c.story, qrs: c.qrs.filter(q => q.url),
+    schedule: d.schedule.filter(e => e.name).map(e => ({ time: fmtTime(e.time, L), name: e.name, date: fmtShort(e.date, L) })),
+    guestName: d.opening.nameEnabled ? guestName : '', shareUrl, shareTitle: names ? `${names} · ${L === 'km' ? 'សិរីសួស្តីអាពាហ៍ពិពាហ៍' : 'Wedding invitation'}` : '',
+    palette: { paper: pal.paper, cream: pal.cream, night: pal.night, foil: pal.foil }, preview,
+  };
 }
 
 /* ------------------------------------------------------------------ Invitation page ------------------------------------------------------------------ */
@@ -333,12 +424,16 @@ function Reveal({ children, className = '' }: { children: React.ReactNode; class
   return <div ref={ref} className={`ivReveal ${on ? 'on' : ''} ${className}`}>{children}</div>;
 }
 
-export function InvitationView({ data, preview = false, replayKey = 0, onViewed }: { data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void }) {
+export function InvitationView({ data, preview = false, replayKey = 0, onViewed, guestName = '', layoutEdit = false, onLayout, shareUrl = '' }: {
+  data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void; guestName?: string; layoutEdit?: boolean; onLayout?: (patch: { btnPos?: Pos; namePos?: Pos }) => void; shareUrl?: string;
+}) {
   useInviteFonts();
   /* Guests start in the invitation's language (Khmer by default) and can switch, unless it is set to bilingual. */
   const [lang, setLang] = useState<Lang>(data.lang);
   useEffect(() => { setLang(data.lang); }, [data.lang]);
   const d = useMemo(() => ({ ...data, lang }), [data, lang]);
+  const cinematic = data.mode === 'cinematic';
+  const cineCfg = useMemo(() => (cinematic ? buildCineCfg(data, lang, guestName, preview, shareUrl) : null), [cinematic, data, lang, guestName, preview, shareUrl]);
   const L = labelsFor(lang);
   const [opened, setOpened] = useState(false);
   const [gone, setGone] = useState(false);
@@ -392,6 +487,7 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed 
 
   return (
     <div className={`ivRoot ${preview ? 'ivPreview' : ''}`} data-kh={lang !== 'en' ? '1' : '0'} style={themeVars(d)}>
+      {cinematic && cineCfg ? <CinematicView cfg={cineCfg} replayKey={replayKey} onOpen={() => { setOpened(true); startMusic(); }} /> : (
       <div className={`ivScroll ${gone ? '' : 'ivLocked'}`}>
         {data.mode === 'canvas' && data.canvas ? <CanvasPages canvas={data.canvas} date={d.date} time={d.time} labels={L} /> : <>
         <section className="ivHero" style={heroImg ? { backgroundImage: `url("${heroImg}")` } : undefined}>
@@ -471,9 +567,9 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed 
 
         <Reveal className="ivSec ivEnd"><Heart fill="currentColor" /><p>{L.thanks}</p><small>{L.ph}</small></Reveal>
         </>}
-      </div>
+      </div>)}
 
-      <Butterflies cfg={d.butterflies} />
+      {!cinematic && <Butterflies cfg={d.butterflies} />}
       {data.lang !== 'both' && data.mode !== 'canvas' && (
         <button type="button" className="ivLang" onClick={() => setLang(lang === 'km' ? 'en' : 'km')} aria-label="Change language">
           <b className={lang === 'km' ? 'on' : ''}>ខ្មែរ</b><b className={lang === 'en' ? 'on' : ''}>EN</b>
@@ -489,7 +585,7 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed 
       )}
       <audio ref={audio} preload="auto" loop={songs.length === 1} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={onEnded} playsInline />
 
-      {!gone && <OpeningScene key={replayKey + d.opening.style} d={d} onOpen={() => { setOpened(true); startMusic(); }} onGone={() => setGone(true)} />}
+      {!gone && !cinematic && <OpeningScene key={replayKey + d.opening.style} d={d} guestName={guestName} preview={preview} layoutEdit={layoutEdit} onLayout={onLayout} onOpen={() => { setOpened(true); startMusic(); }} onGone={() => setGone(true)} />}
     </div>
   );
 }
@@ -497,7 +593,8 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed 
 /* ------------------------------------------------------------------ Public page (no login) ------------------------------------------------------------------ */
 
 export function InvitePublic() {
-  const { slug = '' } = useParams();
+  const { slug = '', code = '' } = useParams();
+  const [guestName, setGuestName] = useState('');
   const [state, setState] = useState<'loading' | 'ok' | 'missing'>('loading');
   const [data, setData] = useState<InviteData>(DEFAULTS);
   const [title, setTitle] = useState('Wedding invitation');
@@ -512,13 +609,23 @@ export function InvitePublic() {
       const r = await supabase.from('wedding_invitations').select('title,data,published').eq('slug', slug.toLowerCase()).eq('published', true).maybeSingle();
       if (!live) return;
       if (r.error || !r.data) { setState('missing'); return; }
+      let who = '';
+      if (code) {
+        /* a personal link: ask for the name that belongs to it (counts one open per visit) */
+        let first = true;
+        try { const k = 'yn-inv-guest-' + code; first = !sessionStorage.getItem(k); sessionStorage.setItem(k, '1'); } catch { /* ignore */ }
+        const g = await supabase.rpc('invitation_guest_name', { p_slug: slug.toLowerCase(), p_code: code.toLowerCase(), p_count: first });
+        if (typeof g.data === 'string') who = g.data;
+        if (!live) return;
+      }
+      setGuestName(who);
       const merged = merge(r.data.data);
       setData(merged); setTitle(r.data.title || 'Wedding invitation'); setState('ok');
       const names = [merged.groom, merged.bride].filter(Boolean).join(' & ');
       document.title = names ? `${names} · Wedding invitation` : r.data.title || 'Wedding invitation';
     })();
     return () => { live = false; };
-  }, [slug]);
+  }, [slug, code]);
 
   const countView = useCallback(() => {
     try {
@@ -531,13 +638,13 @@ export function InvitePublic() {
 
   if (state === 'loading') return <div className="ivMissing"><Heart /><p>Loading your invitation…</p></div>;
   if (state === 'missing') return <div className="ivMissing"><Heart /><h2>Invitation not found</h2><p>This link may be wrong or the invitation is not published yet.</p><small>{title}</small></div>;
-  return <InvitationView data={data} onViewed={countView} />;
+  return <InvitationView data={data} guestName={guestName} onViewed={countView} shareUrl={inviteUrl(slug.toLowerCase())} />;
 }
 
 /* ------------------------------------------------------------------ Admin ------------------------------------------------------------------ */
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
-type Row = { id: string; slug: string; title: string; published: boolean; data: any; views: number; created_at: string; updated_at: string };
+type Row = { id: string; slug: string; title: string; published: boolean; data: any; views: number; customer_id?: string | null; created_at: string; updated_at: string };
 
 async function uploadAsset(file: File, folder: string, kind: 'image' | 'audio'): Promise<string> {
   let f = file;
@@ -582,7 +689,7 @@ export function AdminInvitations({ Shell }: { Shell: Shell }) {
         {(rows || []).map(x => (
           <div className="tr ivRow" key={x.id}>
             <div className="ivRowThumb" style={x.data?.opening?.image ? { backgroundImage: `url("${x.data.opening.image}")` } : undefined}><Heart /></div>
-            <div className="grow"><b>{x.title}</b><small>/i/{x.slug} · {x.views} opens</small></div>
+            <div className="grow"><b>{x.title}</b><small>/i/{x.slug} · {x.views} opens{x.customer_id ? ' · sent to a customer' : ''}</small></div>
             <span className={'status ' + (x.published ? 'published' : 'unpublished')}>{x.published ? 'live' : 'draft'}</span>
             <button className="secondary" onClick={() => copy(x.slug)} title="Copy link"><Copy /><span>Copy link</span></button>
             {x.published && <a className="secondary button" href={inviteUrl(x.slug)} target="_blank" rel="noopener noreferrer" title="Open"><ExternalLink /></a>}
@@ -600,6 +707,331 @@ export function AdminInvitations({ Shell }: { Shell: Shell }) {
 function Card({ title, icon, children, open = false, hide = false }: { title: string; icon?: React.ReactNode; children: React.ReactNode; open?: boolean; hide?: boolean }) {
   if (hide) return null;
   return <details className="panel ivCardAdmin" open={open}><summary>{icon}<b>{title}</b></summary><div className="ivCardBody">{children}</div></details>;
+}
+
+/* ------------------------------------------------------------------ guest names & personal links ------------------------------------------------------------------ */
+
+type Guest = { id: string; code: string; name: string; opens: number; created_at: string };
+const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
+const newCode = () => { const a = new Uint8Array(8); crypto.getRandomValues(a); return Array.from(a, x => CODE_CHARS[x % CODE_CHARS.length]).join(''); };
+const cleanName = (n: string) => n.replace(/\s+/g, ' ').trim().slice(0, 80);
+
+/* Used by the admin (for a customer) and by the customer on their Services page. */
+export function GuestLinks({ invId, slug, published }: { invId: string; slug: string; published: boolean }) {
+  useLang();
+  const [guests, setGuests] = useState<Guest[] | null>(null);
+  const [name, setName] = useState('');
+  const [many, setMany] = useState(false);
+  const [bulk, setBulk] = useState('');
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const load = useCallback(async () => {
+    const r = await supabase.from('wedding_invitation_guests').select('id,code,name,opens,created_at').eq('invitation_id', invId).order('created_at', { ascending: false }).limit(5000);
+    if (r.error) { setMsg(/wedding_invitation_guests|schema cache|relation/i.test(r.error.message) ? 'Run the latest supabase-wedding-invitations.sql in Supabase first.' : r.error.message); setGuests([]); return; }
+    setGuests((r.data || []) as Guest[]);
+  }, [invId]);
+  useEffect(() => { load(); }, [load]);
+
+  const flash = (t: string) => { setMsg(t); window.setTimeout(() => setMsg(''), 2600); };
+  const copy = async (url: string) => { try { await navigator.clipboard.writeText(url); flash(tr('Link copied', 'បានចម្លងតំណ')); } catch { prompt(tr('Copy this link', 'ចម្លងតំណនេះ'), url); } };
+  const share = async (g: Guest) => {
+    const url = inviteUrl(slug, g.code);
+    if ((navigator as any).share) { try { await (navigator as any).share({ title: g.name, text: g.name, url }); return; } catch { /* cancelled */ } }
+    copy(url);
+  };
+
+  async function add(names: string[]) {
+    const list = Array.from(new Set(names.map(cleanName).filter(Boolean)));
+    if (!list.length) return;
+    setBusy(true);
+    let rows = list.map(n => ({ invitation_id: invId, name: n, code: newCode() }));
+    let err: any = null;
+    for (let t = 0; t < 4; t++) {
+      const r = await supabase.from('wedding_invitation_guests').insert(rows);
+      err = r.error;
+      if (!err || err.code !== '23505') break;
+      rows = rows.map(x => ({ ...x, code: newCode() })); // a code collided (very rare): draw new ones
+    }
+    setBusy(false);
+    if (err) { flash(err.message); return; }
+    setName(''); setBulk(''); flash(tr(`${list.length} added`, `បានបន្ថែម ${list.length}`));
+    load();
+  }
+  async function rename(g: Guest) {
+    const n = prompt(tr('Guest name', 'ឈ្មោះភ្ញៀវ'), g.name); if (n === null) return;
+    const v = cleanName(n); if (!v) return;
+    const r = await supabase.from('wedding_invitation_guests').update({ name: v }).eq('id', g.id);
+    if (r.error) flash(r.error.message); else load();
+  }
+  async function remove(g: Guest) {
+    if (!confirm(tr(`Remove “${g.name}”? Their personal link will then open the invitation without a name.`, `លុប “${g.name}” ? តំណផ្ទាល់ខ្លួនរបស់គាត់នឹងបើកធៀបអញ្ជើញដោយគ្មានឈ្មោះ។`))) return;
+    const r = await supabase.from('wedding_invitation_guests').delete().eq('id', g.id);
+    if (r.error) flash(r.error.message); else setGuests(gs => (gs || []).filter(x => x.id !== g.id));
+  }
+
+  const shown = (guests || []).filter(g => !q.trim() || g.name.toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <div className="gl">
+      <div className="glOrig">
+        <b>{tr('Original link (no name)', 'តំណដើម (គ្មានឈ្មោះ)')}</b>
+        <div className="glRow"><code>{inviteUrl(slug)}</code>
+          <button type="button" className="secondary" onClick={() => copy(inviteUrl(slug))}><Copy /> {tr('Copy', 'ចម្លង')}</button>
+          {published && <a className="secondary button" href={inviteUrl(slug)} target="_blank" rel="noopener noreferrer" aria-label="Open"><ExternalLink /></a>}
+        </div>
+      </div>
+      {!published && <p className="notice">{tr('The invitation is not published yet. These links start working as soon as it is.', 'ធៀបអញ្ជើញមិនទាន់បានផ្សាយនៅឡើយទេ។ តំណទាំងនេះនឹងដំណើរការភ្លាមៗនៅពេលផ្សាយ។')}</p>}
+
+      <b className="glHead"><UserPlus /> {tr('Add a guest name', 'បន្ថែមឈ្មោះភ្ញៀវ')}</b>
+      {!many ? (
+        <div className="glRow">
+          <input value={name} maxLength={80} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add([name]); }} placeholder={tr('e.g. Uncle Sokha', 'ឧ. លោកពូ សុខា')} />
+          <button type="button" onClick={() => add([name])} disabled={busy || !cleanName(name)}><Plus /> {tr('Add', 'បន្ថែម')}</button>
+        </div>
+      ) : (
+        <div className="glBulk">
+          <textarea rows={5} value={bulk} onChange={e => setBulk(e.target.value)} placeholder={tr('One name per line', 'ឈ្មោះមួយក្នុងមួយបន្ទាត់')} />
+          <button type="button" onClick={() => add(bulk.split('\n'))} disabled={busy || !bulk.trim()}><Plus /> {tr('Add all', 'បន្ថែមទាំងអស់')}</button>
+        </div>
+      )}
+      <button type="button" className="glLink" onClick={() => setMany(m => !m)}>{many ? tr('Add one name', 'បន្ថែមមួយឈ្មោះ') : tr('Add many names at once', 'បន្ថែមច្រើនឈ្មោះក្នុងពេលតែមួយ')}</button>
+      {msg && <p className="notice">{msg}</p>}
+
+      <b className="glHead"><Users /> {tr('Guest links', 'តំណភ្ញៀវ')} {guests ? `(${guests.length})` : ''}</b>
+      {(guests?.length || 0) > 8 && <div className="glSearch"><Search /><input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Search names', 'ស្វែងរកឈ្មោះ')} /></div>}
+      <ul className="glList">
+        {shown.map(g => (
+          <li key={g.id}>
+            <div className="glName"><b>{g.name}</b><small>{g.opens ? tr(`opened ${g.opens}×`, `បានបើក ${g.opens} ដង`) : tr('not opened yet', 'មិនទាន់បានបើក')} · …/{g.code}</small></div>
+            <button type="button" className="secondary" onClick={() => copy(inviteUrl(slug, g.code))}><Copy /><span>{tr('Copy link', 'ចម្លងតំណ')}</span></button>
+            <button type="button" className="secondary icon" onClick={() => share(g)} aria-label="Share"><Share2 /></button>
+            <button type="button" className="secondary icon" onClick={() => rename(g)} aria-label="Rename"><Pencil /></button>
+            <button type="button" className="icon danger" onClick={() => remove(g)} aria-label="Remove"><Trash2 /></button>
+          </li>))}
+      </ul>
+      {guests && !guests.length && <p className="muted">{tr('No names yet. Add a name and it gets its own link.', 'មិនទាន់មានឈ្មោះនៅឡើយទេ។ បន្ថែមឈ្មោះ ហើយវានឹងមានតំណផ្ទាល់ខ្លួន។')}</p>}
+    </div>
+  );
+}
+
+/* The finished invitation the admin sent to this customer, shown on the Services page.
+   Tap it to open a sheet where the customer adds guest names (each gets a personal link). */
+export function MyInvitations() {
+  useLang();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const u = (await supabase.auth.getUser()).data.user?.id; if (!u) return;
+      const r = await supabase.from('wedding_invitations').select('id,slug,title,published,data,views,customer_id,created_at,updated_at').eq('customer_id', u).order('created_at', { ascending: false });
+      if (live && !r.error) setRows((r.data || []) as Row[]);
+    })();
+    return () => { live = false; };
+  }, []);
+  useEffect(() => {
+    if (!openId) return;
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenId(null); };
+    window.addEventListener('keydown', k); document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', k); document.body.style.overflow = ''; };
+  }, [openId]);
+  if (!rows.length) return null;
+  const cur = rows.find(x => x.id === openId);
+  return (
+    <section className="myInv" aria-label={tr('Your wedding invitation', 'ធៀបអញ្ជើញរបស់អ្នក')}>
+      <h2 className="svcGroup">{tr('Your wedding invitation', 'ធៀបអញ្ជើញមង្គលការរបស់អ្នក')}</h2>
+      {rows.map(x => (
+        <button type="button" className="myInvCard" key={x.id} onClick={() => setOpenId(x.id)}>
+          <span className="myInvIcon"><Heart /></span>
+          <span className="myInvTitle"><b>{x.title}</b><small>{x.published ? tr('Tap to add your guests’ names', 'ចុចដើម្បីបន្ថែមឈ្មោះភ្ញៀវ') : tr('We are still preparing it', 'យើងកំពុងរៀបចំ')}</small></span>
+          <span className={'status ' + (x.published ? 'published' : 'unpublished')}>{x.published ? tr('Ready', 'រួចរាល់') : tr('Draft', 'ព្រាង')}</span>
+        </button>))}
+      {cur && (
+        <div className="myInvOverlay" onClick={() => setOpenId(null)}>
+          <div className="myInvSheet" role="dialog" aria-label={cur.title} onClick={e => e.stopPropagation()}>
+            <div className="myInvHead">
+              <span className="myInvIcon"><Heart /></span>
+              <span className="myInvTitle"><b>{cur.title}</b><small>{cur.published ? tr(`${cur.views} opens`, `បានបើក ${cur.views} ដង`) : tr('Not published yet', 'មិនទាន់ផ្សាយ')}</small></span>
+              <button type="button" className="icon" onClick={() => setOpenId(null)} aria-label="Close"><X /></button>
+            </div>
+            <p className="muted">{tr('Add a guest’s name and they get their own link. When they open it, their name appears on the opening page. You can also share the original link with no name.', 'បន្ថែមឈ្មោះភ្ញៀវ ហើយគាត់នឹងមានតំណផ្ទាល់ខ្លួន។ ពេលគាត់បើក ឈ្មោះរបស់គាត់នឹងបង្ហាញលើទំព័របើក។ អ្នកក៏អាចចែករំលែកតំណដើមដែលគ្មានឈ្មោះបានដែរ។')}</p>
+            <GuestLinks invId={cur.id} slug={cur.slug} published={cur.published} />
+          </div>
+        </div>)}
+    </section>
+  );
+}
+
+function CustomerPicker({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+  const [list, setList] = useState<{ user_id: string; name: string | null; email: string | null }[]>([]);
+  const [q, setQ] = useState('');
+  useEffect(() => { supabase.from('profiles').select('user_id,name,email').order('name').limit(1000).then((r: any) => { if (r?.data) setList(r.data); }, () => {}); }, []);
+  const cur = list.find(x => x.user_id === value);
+  const hits = q.trim() ? list.filter(x => `${x.name || ''} ${x.email || ''}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8) : [];
+  return (
+    <div className="cpick">
+      {value && <div className="cpickCur"><Check /> <span>{cur ? `${cur.name || 'Customer'} · ${cur.email || ''}` : 'Customer selected'}</span><button type="button" className="secondary" onClick={() => onChange(null)}><X /> Remove</button></div>}
+      <div className="glSearch"><Search /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search a customer by name or email" /></div>
+      {hits.map(x => <button type="button" key={x.user_id} className="cpickHit" onClick={() => { onChange(x.user_id); setQ(''); }}><b>{x.name || '(no name)'}</b><small>{x.email}</small></button>)}
+    </div>
+  );
+}
+
+/* link-preview picture (1200x630) for Telegram / Messenger / Facebook: the cover photo, the names, a gold frame */
+async function buildOgBlob(photo: string, khNames: string, enNames: string): Promise<Blob> {
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 630;
+  const x = c.getContext('2d')!;
+  x.fillStyle = '#14160c'; x.fillRect(0, 0, 1200, 630);
+  if (photo) {
+    const img = await new Promise<HTMLImageElement | null>(res => { const i = new window.Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = photo; });
+    if (img) { const k = Math.max(1200 / img.naturalWidth, 630 / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k; x.drawImage(img, (1200 - w) / 2, (630 - h) / 2, w, h); }
+  }
+  const g = x.createLinearGradient(0, 0, 0, 630); g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(.5, 'rgba(0,0,0,.4)'); g.addColorStop(1, 'rgba(0,0,0,.72)');
+  x.fillStyle = g; x.fillRect(0, 0, 1200, 630);
+  try { await Promise.all([document.fonts.load('60px Moulpali'), document.fonts.load('56px "Pinyon Script"')]); } catch { /* use fallbacks */ }
+  const foil = x.createLinearGradient(300, 0, 900, 0); ['#a8761f', '#f3dc94', '#c9a24b', '#fbf0c4', '#a8761f'].forEach((c2, i, a) => foil.addColorStop(i / (a.length - 1), c2));
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = foil;
+  x.font = '38px Moulpali, "Kantumruy Pro", serif'; x.fillText('សិរីសួស្តីអាពាហ៍ពិពាហ៍', 600, 170);
+  let size = 82; const fit = (t: string, font: (s: number) => string, max: number) => { size = 82; do { x.font = font(size); size -= 3; } while (x.measureText(t).width > max && size > 28); };
+  if (khNames) { fit(khNames, s2 => `${s2}px Moulpali, "Kantumruy Pro", serif`, 1020); x.fillText(khNames, 600, 310); }
+  if (enNames) { x.fillStyle = '#f6efe0'; fit(enNames, s2 => `${Math.round(s2 * .8)}px "Pinyon Script", "Playfair Display", serif`, 1020); x.fillText(enNames, 600, khNames ? 430 : 330); }
+  x.strokeStyle = foil; x.lineWidth = 3; x.strokeRect(30, 30, 1140, 570); x.lineWidth = 1; x.strokeRect(42, 42, 1116, 546);
+  return await new Promise<Blob>((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('Could not create the picture'))), 'image/jpeg', 0.86));
+}
+
+function CinematicCard({ data, set, setCine, pick, busy, uploadBlob, uploadFile, setNote, onDate, setIn, setReplay }: {
+  data: InviteData; set: (p: Partial<InviteData>) => void; setCine: (p: Partial<CineData>) => void;
+  pick: (f: File | undefined, kind: 'image' | 'audio', onUrl: (u: string) => void, label: string) => void; busy: string;
+  uploadBlob: (b: Blob) => Promise<string>; uploadFile: (f: File) => Promise<string>; setNote: (t: string) => void; onDate: (d: string) => void;
+  setIn: <K extends 'look' | 'opening' | 'butterflies'>(k: K, patch: Partial<InviteData[K]>) => void; setReplay: () => void;
+}) {
+  const c = data.cine;
+  const img = (label: string, key: 'archPhoto' | 'groomPhoto' | 'bridePhoto' | 'candlePhoto', busyKey: string) =>
+    <PhotoTile wide label={label} url={c[key]} busy={busy === busyKey} onFile={f => pick(f, 'image', u => setCine({ [key]: u } as Partial<CineData>), busyKey)} onClear={() => setCine({ [key]: '' } as Partial<CineData>)} />;
+  const applyPalette = (id: 'olive' | 'rose' | 'navy') => { const q = CINE_PALETTES[id]; setCine({ palette: id, paper: q.paper, cream: q.cream, night: q.night, foil: q.foil }); setReplay(); };
+  async function makeOg() {
+    setNote('Creating the link-preview picture…');
+    try {
+      const blob = await buildOgBlob(data.opening.image || data.gallery[0] || '', [data.groom, data.bride].filter(Boolean).join('  &  '), [c.groomEn, c.brideEn].filter(Boolean).join('  &  '));
+      setCine({ ogImage: await uploadBlob(blob) }); setNote('Link-preview picture created. Save to keep it.');
+    } catch (e: any) { setNote(/tainted|security/i.test(e?.message || '') ? 'The photo could not be read for the picture (storage CORS). Try uploading the cover photo again.' : e?.message || 'Could not create the picture.'); }
+  }
+  return (
+    <>
+      <Card title="Cinematic invitation" icon={<Sparkles />} open>
+        <p className="notice">Envelope with a wax seal → cover → words → couple → countdown → programme → love story → candlelight → gallery → venue → gift → thank you. A section only appears when it has something in it. Nothing is invented: empty fields stay empty.</p>
+        <Sub>Names</Sub>
+        <div className="two">
+          <label>Groom, Khmer (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} /></label>
+          <label>Bride, Khmer (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} /></label>
+        </div>
+        <div className="two">
+          <label>Groom, English<input value={c.groomEn} onChange={e => setCine({ groomEn: e.target.value })} /></label>
+          <label>Bride, English<input value={c.brideEn} onChange={e => setCine({ brideEn: e.target.value })} /></label>
+        </div>
+        <div className="two">
+          <label>Name-logo: groom’s short name<input value={c.groomShort} onChange={e => setCine({ groomShort: e.target.value })} placeholder="first name only" /></label>
+          <label>Name-logo: bride’s short name<input value={c.brideShort} onChange={e => setCine({ brideShort: e.target.value })} placeholder="first name only" /></label>
+        </div>
+        <Sub>Parents (written “លោក …” and “និងលោកស្រី …”)</Sub>
+        <div className="two">
+          <label>Groom’s father<input value={c.groomFather} onChange={e => setCine({ groomFather: e.target.value })} /></label>
+          <label>Groom’s mother<input value={c.groomMother} onChange={e => setCine({ groomMother: e.target.value })} /></label>
+          <label>Bride’s father<input value={c.brideFather} onChange={e => setCine({ brideFather: e.target.value })} /></label>
+          <label>Bride’s mother<input value={c.brideMother} onChange={e => setCine({ brideMother: e.target.value })} /></label>
+        </div>
+        <Sub>Date, place and map</Sub>
+        <div className="two">
+          <label>Wedding date<input type="date" value={data.date} onChange={e => onDate(e.target.value)} /></label>
+          <label>Wedding time<input type="time" value={data.time} onChange={e => set({ time: e.target.value })} /></label>
+        </div>
+        <label>Khmer lunar date (ត្រូវនឹង…)<input value={c.lunar} onChange={e => setCine({ lunar: e.target.value })} /></label>
+        <label>Venue / address<textarea rows={2} value={data.venue} onChange={e => set({ venue: e.target.value })} /></label>
+        <div className="two">
+          <label>Map pin: latitude<input value={c.lat} onChange={e => setCine({ lat: e.target.value })} inputMode="decimal" placeholder="e.g. 11.5564" /></label>
+          <label>Map pin: longitude<input value={c.lng} onChange={e => setCine({ lng: e.target.value })} inputMode="decimal" placeholder="e.g. 104.9282" /></label>
+        </div>
+        <label>Google Maps link (optional)<input value={data.mapUrl} onChange={e => set({ mapUrl: e.target.value })} placeholder="https://maps.google.com/…" /></label>
+        <Sub>Wording</Sub>
+        <label>Formal invitation words (one line per row; leave empty for the standard words)<textarea rows={5} value={c.words} onChange={e => setCine({ words: e.target.value })} /></label>
+        <div className="two">
+          <label>Blessing line behind the countdown<input value={c.blessing} onChange={e => setCine({ blessing: e.target.value })} placeholder="optional" /></label>
+          <label>Thank-you message<input value={c.thanks} onChange={e => setCine({ thanks: e.target.value })} placeholder="optional" /></label>
+        </div>
+      </Card>
+
+      <Card title="Photos, love story & gift QR" icon={<ImagePlus />} open>
+        <Sub>Cover photo (envelope background and cover)</Sub>
+        <div className="ivPhotoPair three">
+          <PhotoTile wide label="Cover photo" url={data.opening.image} busy={busy === 'cover'} onFile={f => pick(f, 'image', u => { setIn('opening', { image: u }); setReplay(); }, 'cover')} onClear={() => setIn('opening', { image: '' })} />
+          {img('Arch photo (words section)', 'archPhoto', 'arch')}
+          {img('Groom photo', 'groomPhoto', 'gph')}
+          {img('Bride photo', 'bridePhoto', 'bph')}
+          {img('Candlelight photo', 'candlePhoto', 'cph')}
+        </div>
+        <Sub>Gallery (masonry + swipe viewer)</Sub>
+        <div className="ivGalleryAdmin">
+          {data.gallery.map((u, i) => (
+            <div key={u + i} className="ivGThumb" style={{ backgroundImage: `url("${u}")` }}>
+              <button className="icon danger" onClick={() => set({ gallery: data.gallery.filter((_, j) => j !== i) })} aria-label="Remove photo"><X /></button>
+            </div>))}
+          <label className="ivGAdd"><Plus /><span>{busy === 'gal' ? '…' : 'Add'}</span>
+            <input type="file" accept="image/*" multiple hidden onChange={async e => {
+              const fs = Array.from(e.target.files || []); e.target.value = ''; if (!fs.length) return;
+              setNote('Uploading photos…'); const urls: string[] = [];
+              for (const f of fs) { try { urls.push(await uploadFile(f)); } catch (er: any) { setNote(er?.message || 'Upload failed.'); } }
+              if (urls.length) { set({ gallery: [...data.gallery, ...urls] }); setNote(''); }
+            }} /></label>
+        </div>
+        <Sub>Love story (photo + a short caption each)</Sub>
+        {c.story.map((st, i) => (
+          <div className="ivSong" key={i}>
+            <div className="ivMini"><div className="ivPickThumb" style={{ width: 52, height: 52, ...(st.photo ? { backgroundImage: `url("${st.photo}")` } : {}) }}>{!st.photo && <ImagePlus />}</div>
+              <input value={st.caption} onChange={e => setCine({ story: c.story.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)) })} placeholder="Caption" />
+              <button className="icon danger" onClick={() => setCine({ story: c.story.filter((_, j) => j !== i) })} aria-label="Remove"><X /></button></div>
+            <label className="button secondary ivUpload"><Upload /> {st.photo ? 'Replace photo' : 'Photo'}<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; pick(f, 'image', u => setCine({ story: c.story.map((x, j) => (j === i ? { ...x, photo: u } : x)) }), 'story'); }} /></label>
+          </div>))}
+        <button className="secondary" onClick={() => setCine({ story: [...c.story, { photo: '', caption: '' }] })}><Plus /> Add a love-story moment</button>
+        <Sub>Wedding gift QR codes (KHQR / ABA images)</Sub>
+        {c.qrs.map((q, i) => (
+          <div className="ivSong" key={i}>
+            <div className="ivMini"><div className="ivPickThumb" style={{ width: 52, height: 52, ...(q.url ? { backgroundImage: `url("${q.url}")`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat' } : {}) }}>{!q.url && <ImagePlus />}</div>
+              <input value={q.label} onChange={e => setCine({ qrs: c.qrs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} placeholder="Account name / bank" />
+              <button className="icon danger" onClick={() => setCine({ qrs: c.qrs.filter((_, j) => j !== i) })} aria-label="Remove"><X /></button></div>
+            <label className="button secondary ivUpload"><Upload /> {q.url ? 'Replace QR image' : 'QR image'}<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; pick(f, 'image', u => setCine({ qrs: c.qrs.map((x, j) => (j === i ? { ...x, url: u } : x)) }), 'qr'); }} /></label>
+          </div>))}
+        <button className="secondary" onClick={() => setCine({ qrs: [...c.qrs, { label: '', url: '' }] })}><Plus /> Add a QR code</button>
+      </Card>
+
+      <Card title="Look, language & link preview" icon={<Sparkles />} open>
+        <Sub>Colours from the printed card</Sub>
+        <div className="ivSwatches">
+          {(['olive', 'rose', 'navy'] as const).map(id => { const q = CINE_PALETTES[id]; return (
+            <button key={id} type="button" className={'ivSwatch ' + (c.palette === id ? 'on' : '')} onClick={() => applyPalette(id)}><i style={{ background: q.paper }} /><i style={{ background: q.cream }} /><i style={{ background: q.night }} /><small>{q.name}</small></button>); })}
+        </div>
+        <div className="two">
+          <label>Paper (envelope)<input type="color" value={c.paper} onChange={e => { setCine({ palette: 'custom', paper: e.target.value }); }} style={{ height: 44, padding: 4 }} /></label>
+          <label>Card cream<input type="color" value={c.cream} onChange={e => setCine({ palette: 'custom', cream: e.target.value })} style={{ height: 44, padding: 4 }} /></label>
+          <label>Night (photo sections)<input type="color" value={c.night} onChange={e => setCine({ palette: 'custom', night: e.target.value })} style={{ height: 44, padding: 4 }} /></label>
+          <label>Metallic foil<select value={c.foil} onChange={e => setCine({ palette: 'custom', foil: e.target.value as CineData['foil'] })}><option value="gold">Gold</option><option value="rose">Rose gold</option><option value="silver">Silver</option></select></label>
+        </div>
+        <Sub>Language</Sub>
+        <div className="ivSeg">
+          {([['km', 'ខ្មែរ', 'Khmer first'], ['en', 'English', 'English first'], ['both', 'ខ្មែរ + EN', 'Khmer, with switch']] as const).map(([v, a, b]) => (
+            <button key={v} type="button" className={data.lang === v ? 'on' : ''} onClick={() => set({ lang: v === 'both' ? 'km' : v })}><b>{a}</b><small>{b}</small></button>))}
+        </div>
+        <small className="muted">Guests always get the ខ្មែរ | EN switch in the corner. Khmer numerals are used in Khmer.</small>
+        <label className="ivCheck"><input type="checkbox" checked={data.opening.nameEnabled} onChange={e => { setIn('opening', { nameEnabled: e.target.checked }); setReplay(); }} /> Write the guest’s name on the envelope (from their personal link)</label>
+        <Sub>Link preview (Telegram, Messenger, Facebook)</Sub>
+        <small className="muted">The picture and title people see when the link is shared. It uses the cover photo and the names.</small>
+        <div className="row" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+          <button className="secondary" onClick={makeOg} disabled={!data.opening.image && !data.gallery[0]}><RefreshCw /> {c.ogImage ? 'Recreate preview picture' : 'Create preview picture'}</button>
+          {c.ogImage && <img src={c.ogImage} alt="" style={{ height: 64, borderRadius: 8, border: '1px solid var(--line)' }} />}
+        </div>
+      </Card>
+    </>
+  );
 }
 
 function Sub({ children }: { children: React.ReactNode }) { return <h4 className="ivSubHead">{children}</h4>; }
@@ -622,7 +1054,11 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
   const [id, setId] = useState<string | null>(row?.id || null);
   const [data, setData] = useState<InviteData>(() => { const m = merge(row?.data); return startCanvas && !row ? { ...m, mode: 'canvas', canvas: emptyCanvas() } : m; });
   const [builder, setBuilder] = useState(false);
+  const [layout, setLayout] = useState(false);
+  const [customerId, setCustomerId] = useState<string | null>(row?.customer_id || null);
+  const [sentTo, setSentTo] = useState<string | null>(row?.customer_id || null);
   const canvasMode = data.mode === 'canvas';
+  const cineMode = data.mode === 'cinematic';
   const [priv, setPriv] = useState<Private>(PRIVATE_DEFAULTS);
   const [title, setTitle] = useState(row?.title || '');
   const [slug, setSlug] = useState(row?.slug || '');
@@ -636,6 +1072,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
 
   const set = (patch: Partial<InviteData>) => { setData(d => ({ ...d, ...patch })); setDirty(true); };
   const setIn = <K extends 'look' | 'opening' | 'butterflies'>(k: K, patch: Partial<InviteData[K]>) => { setData(d => ({ ...d, [k]: { ...d[k], ...patch } })); setDirty(true); };
+  const setCine = (patch: Partial<CineData>) => { setData(d => ({ ...d, cine: { ...d.cine, ...patch } })); setDirty(true); };
   const setP = (patch: Partial<Private>) => { setPriv(p => ({ ...p, ...patch })); setDirty(true); };
 
   /* the private part (completion date, requests, designer notes) lives in its own admin-only table */
@@ -677,11 +1114,12 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
     setDirty(true); setReplay(n => n + 1);
   }
 
-  async function save(nextPublished = published) {
+  async function save(nextPublished = published, nextCustomer: string | null | undefined = undefined) {
+    const cust = nextCustomer === undefined ? customerId : nextCustomer;
     const clean = slug.trim().toLowerCase();
     if (!/^[a-z0-9][a-z0-9-]{2,60}$/.test(clean)) { setNote('The link needs 3+ letters, numbers or dashes (no spaces).'); return; }
     setBusy('Saving…'); setNote('');
-    const payload = { slug: clean, title: title.trim() || 'Wedding invitation', published: nextPublished, data };
+    const payload = { slug: clean, title: title.trim() || 'Wedding invitation', published: nextPublished, data, customer_id: cust };
     const r = id
       ? await supabase.from('wedding_invitations').update(payload).eq('id', id).select().single()
       : await supabase.from('wedding_invitations').insert({ ...payload, created_by: (await supabase.auth.getUser()).data.user?.id }).select().single();
@@ -693,7 +1131,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
     const newId = (r.data as any).id as string;
     const pr = await supabase.from('wedding_invitation_private').upsert({ invitation_id: newId, data: priv }, { onConflict: 'invitation_id' });
     setBusy('');
-    setId(newId); setSlug(clean); setPublished(nextPublished); setDirty(false);
+    setId(newId); setSlug(clean); setPublished(nextPublished); setCustomerId(cust); setSentTo(cust); setDirty(false);
     setNote(pr.error ? 'Saved, but the private notes were not saved. Run the latest supabase-wedding-invitations.sql, then save again.' : nextPublished ? 'Saved. The link is live.' : 'Saved as draft.');
   }
   const copyLink = async () => { try { await navigator.clipboard.writeText(link); setNote('Link copied.'); } catch { prompt('Copy this link', link); } };
@@ -713,10 +1151,13 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
         </div>
         {note && <p className="notice">{note}</p>}
 
-        <div className="ivModeSeg">
-          <button type="button" className={!canvasMode ? 'on' : ''} onClick={() => set({ mode: 'form' })}><b>Guided form</b><small>Fill in names, date, schedule… and pick a template.</small></button>
+        <div className="ivModeSeg ivModeSeg3">
+          <button type="button" className={!canvasMode && !cineMode ? 'on' : ''} onClick={() => set({ mode: 'form' })}><b>Guided form</b><small>Fill in names, date, schedule… and pick a template.</small></button>
+          <button type="button" className={cineMode ? 'on' : ''} onClick={() => set({ mode: 'cinematic' })}><b>Cinematic ✨</b><small>Envelope, wax seal, cover, scroll story, candlelight.</small></button>
           <button type="button" className={canvasMode ? 'on' : ''} onClick={() => set({ mode: 'canvas', canvas: data.canvas || emptyCanvas() })}><b>Blank canvas</b><small>Start empty. Place and draw everything yourself.</small></button>
         </div>
+
+        {cineMode && <CinematicCard data={data} set={set} setCine={setCine} pick={pick} busy={busy} uploadBlob={b => uploadAsset(new File([b], 'preview.jpg', { type: 'image/jpeg' }), 'pictures', 'image')} uploadFile={f => uploadAsset(f, 'pictures', 'image')} setNote={setNote} onDate={onDate} setIn={setIn} setReplay={() => setReplay(n => n + 1)} />}
 
         {canvasMode && (
           <>
@@ -740,7 +1181,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
         )}
 
         {/* 1 ----------------------------------------------------------- */}
-        <Card title="1. Bride & Groom Information" icon={<Heart />} open hide={canvasMode}>
+        <Card title="1. Bride & Groom Information" icon={<Heart />} open hide={canvasMode || cineMode}>
           <div className="two">
             <label>Groom's full name (ឈ្មោះកូនកំលោះ)<input value={data.groom} onChange={e => set({ groom: e.target.value })} /></label>
             <label>Bride's full name (ឈ្មោះកូនក្រមុំ)<input value={data.bride} onChange={e => set({ bride: e.target.value })} /></label>
@@ -752,7 +1193,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
         </Card>
 
         {/* 2 ----------------------------------------------------------- */}
-        <Card title="2. Wedding Details" icon={<CalendarDays />} open hide={canvasMode}>
+        <Card title="2. Wedding Details" icon={<CalendarDays />} open hide={canvasMode || cineMode}>
           <div className="two">
             <label>Wedding date (ថ្ងៃខែឆ្នាំរៀបការ)<input type="date" value={data.date} onChange={e => onDate(e.target.value)} /></label>
             <label>Wedding day of the week (ថ្ងៃ)<input value={data.weekday} onChange={e => set({ weekday: e.target.value })} placeholder="auto from the date" /></label>
@@ -770,7 +1211,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
         </Card>
 
         {/* 3 ----------------------------------------------------------- */}
-        <Card title="3. Ceremony Schedule (កម្មវិធីមង្គលការ)" icon={<CalendarDays />} open hide={canvasMode}>
+        <Card title="Programme: ceremony schedule (កម្មវិធី)" icon={<CalendarDays />} open hide={canvasMode}>
           <small className="muted">Add as many events as the wedding program needs. Tap a suggestion to add it, then set its date and time.</small>
           <div className="ivChips">{CEREMONY_SUGGESTIONS.map(n => <button key={n} type="button" className="ivChip" onClick={() => addEv(n)}><Plus /> {n}</button>)}</div>
           {data.schedule.map((ev, i) => (
@@ -786,8 +1227,8 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
         </Card>
 
         {/* 4 ----------------------------------------------------------- */}
-        <Card title={canvasMode ? 'Opening scene, butterflies & music' : '4. Invitation Design'} icon={<Sparkles />} open>
-          {!canvasMode && <>
+        <Card title={cineMode ? 'Music' : canvasMode ? 'Opening scene, butterflies & music' : '4. Invitation Design'} icon={<Sparkles />} open>
+          {!canvasMode && !cineMode && <>
           <Sub>Selected invitation template</Sub>
           <div className="ivTemplates">
             {TEMPLATES.map(t => {
@@ -857,6 +1298,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
 
           </>}
 
+          {!cineMode && <>
           <Sub>Opening scene (click to open)</Sub>
           <div className="ivStyles">
             {OPEN_STYLES.map(o => (
@@ -885,6 +1327,20 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
             <label>Button text<input value={data.opening.button} onChange={e => setIn('opening', { button: e.target.value })} /></label></div>
           <button className="secondary" onClick={() => setReplay(n => n + 1)}><RefreshCw /> Replay opening in preview</button>
 
+          <Sub>Open button & guest name position</Sub>
+          <label className="ivCheck"><input type="checkbox" checked={data.opening.nameEnabled} onChange={e => { setIn('opening', { nameEnabled: e.target.checked }); setReplay(n => n + 1); }} /> Add a blank space for the guest’s name (optional)</label>
+          <small className="muted">When a customer adds a guest name, it appears in this space on the opening page in Khmer OS Muol Light, and that guest gets their own link. With no name, the space stays empty.</small>
+          {data.opening.nameEnabled && (
+            <div className="two">
+              <label>Name size: <b>{data.opening.nameSize}px</b><input type="range" min={12} max={48} value={data.opening.nameSize} onChange={e => setIn('opening', { nameSize: Number(e.target.value) })} /></label>
+              <label>Name colour<input type="color" value={data.opening.nameColor} onChange={e => setIn('opening', { nameColor: e.target.value })} style={{ height: 44, padding: 4 }} /></label>
+            </div>)}
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            <button className={layout ? '' : 'secondary'} onClick={() => { setLayout(l => !l); setReplay(n => n + 1); }}><Move /> {layout ? 'Done moving' : 'Move them on the preview'}</button>
+            {(data.opening.btnPos || data.opening.namePos) && <button className="secondary" onClick={() => setIn('opening', { btnPos: null, namePos: null })}><RefreshCw /> Reset positions</button>}
+          </div>
+          {layout && <p className="notice">Drag the “Open button” {data.opening.nameEnabled ? 'and the “Guest name” box ' : ''}anywhere on the phone preview, then press “Done moving”.</p>}
+
           <Sub>Flying butterflies 🦋</Sub>
           <label className="ivCheck"><input type="checkbox" checked={data.butterflies.enabled} onChange={e => setIn('butterflies', { enabled: e.target.checked })} /> Show butterflies flying around the screen</label>
           {data.butterflies.enabled && <>
@@ -892,6 +1348,8 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
             <label>Size: <b>{data.butterflies.size}px</b><input type="range" min={18} max={80} value={data.butterflies.size} onChange={e => setIn('butterflies', { size: Number(e.target.value) })} /></label>
             <label className="ivCheck"><input type="checkbox" checked={data.butterflies.mix} onChange={e => setIn('butterflies', { mix: e.target.checked })} /> Mixed pastel colours</label>
             {!data.butterflies.mix && <label>Butterfly colour<input type="color" value={data.butterflies.color} onChange={e => setIn('butterflies', { color: e.target.value })} style={{ height: 44, padding: 4 }} /></label>}
+          </>}
+
           </>}
 
           <Sub>Music selection</Sub>
@@ -908,7 +1366,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
           {busy === 'Uploading song…' && <p className="notice">Uploading song…</p>}
           <button className="secondary" onClick={() => set({ songs: [...data.songs, { title: '', url: '' }] })}><Music2 /> Add a song</button>
 
-          <Sub>Additional text or special requests</Sub>
+          <Sub>Private notes: special requests (only you see this)</Sub>
           <textarea rows={3} value={priv.requests} onChange={e => setP({ requests: e.target.value })} placeholder="Anything else the couple wants on the invitation (only you can see this)" />
         </Card>
 
@@ -921,6 +1379,20 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
           <small className="muted">The phone and Telegram become “Call us” and “Telegram” buttons for guests.</small>
           <label>Preferred completion date<input type="date" value={priv.completionDate} onChange={e => setP({ completionDate: e.target.value })} /></label>
           <label>Special instructions for the designer<textarea rows={3} value={priv.designerNotes} onChange={e => setP({ designerNotes: e.target.value })} placeholder="Only you can see this. It is never shown to guests." /></label>
+        </Card>
+
+        <Card title="Send to a customer & guest links" icon={<Users />} open>
+          <small className="muted">Pick the customer this invitation is for. It then shows on their Services page, where they can use the original link or add guest names (each name gets its own link).</small>
+          <CustomerPicker value={customerId} onChange={v => { setCustomerId(v); setDirty(true); }} />
+          <div className="ivSendBox">
+            <span className={'ivSendState ' + (sentTo ? 'sent' : '')}>{sentTo ? <><Check /> Sent: it is on the customer’s Services page</> : 'Not sent yet'}</span>
+            <div className="row" style={{ flexWrap: 'wrap' }}>
+              <button disabled={!customerId || !!busy || (!!sentTo && sentTo === customerId && published)} onClick={() => { if (!published && !confirm('Publish this invitation now so the customer’s links work?')) return; save(true, customerId); }}><Send /> {sentTo && sentTo === customerId ? 'Send again' : 'Send to customer'}</button>
+              {sentTo && <button className="secondary" disabled={!!busy} onClick={() => { if (confirm('Take it back? It disappears from the customer’s Services page (their guest links stay saved).')) save(published, null); }}>Take back</button>}
+            </div>
+            <small className="muted">Sending publishes the invitation (if it is not live yet) and puts it on the customer’s Services page. You can keep editing it afterwards; changes show instantly.</small>
+          </div>
+          {id ? <GuestLinks invId={id} slug={slug} published={published} /> : <p className="muted">Press Save first, then you can add guest names here too.</p>}
         </Card>
 
         {/* publish ----------------------------------------------------- */}
@@ -947,7 +1419,7 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
       </div>
 
       <aside className="ivPhoneCol">
-        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} /></div></div>
+        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} shareUrl={slug ? inviteUrl(slug) : ''} layoutEdit={layout} onLayout={p => setIn('opening', p)} /></div></div>
         <small className="muted">Live preview. Tap the opening to try it, including the music.</small>
       </aside>
       {builder && data.canvas && (

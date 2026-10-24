@@ -791,6 +791,7 @@ function RouteFx({children}:{children:React.ReactNode}){const loc=useLocation();
 function App(){useLang();const isInvite=useLocation().pathname.startsWith('/i/');useEffect(()=>{initFx();initFit()},[]);return <>{!isPreviewFrame()&&!isInvite&&<PwaInstall/>}{!isInvite&&<><SecretThemeRuntime/><AdminAssistantHost/><AdminActionScene/><CartSceneHost/></>}<RouteFx><Routes>
   <Route path="/login" element={<Login/>}/>
   <Route path="/i/:slug" element={<InvitePublic/>}/>
+  <Route path="/i/:slug/:code" element={<InvitePublic/>}/>
   <Route path="/" element={<Protected><Shop/></Protected>}/>
   
   <Route path="/product/:id" element={<Protected><Product/></Protected>}/>

@@ -51,7 +51,7 @@ export function securityHeaders(env = process.env) {
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
     `connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.open-meteo.com https://geocoding-api.open-meteo.com https://cdn.jsdelivr.net ${extraConnect}`.trim(),
-    `frame-src 'self' https://challenges.cloudflare.com ${payway}`,
+    `frame-src 'self' https://challenges.cloudflare.com https://maps.google.com https://www.google.com ${payway}`,
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
