@@ -58,17 +58,21 @@ export type CineData = {
   lunar: string; lat: string; lng: string; words: string; blessing: string; thanks: string;
   archPhoto: string; groomPhoto: string; bridePhoto: string; candlePhoto: string;
   story: { photo: string; caption: string }[]; qrs: { label: string; url: string }[];
-  palette: 'olive' | 'rose' | 'navy' | 'custom'; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; ogImage: string;
+  palette: 'jade' | 'silk' | 'olive' | 'rose' | 'navy' | 'custom'; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; wax: string; ogImage: string;
 };
-const CINE_PALETTES: Record<string, { name: string; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver' }> = {
-  olive: { name: 'Olive + gold foil', paper: '#5b6430', cream: '#f6efe0', night: '#14160c', foil: 'gold' },
-  rose: { name: 'Cream + rose gold', paper: '#e6cfc3', cream: '#fbf6ef', night: '#2a1d1c', foil: 'rose' },
-  navy: { name: 'Navy + silver', paper: '#22355a', cream: '#eef2f7', night: '#0b1222', foil: 'silver' },
+type CinePalette = { name: string; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; wax: string };
+/* Each palette is five colours that belong together: envelope paper, card cream, dark background, foil, and a wax that contrasts with the paper. */
+const CINE_PALETTES: Record<string, CinePalette> = {
+  jade: { name: 'Jade + ruby wax', paper: '#2e6b5c', cream: '#f8f1de', night: '#0a1f1b', foil: 'gold', wax: '#a3202f' },
+  silk: { name: 'Silk magenta + jade wax', paper: '#9b2a63', cream: '#fbf0e2', night: '#25091a', foil: 'gold', wax: '#1f6a57' },
+  rose: { name: 'Blush + wine wax', paper: '#e8c7b8', cream: '#fdf7f0', night: '#2b1824', foil: 'rose', wax: '#7d2c3b' },
+  navy: { name: 'Indigo + pearl wax', paper: '#2c4a86', cream: '#eef2f7', night: '#0a1226', foil: 'silver', wax: '#e6e1d4' },
 };
+CINE_PALETTES.olive = CINE_PALETTES.jade; // invitations saved with the old green palette now get the new green
 const CINE_DEFAULTS: CineData = {
   groomEn: '', brideEn: '', groomShort: '', brideShort: '', groomFather: '', groomMother: '', brideFather: '', brideMother: '',
   lunar: '', lat: '', lng: '', words: '', blessing: '', thanks: '', archPhoto: '', groomPhoto: '', bridePhoto: '', candlePhoto: '',
-  story: [], qrs: [], palette: 'olive', paper: CINE_PALETTES.olive.paper, cream: CINE_PALETTES.olive.cream, night: CINE_PALETTES.olive.night, foil: 'gold', ogImage: '',
+  story: [], qrs: [], palette: 'jade', paper: CINE_PALETTES.jade.paper, cream: CINE_PALETTES.jade.cream, night: CINE_PALETTES.jade.night, foil: 'gold', wax: CINE_PALETTES.jade.wax, ogImage: '',
 };
 /* Texts the admin has not changed follow the guest's language; texts the admin typed are shown as typed. */
 const TXT = {
@@ -378,7 +382,7 @@ function OpeningScene({ d, guestName, preview, layoutEdit, onLayout, onOpen, onG
 function buildCineCfg(d: InviteData, lang: Lang, guestName: string, preview: boolean, shareUrl: string): CineCfg {
   const L: 'km' | 'en' = lang === 'en' ? 'en' : 'km';
   const c = d.cine, p = parseDate(d.date);
-  const pal = c.palette === 'custom' ? { paper: c.paper, cream: c.cream, night: c.night, foil: c.foil } : CINE_PALETTES[c.palette] || CINE_PALETTES.olive;
+  const pal: { paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; wax?: string } = c.palette === 'custom' ? { paper: c.paper, cream: c.cream, night: c.night, foil: c.foil, wax: c.wax || undefined } : CINE_PALETTES[c.palette] || CINE_PALETTES.jade;
   const when = d.date ? new Date(`${d.date}T${d.time || '09:00'}:00`) : null;
   const ok = when && Number.isFinite(when.getTime()) ? when : null;
   const iso = (t: Date) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}T${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:00`;
@@ -397,7 +401,7 @@ function buildCineCfg(d: InviteData, lang: Lang, guestName: string, preview: boo
     gallery: d.gallery, story: c.story, qrs: c.qrs.filter(q => q.url),
     schedule: d.schedule.filter(e => e.name).map(e => ({ time: fmtTime(e.time, L), name: e.name, date: fmtShort(e.date, L) })),
     guestName: d.opening.nameEnabled ? guestName : '', shareUrl, shareTitle: names ? `${names} · ${L === 'km' ? 'សិរីសួស្តីអាពាហ៍ពិពាហ៍' : 'Wedding invitation'}` : '',
-    palette: { paper: pal.paper, cream: pal.cream, night: pal.night, foil: pal.foil }, preview,
+    palette: { paper: pal.paper, cream: pal.cream, night: pal.night, foil: pal.foil, wax: pal.wax }, preview,
   };
 }
 
@@ -909,7 +913,7 @@ function CinematicCard({ data, set, setCine, pick, busy, uploadBlob, uploadFile,
   const c = data.cine;
   const img = (label: string, key: 'archPhoto' | 'groomPhoto' | 'bridePhoto' | 'candlePhoto', busyKey: string) =>
     <PhotoTile wide label={label} url={c[key]} busy={busy === busyKey} onFile={f => pick(f, 'image', u => setCine({ [key]: u } as Partial<CineData>), busyKey)} onClear={() => setCine({ [key]: '' } as Partial<CineData>)} />;
-  const applyPalette = (id: 'olive' | 'rose' | 'navy') => { const q = CINE_PALETTES[id]; setCine({ palette: id, paper: q.paper, cream: q.cream, night: q.night, foil: q.foil }); setReplay(); };
+  const applyPalette = (id: 'jade' | 'silk' | 'rose' | 'navy') => { const q = CINE_PALETTES[id]; setCine({ palette: id, paper: q.paper, cream: q.cream, night: q.night, foil: q.foil, wax: q.wax }); setReplay(); };
   async function makeOg() {
     setNote('Creating the link-preview picture…');
     try {
@@ -1005,15 +1009,16 @@ function CinematicCard({ data, set, setCine, pick, busy, uploadBlob, uploadFile,
       </Card>
 
       <Card title="Look, language & link preview" icon={<Sparkles />} open>
-        <Sub>Colours from the printed card</Sub>
-        <div className="ivSwatches">
-          {(['olive', 'rose', 'navy'] as const).map(id => { const q = CINE_PALETTES[id]; return (
-            <button key={id} type="button" className={'ivSwatch ' + (c.palette === id ? 'on' : '')} onClick={() => applyPalette(id)}><i style={{ background: q.paper }} /><i style={{ background: q.cream }} /><i style={{ background: q.night }} /><small>{q.name}</small></button>); })}
+        <Sub>Colours (pick a set, or change any one)</Sub>
+        <div className="ivSwatches" style={{ gridTemplateColumns: 'repeat(2,1fr)' }}>
+          {(['jade', 'silk', 'rose', 'navy'] as const).map(id => { const q = CINE_PALETTES[id]; return (
+            <button key={id} type="button" className={'ivSwatch ivSwatch4 ' + (c.palette === id || (id === 'jade' && c.palette === 'olive') ? 'on' : '')} onClick={() => applyPalette(id)}><i style={{ background: q.paper }} /><i style={{ background: q.cream }} /><i style={{ background: q.night }} /><i style={{ background: q.wax }} /><small>{q.name}</small></button>); })}
         </div>
         <div className="two">
           <label>Paper (envelope)<input type="color" value={c.paper} onChange={e => { setCine({ palette: 'custom', paper: e.target.value }); }} style={{ height: 44, padding: 4 }} /></label>
           <label>Card cream<input type="color" value={c.cream} onChange={e => setCine({ palette: 'custom', cream: e.target.value })} style={{ height: 44, padding: 4 }} /></label>
           <label>Night (photo sections)<input type="color" value={c.night} onChange={e => setCine({ palette: 'custom', night: e.target.value })} style={{ height: 44, padding: 4 }} /></label>
+          <label>Wax seal<input type="color" value={/^#[0-9a-f]{6}$/i.test(c.wax) ? c.wax : '#8d1f2d'} onChange={e => setCine({ palette: 'custom', wax: e.target.value })} style={{ height: 44, padding: 4 }} /></label>
           <label>Metallic foil<select value={c.foil} onChange={e => setCine({ palette: 'custom', foil: e.target.value as CineData['foil'] })}><option value="gold">Gold</option><option value="rose">Rose gold</option><option value="silver">Silver</option></select></label>
         </div>
         <Sub>Language</Sub>

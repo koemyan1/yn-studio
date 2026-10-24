@@ -188,6 +188,7 @@ body.ivPublicBody{background:#111;overflow:hidden}
 .ivSwatches{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .ivSwatch{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0;border:2px solid var(--line);background:#fff;border-radius:14px;overflow:hidden;color:var(--ink)}
 .ivSwatch i{height:30px;display:block}
+.ivSwatch4{grid-template-columns:repeat(4,1fr)}
 .ivSwatch small{grid-column:1/-1;padding:6px;font-weight:700;text-align:center;font-size:11px}
 .ivSwatch.on{border-color:var(--purple);box-shadow:0 0 0 4px #7c3aed18}
 .ivSlug{display:flex;align-items:center;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}

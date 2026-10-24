@@ -50,3 +50,23 @@ New: `src/cinematic/*` (framework-free: `art.ts` original SVG elements and paper
 
 ## Not verified
 Written without installing dependencies, so `npm run build` and a real Supabase round trip have not been run. Please test one invitation end to end (upload, publish, open the link in a private window).
+
+## Cinematic mode: new seal, opening and colours (update)
+Files: `src/cinematic/art.ts`, `cinematic.ts`, `cinematic.css`, `types.ts`; `src/Invitations.tsx`, `src/invitations.css`; `tools/cinematic-qa/index.html`. No new SQL, no new dependencies.
+
+**The opening now tells one physical story (about 5.3 s, no cuts):**
+1. The seal is pressed, a jagged crack runs across it and a few wax crumbs fall (phones vibrate briefly where allowed).
+2. The flap lifts. The upper half of the seal is stuck to the flap and goes with it; the lower half stays on the envelope as a broken remnant. Warm light spills out of the patterned lining.
+3. The card is drawn up and held for a moment so the names can be read (on short landscape screens it never rises off the top).
+4. The envelope sinks away, the card comes to the camera, its light fills the screen and settles into the cover (this replaces the old fade through black, and the seal no longer flies off screen).
+
+**Unique details:** a lotus pressed into the wax (embossed, not a glossy ball), a lotus-lattice lining inside the envelope and flap, gold dust drifting in the light on the envelope screen, a soft ring that pulses on the seal as the "tap here" cue.
+
+**Colour fixes:**
+- Four palettes, each five colours chosen to work together (paper, card cream, night, foil, wax): Jade + ruby wax (new default), Silk magenta + jade wax, Blush + wine wax, Indigo + pearl wax. Invitations saved with the old green palette (`olive`) pick up the new Jade automatically.
+- New **Wax seal** colour for custom palettes (left empty = a wax that suits the foil).
+- Gold text on cream was unreadable: headings, names and labels on light paper now use a deeper foil; ink colour is derived from the paper. Pale envelopes (Blush) use the deeper foil on the flap too.
+- The cover and the envelope screen are lit and shaded with the palette's own night colour instead of flat black; the old olive-black is gone from the dark sections.
+- Nothing in the stylesheet is a fixed gold or brown any more; all of it follows the palette.
+
+**Tested** in real Chromium at 320×568, 390×844, 740×360 and 1280×800 (frames at exact times, real-time run, reduced motion, replay). Khmer fonts were not installed in the test machine, so check the Khmer wording on a real phone.

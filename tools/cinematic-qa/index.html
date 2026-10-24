@@ -16,6 +16,12 @@ const lang = q.get('lang') || 'en';
 const full = q.get('full') === '1';
 const km = lang === 'km';
 const T = (en, kh) => km ? kh : en;
+const PALS = {
+  jade: { paper: '#2e6b5c', cream: '#f8f1de', night: '#0a1f1b', foil: 'gold', wax: '#a3202f' },
+  silk: { paper: '#9b2a63', cream: '#fbf0e2', night: '#25091a', foil: 'gold', wax: '#1f6a57' },
+  rose: { paper: '#e8c7b8', cream: '#fdf7f0', night: '#2b1824', foil: 'rose', wax: '#7d2c3b' },
+  navy: { paper: '#2c4a86', cream: '#eef2f7', night: '#0a1226', foil: 'silver', wax: '#e6e1d4' },
+};
 const cfg = {
   lang, groomShort: q.get('g') || 'Groom', brideShort: q.get('b') || 'Bride',
   groomKh: '', brideKh: '', groomEn: q.get('gen') || 'Groom Name', brideEn: q.get('ben') || 'Bride Name',
@@ -34,7 +40,7 @@ const cfg = {
   qrs: full ? [{ label: T('Account name', 'ឈ្មោះគណនី'), url: 'qr1.svg' }] : [],
   schedule: full ? [0,1,2,3,4,5].map(i => ({ time: T('Time '+(i+1), 'ម៉ោង'), name: T('Ceremony '+(i+1), 'ពិធី '+(i+1)), date: '' })) : [],
   guestName: q.get('guest') || '', shareUrl: 'https://example.invalid/i/test', shareTitle: 'Invitation',
-  palette: { paper: q.get('paper') || '#5b6430', cream: '#f6efe0', night: '#14160c', foil: q.get('foil') || 'gold' }, preview: q.get('pv') !== '0',
+  palette: Object.assign({ paper: q.get('paper') || '#5b6430', cream: '#f6efe0', night: '#14160c', foil: q.get('foil') || 'gold' }, PALS[q.get('pal') || 'jade'] || {}), preview: q.get('pv') !== '0',
 };
 window.cine = mountCinematic(document.getElementById('host'), cfg, { onOpen(){ window.__opened = true }, onOpened(){ window.__done = true } });
 window.__ready = true;

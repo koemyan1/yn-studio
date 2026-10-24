@@ -140,3 +140,84 @@ export const LOGOS = {
   cal: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M7 3v4M17 3v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM8 12h3v3H8z"/></svg>`,
   save: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>`,
 };
+
+/* ================================================================ colour system ================================================================ */
+/* Every colour on the page comes from five inputs (paper, cream, night, foil, wax). Nothing else is hard-coded, so a palette can never clash with itself. */
+export const mixHex = (a: string, b: string, t: number): string => {
+  const p = (h: string) => { const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(h.trim()); if (!m) return [128, 128, 128]; let s = m[1]; if (s.length === 3) s = s.split('').map(c => c + c).join(''); return [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16)); };
+  const x = p(a), y = p(b);
+  return '#' + x.map((v, i) => Math.round(v * (1 - t) + y[i] * t).toString(16).padStart(2, '0')).join('');
+};
+/* deeper foil for text on light paper: the bright foil is lovely on dark, but gold on cream cannot be read */
+export const FOILS_DEEP: Record<FoilName, string[]> = {
+  gold: ['#4a3208', '#7c5710', '#a77a1f', '#8a6215', '#b98a2d', '#6b4a0f', '#9a6f1a', '#4a3208'],
+  rose: ['#4e2a27', '#80524c', '#a8736b', '#8b5a52', '#b8837a', '#6d433d', '#9a645c', '#4e2a27'],
+  silver: ['#2b323a', '#5b6672', '#7d8895', '#657180', '#8a95a2', '#4a5460', '#707c89', '#2b323a'],
+};
+export const foilDeepCss = (f: FoilName) => `linear-gradient(115deg, ${FOILS_DEEP[f].map((c, i) => `${c} ${STOPS[i]}%`).join(', ')})`;
+/* a wax that sits well with the foil when the admin has not picked one */
+export const waxDefault = (f: FoilName) => (f === 'silver' ? '#e4e0d6' : f === 'rose' ? '#7d2c3b' : '#8d1f2d');
+
+/* ================================================================ the wax seal ================================================================ */
+/* A lotus, pressed into wax. Drawn in a 120 x 120 box, centred on (60, 60). */
+const lotusPaths = (): string => {
+  const petal = 'M60 30 C51 43 51 60 60 74 C69 60 69 43 60 30Z';
+  const at = (a: number, s: number) => `<path d="${petal}" transform="rotate(${a} 60 80) translate(60 80) scale(${s}) translate(-60 -80)"/>`;
+  return `${at(-62, .66)}${at(62, .66)}${at(-32, .88)}${at(32, .88)}${at(0, 1)}
+    <path d="M38 82 C49 90 71 90 82 82" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M47 89 C54 94 66 94 73 89" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    <circle cx="60" cy="24" r="2.2"/>`;
+};
+
+/* Both halves are the same picture, cut along a jagged crack. Percent coordinates of the 120 box. */
+export const SEAL_CRACK: [number, number][] = [[-2, 50], [13, 43], [26, 55], [40, 44], [54, 57], [68, 45], [82, 56], [96, 44], [102, 51]];
+export const sealClip = (half: 'u' | 'l'): string => {
+  const c = SEAL_CRACK.map(([x, y]) => `${x}% ${y}%`);
+  return half === 'u' ? `polygon(0 0, 100% 0, 100% 51%, ${c.slice().reverse().join(', ')}, 0 51%)` : `polygon(0 51%, ${c.join(', ')}, 100% 51%, 100% 100%, 0 100%)`;
+};
+export const sealCrackPath = (): string => 'M' + SEAL_CRACK.map(([x, y]) => `${x * 1.2} ${y * 1.2}`).join(' L');
+
+export function sealSvg(id: string, wax: string, half: 'u' | 'l' | 'all' = 'all'): string {
+  const hi = mixHex(wax, '#ffffff', .38), lo = mixHex(wax, '#000000', .38), deep = mixHex(wax, '#000000', .62), emb = mixHex(wax, '#000000', .2);
+  const light = mixHex(wax, '#ffffff', .62);
+  const edge = half === 'l' ? `<path d="${sealCrackPath()}" fill="none" stroke="${light}" stroke-opacity=".5" stroke-width="1.1" stroke-linejoin="round" transform="translate(0 .9)"/>`
+    : half === 'u' ? `<path d="${sealCrackPath()}" fill="none" stroke="${deep}" stroke-opacity=".55" stroke-width="1.2" stroke-linejoin="round"/>` : '';
+  return `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="color:${emb}">
+    <defs>
+      <radialGradient id="${id}g" cx=".34" cy=".28" r=".95"><stop offset="0" stop-color="${hi}"/><stop offset=".38" stop-color="${wax}"/><stop offset=".82" stop-color="${lo}"/><stop offset="1" stop-color="${deep}"/></radialGradient>
+      <filter id="${id}w" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="3" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G" result="d"/>
+        <feGaussianBlur in="d" stdDeviation="1.1" result="b"/>
+        <feSpecularLighting in="b" surfaceScale="3.2" specularConstant=".42" specularExponent="26" lighting-color="${light}" result="s"><fePointLight x="34" y="22" z="80"/></feSpecularLighting>
+        <feComposite in="s" in2="d" operator="in" result="sc"/>
+        <feComposite in="d" in2="sc" operator="arithmetic" k1="0" k2="1" k3=".7" k4="0"/>
+      </filter>
+    </defs>
+    <g filter="url(#${id}w)">
+      <circle cx="60" cy="60" r="43" fill="url(#${id}g)"/>
+      <circle cx="21" cy="75" r="7.5" fill="url(#${id}g)"/><circle cx="97" cy="42" r="6" fill="url(#${id}g)"/><circle cx="72" cy="105" r="5" fill="url(#${id}g)"/><circle cx="30" cy="30" r="4.5" fill="url(#${id}g)"/>
+      <circle cx="60" cy="60" r="34" fill="none" stroke="${deep}" stroke-opacity=".55" stroke-width="1.5"/>
+      <circle cx="60" cy="60" r="32.2" fill="none" stroke="${light}" stroke-opacity=".38" stroke-width="1"/>
+    </g>
+    <g fill="${light}" fill-opacity=".5" transform="translate(-.7 -.7)">${lotusPaths().replace(/currentColor/g, light)}</g>
+    <g fill="${deep}" fill-opacity=".55" transform="translate(.7 .8)">${lotusPaths().replace(/currentColor/g, deep)}</g>
+    <g fill="${emb}">${lotusPaths()}</g>
+    ${edge}
+  </svg>`;
+}
+
+/* ================================================================ envelope lining ================================================================ */
+/* a fine lattice of small lotus buds, as printed on the tissue inside a good envelope. Tileable, colour passed as a hex. */
+export const linerTexture = (line: string): string => svgUri(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='${line}' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' opacity='.55'>` +
+  `<path d='M28 6 C23 13 23 20 28 26 C33 20 33 13 28 6Z'/><path d='M28 26 C21 24 17 19 17 14 M28 26 C35 24 39 19 39 14'/>` +
+  `<path d='M0 34 L28 50 L56 34 M0 56 L28 40 L56 56' opacity='.6'/><circle cx='0' cy='6' r='1.2'/><circle cx='56' cy='6' r='1.2'/></g></svg>`);
+
+export const foilStopsDeep = (f: FoilName) => FOILS_DEEP[f].map((c, i) => `<stop offset="${STOPS[i]}%" stop-color="${c}"/>`).join('');
+/* is this paper pale enough that bright foil would vanish on it? */
+export const isLight = (hex: string): boolean => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim()); if (!m) return false;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.32;
+};

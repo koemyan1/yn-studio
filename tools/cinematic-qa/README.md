@@ -18,5 +18,5 @@ node tools/cinematic-qa/flow.js 390 844 "full=1&photo=1" f    # scroll every sec
 ```
 
 Query options for the page: `lang=km|en`, `full=1` (every section with placeholder content), `photo=1`, `pv=0` (guest view, no
-placeholders), `nodate=1`, `nolunar=1`, `novenue=1`, `g=`/`b=` (short names), `guest=` (name on the envelope), `paper=%23hex`, `foil=gold|rose|silver`.
+placeholders), `nodate=1`, `nolunar=1`, `novenue=1`, `g=`/`b=` (short names), `guest=` (name on the envelope), `pal=jade|silk|rose|navy` (palette presets, default jade), `paper=%23hex`, `foil=gold|rose|silver`.
 The scripts expect the page files in `/tmp/h` (edit the paths at the top if you keep them elsewhere).

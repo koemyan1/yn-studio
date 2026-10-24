@@ -19,7 +19,7 @@ export type CineCfg = {
   schedule: { time: string; name: string; date: string }[];
   /* extras */
   guestName: string; shareUrl: string; shareTitle: string;
-  palette: { paper: string; cream: string; night: string; foil: FoilName };
+  palette: { paper: string; cream: string; night: string; foil: FoilName; wax?: string };
   preview: boolean;                         // admin preview: dim placeholders for empty fields
 };
 export type CineHooks = { onOpen?: () => void; onOpened?: () => void };

@@ -1,6 +1,6 @@
 /* Cinematic wedding invitation, phase 1: envelope screen, the opening sequence and the cover.
    Plain DOM + the Web Animations API (no dependencies), so it runs inside Telegram / Messenger browsers and can be tested headless. */
-import { foilCss, foilStops, grainTexture, fibreTexture, flapPath, flapTrim, crestSvg, cornerSvg, flourishSvg, heartSvg, butterflySvg, scallopFrame } from './art';
+import { foilCss, foilStops, foilStopsDeep, isLight, foilDeepCss, FOILS, FOILS_DEEP, mixHex, waxDefault, linerTexture, sealSvg, sealClip, sealCrackPath, grainTexture, fibreTexture, flapPath, flapTrim, crestSvg, cornerSvg, flourishSvg, heartSvg, butterflySvg, scallopFrame } from './art';
 import type { CineCfg, CineHooks, CineHandle } from './types';
 import { TEXT } from './text';
 import { buildFlow, initFlow } from './sections';
@@ -31,7 +31,7 @@ export function mountCinematic(host: HTMLElement, cfg0: CineCfg, hooks: CineHook
     const t = TEXT[cfg.lang];
     const g = cfg.groomShort || firstWord(cfg.groomKh) || (cfg.preview ? t.phG : '');
     const b = cfg.brideShort || firstWord(cfg.brideKh) || (cfg.preview ? t.phB : '');
-    const fid = `${uid}f`;
+    const fid = variant === 'card' || (variant === 'flap' && isLight(cfg.palette.paper)) ? `${uid}d` : `${uid}f`;
     const isPh = !cfg.groomShort && !firstWord(cfg.groomKh);
     return `<div class="cn-logo cn-logo-${variant}${isPh ? ' cn-logo-ph' : ''}">
       ${variant === 'mini' ? '' : `<div class="cn-logo-crest">${crestSvg(fid)}</div>`}
@@ -51,43 +51,30 @@ export function mountCinematic(host: HTMLElement, cfg0: CineCfg, hooks: CineHook
     return `<div class="cn-date${p ? '' : ' cn-ph'}">${vals.map((v, i) => `<div><small>${esc(t.labels[i])}</small><b class="cn-foil">${esc(v)}</b></div>`).join('<i class="cn-dsep"></i>')}</div>`;
   }
 
-  function seal(): string {
-    const id = uid;
-    return `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-      <defs>
-        <radialGradient id="${id}sg" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="#fff0b5"/><stop offset=".3" stop-color="#e3bb58"/><stop offset=".66" stop-color="#b3842a"/><stop offset="1" stop-color="#694510"/></radialGradient>
-        <filter id="${id}w" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency=".032" numOctaves="3" seed="11" result="n"/>
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="14" xChannelSelector="R" yChannelSelector="G" result="d"/>
-          <feGaussianBlur in="d" stdDeviation="1.7" result="b"/>
-          <feSpecularLighting in="b" surfaceScale="4" specularConstant=".8" specularExponent="22" lighting-color="#ffeebd" result="s"><fePointLight x="36" y="24" z="90"/></feSpecularLighting>
-          <feComposite in="s" in2="d" operator="in" result="sc"/>
-          <feComposite in="d" in2="sc" operator="arithmetic" k1="0" k2="1" k3=".55" k4="0"/>
-        </filter>
-      </defs>
-      <g filter="url(#${id}w)">
-        <circle cx="60" cy="60" r="43" fill="url(#${id}sg)"/>
-        <circle cx="22" cy="74" r="7" fill="url(#${id}sg)"/><circle cx="95" cy="40" r="6" fill="url(#${id}sg)"/><circle cx="70" cy="104" r="5" fill="url(#${id}sg)"/>
-        <circle cx="60" cy="60" r="33" fill="none" stroke="rgba(70,42,5,.5)" stroke-width="1.6"/>
-        <circle cx="60" cy="60" r="29.5" fill="none" stroke="rgba(255,244,200,.55)" stroke-width="1"/>
-      </g>
-      <g>${crestSvg('rgba(255,246,205,.8)', { line: 'none', attrs: 'x="35" y="40" width="50" height="38"' })}</g>
-      <g>${crestSvg('#6a4510', { line: 'none', attrs: 'x="34.4" y="39.4" width="50" height="38"' })}</g>
-    </svg>`;
-  }
+  /* the seal is one picture cut along a crack: the upper half is stuck to the flap, the lower half to the envelope */
+  const waxOf = () => cfg.palette.wax || waxDefault(cfg.palette.foil);
+  const sealHalf = (h: 'u' | 'l') => `<div class="cn-sealHalf" style="clip-path:${sealClip(h)};-webkit-clip-path:${sealClip(h)}">${sealSvg(uid + 's' + h, waxOf(), h)}</div>`;
+  const rnd = (i: number) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const dust = () => Array.from({ length: 14 }, (_, i) => `<i style="left:${(rnd(i) * 100).toFixed(1)}%;top:${(18 + rnd(i + 40) * 78).toFixed(1)}%;--sz:${(2 + rnd(i + 80) * 3.2).toFixed(1)}px;--dl:${(-rnd(i + 120) * 14).toFixed(1)}s;--du:${(11 + rnd(i + 160) * 10).toFixed(1)}s;--dx:${((rnd(i + 200) - .5) * 40).toFixed(0)}px"></i>`).join('');
+  const crumbs = () => Array.from({ length: 9 }, (_, i) => {
+    const a = (-150 + i * 37 + rnd(i + 9) * 20) * Math.PI / 180, r = 30 + rnd(i + 3) * 46;
+    return `<i style="--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * .9}px;--s:${(2.4 + rnd(i + 21) * 3.2).toFixed(1)}px"></i>`;
+  }).join('');
 
   function buildStage(): string {
     const t = TEXT[cfg.lang];
     const guest = cfg.guestName ? `<div class="cn-guest" style="--gl:${Math.max(6, Array.from(cfg.guestName).length)}"><span>${esc(cfg.guestName)}</span></div>` : '';
     return `<div class="cn-stage" data-stage>
-      <div class="cn-bg" style="${cfg.photo ? `background-image:url('${esc(cfg.photo)}')` : ''}"></div>
-      <div class="cn-bgShade"></div>
+      <div class="cn-bgPhoto" style="${cfg.photo ? `background-image:url('${esc(cfg.photo)}')` : ''}"></div>
+      <div class="cn-bg"></div>
+      <div class="cn-dust" aria-hidden="true">${dust()}</div>
       <header class="cn-head" data-head><p class="cn-kicker cn-foil">${esc(t.title)}</p><p class="cn-sub">${esc(t.sub)}</p></header>
       <div class="cn-float" data-float>
         <div class="cn-env" data-env>
           <div class="cn-part cn-back" data-part></div>
+          <div class="cn-part cn-glow" data-part data-glow></div>
           <div class="cn-card" data-card>
-            <div class="cn-cardIn"><i class="cn-cardBorder"></i><div class="cn-cardCrest">${crestSvg(uid + 'f')}</div>${logo('card')}<p class="cn-cardLine">${esc(t.invite)}</p></div>
+            <div class="cn-cardIn"><i class="cn-cardBorder"></i><div class="cn-cardCrest">${crestSvg(uid + 'd')}</div>${logo('card')}<p class="cn-cardLine">${esc(t.invite)}</p></div>
           </div>
           <div class="cn-part cn-pocket" data-part>
             <div class="cn-pk cn-pk-l"><i></i></div><div class="cn-pk cn-pk-r"><i></i></div><div class="cn-pk cn-pk-b"><i></i></div>${guest}
@@ -96,11 +83,17 @@ export function mountCinematic(host: HTMLElement, cfg0: CineCfg, hooks: CineHook
           <div class="cn-part cn-flapBox" data-part data-flapbox>
             <div class="cn-flap" data-flap>
               <div class="cn-flapFace cn-flapFront"><div class="cn-flapLogo">${logo('flap')}</div>
-                <svg class="cn-trim" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><path d="${flapTrim(9, 0.016, 0.93)}" fill="none" stroke="url(#${uid}f)" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg></div>
+                <svg class="cn-trim" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><path d="${flapTrim(9, 0.016, 0.93)}" fill="none" stroke="url(#${uid}${isLight(cfg.palette.paper) ? 'd' : 'f'})" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg></div>
               <div class="cn-flapFace cn-flapBack"></div>
+              <div class="cn-sealU" data-sealu>${sealHalf('u')}</div>
             </div>
           </div>
-          <button type="button" class="cn-seal" data-seal aria-label="${esc(t.tap)}">${seal()}</button>
+          <div class="cn-part cn-sealLayer" data-part>
+            <div class="cn-sealL" data-seall>${sealHalf('l')}</div>
+            <div class="cn-crumbs" data-crumbs aria-hidden="true">${crumbs()}</div>
+          </div>
+          <button type="button" class="cn-seal" data-seal aria-label="${esc(t.tap)}"><i class="cn-ring"></i>
+            <svg class="cn-crack" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><path data-crack d="${sealCrackPath()}" pathLength="1" fill="none"/></svg></button>
         </div>
       </div>
       <button type="button" class="cn-hint" data-hint><span>${esc(t.tap)}</span></button>
@@ -130,9 +123,10 @@ export function mountCinematic(host: HTMLElement, cfg0: CineCfg, hooks: CineHook
   function render() {
     stopFlow?.(); stopFlow = null;
     const p = cfg.palette;
-    host.innerHTML = `<div class="cn-root" data-lang="${cfg.lang}" data-phase="${phase}" style="--paper:${esc(p.paper)};--cream:${esc(p.cream)};--night:${esc(p.night)};--foil:${foilCss(p.foil)};--tex-grain:${grain};--tex-fibre:${fibre}">
+    host.innerHTML = `<div class="cn-root" data-lang="${cfg.lang}" data-phase="${phase}" data-paper="${isLight(p.paper) ? 'light' : 'dark'}" style="--paper:${esc(p.paper)};--cream:${esc(p.cream)};--night:${esc(p.night)};--foil:${foilCss(p.foil)};--foil-deep:${foilDeepCss(p.foil)};--gold:${FOILS[p.foil][3]};--gold-hi:${FOILS[p.foil][2]};--gold-deep:${FOILS_DEEP[p.foil][3]};--ink:${mixHex('#1a1109', p.paper, .22)};--wax:${esc(p.wax || waxDefault(p.foil))};--liner:${linerTexture(FOILS_DEEP[p.foil][2])};--tex-grain:${grain};--tex-fibre:${fibre}">
       <svg class="cn-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
         <linearGradient id="${uid}f" x1="0" y1="0" x2="1" y2="1">${foilStops(p.foil)}</linearGradient>
+        <linearGradient id="${uid}d" x1="0" y1="0" x2="1" y2="1">${foilStopsDeep(p.foil)}</linearGradient>
         <clipPath id="${uid}c" clipPathUnits="objectBoundingBox"><path d="${flapPath(9, 0.016, 1)}"/></clipPath>
         <clipPath id="${uid}s" clipPathUnits="objectBoundingBox"><path d="${scallopFrame()}"/></clipPath>
       </defs></svg>
@@ -179,12 +173,18 @@ export function mountCinematic(host: HTMLElement, cfg0: CineCfg, hooks: CineHook
     window.addEventListener('deviceorientation', mo); off.push(() => window.removeEventListener('deviceorientation', mo));
   }
 
-  /* ------------------------------------------------------------ the opening (about 5.9 s, slow, "by hand") ------------------------------------------------------------ */
+  /* ------------------------------------------------------------ the opening (about 5.3 s) ------------------------------------------------------------
+     One physical story, no cuts:
+       press   the seal is pressed, cracks along a jagged line and sheds crumbs
+       open    the flap lifts, taking its half of the seal with it; the other half stays on the envelope; warm light spills out of the lining
+       draw    the card is drawn up out of the pocket and held for a moment so the names can be read
+       reveal  the envelope sinks away, the card comes to the camera, and its light fills the screen and settles into the cover */
   function open() {
     if (phase !== 'closed') return;
     phase = 'opening'; root.dataset.phase = 'opening';
     clearBinds();
     hooks.onOpen?.();
+    try { navigator.vibrate?.(14); } catch { /* not supported */ }
     const q = <T extends HTMLElement>(s: string) => root.querySelector(s) as T;
     const rr = root.getBoundingClientRect();
     const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -192,44 +192,58 @@ export function mountCinematic(host: HTMLElement, cfg0: CineCfg, hooks: CineHook
     cover.classList.add('is-in'); armSettle();
     if (reduce) { finish(); return; }
 
-    const env = q('[data-env]'), card = q('[data-card]'), seal = q('[data-seal]'), flap = q('[data-flap]'), fbox = q('[data-flapbox]'), fsh = q('[data-fshadow]');
+    const env = q('[data-env]'), card = q('[data-card]'), flap = q('[data-flap]'), fbox = q('[data-flapbox]'), fsh = q('[data-fshadow]'), glow = q('[data-glow]');
+    const sealU = q('[data-sealu]'), sealL = q('[data-seall]'), crack = root.querySelector('[data-crack]') as SVGPathElement;
     const head = q('[data-head]'), hint = q('[data-hint]'), top = q('[data-top]');
+    const crumbs = Array.from(root.querySelectorAll<HTMLElement>('[data-crumbs] i'));
     const parts = Array.from(root.querySelectorAll<HTMLElement>('[data-part]'));
-    const H = env.offsetHeight, ch = card.offsetHeight;
-    const A = (el: HTMLElement, kf: Keyframe[], o: KeyframeAnimationOptions) => { const a = el.animate(kf, { fill: 'forwards', easing: 'ease', ...o }); anims.push(a); return a; };
+    const ch = card.offsetHeight;
+    const A = (el: Element, kf: Keyframe[], o: KeyframeAnimationOptions) => { const a = (el as HTMLElement).animate(kf, { fill: 'forwards', easing: 'ease', ...o }); anims.push(a); return a; };
     const jump = (el: HTMLElement, prop: string, from: string, to: string, at: number) => A(el, [{ [prop]: from }, { [prop]: to }], { delay: at, duration: 1, easing: 'steps(1, jump-start)' });
 
-    /* 0.0 – 1.5  the seal is pressed, lifted (its shadow grows) and set aside off screen */
-    A(head, [{ opacity: 1 }, { opacity: 0 }], { delay: 150, duration: 600 });
-    A(hint, [{ opacity: 1 }, { opacity: 0 }], { delay: 0, duration: 300 });
-    A(seal, [{ transform: 'scale(1)' }, { transform: 'scale(.91)' }], { duration: 330, easing: 'ease-out' });
-    A(seal, [{ transform: 'scale(.91) translateY(0)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.45))' }, { transform: 'scale(1.2) translateY(-18px)', filter: 'drop-shadow(0 20px 14px rgba(0,0,0,.5))' }], { delay: 330, duration: 560, easing: 'cubic-bezier(.3,.7,.3,1)' });
-    A(seal, [{ transform: 'scale(1.2) translateY(-18px) rotate(0deg)' }, { transform: `translate(${rr.width * 0.65}px, ${-rr.height * 0.55}px) scale(1.1) rotate(70deg)` }], { delay: 900, duration: 700, easing: 'cubic-bezier(.5,0,.85,.45)' });
+    /* 0.00 – 0.60  press: both halves sink under the thumb, a crack runs across, the wax gives way */
+    A(hint, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+    A(head, [{ opacity: 1 }, { opacity: 0 }], { delay: 200, duration: 700 });
+    [sealU, sealL].forEach(h => A(h, [{ transform: 'scale(1)' }, { offset: .5, transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 480, easing: 'ease-in-out' }));
+    A(crack, [{ strokeDashoffset: 1, opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }], { delay: 160, duration: 220, easing: 'ease-out' });
+    A(crack, [{ opacity: 1 }, { opacity: 0 }], { delay: 620, duration: 300 });
+    A(env, [{ transform: 'translateY(0) rotate(0deg)' }, { offset: .4, transform: 'translateY(2px) rotate(.45deg)' }, { transform: 'translateY(0) rotate(0deg)' }], { delay: 330, duration: 460, easing: 'ease-out' });
+    crumbs.forEach(c => {
+      const dx = parseFloat(c.style.getPropertyValue('--dx')), dy = parseFloat(c.style.getPropertyValue('--dy'));
+      A(c, [{ opacity: 0, transform: 'translate(0,0) scale(.5)', easing: 'cubic-bezier(.15,.7,.35,1)' },
+        { opacity: 1, offset: .1 },
+        { opacity: 1, transform: `translate(${dx}px, ${dy}px) scale(1)`, offset: .42, easing: 'cubic-bezier(.5,0,.9,.55)' },
+        { opacity: 0, transform: `translate(${dx * 1.3}px, ${dy + rr.height * .12}px) scale(.8)` }], { delay: 330, duration: 1000, easing: 'linear' });
+    });
 
-    /* 1.2 – 2.6  the flap folds back 180° in 3D, its shadow lifting; behind the card once past 90° */
-    A(fsh, [{ opacity: 1 }, { opacity: 0 }], { delay: 1200, duration: 800, easing: 'ease-in' });
-    A(flap, [{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(180deg)' }], { delay: 1200, duration: 1450, easing: 'cubic-bezier(.5,0,.2,1)' });
-    jump(fbox, 'zIndex', '4', '1', 1200 + 700);
+    /* 0.55 – 1.90  the flap folds back 180° in 3D; the half of the seal stuck to it goes with it, behind the card once past 90° */
+    A(fsh, [{ opacity: 1 }, { opacity: 0 }], { delay: 560, duration: 800, easing: 'ease-in' });
+    A(flap, [{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(180deg)' }], { delay: 560, duration: 1350, easing: 'cubic-bezier(.5,0,.2,1)' });
+    jump(fbox, 'zIndex', '4', '1', 560 + 680);
 
-    /* 2.5 – 3.9  the card is drawn out of the pocket at a slight angle while the envelope settles down a little */
-    A(card, [{ transform: 'translateY(0) rotate(0deg) scale(1)' }, { transform: `translateY(${-ch * 0.66}px) rotate(-2.4deg) scale(1.02)` }], { delay: 2500, duration: 1400, easing: 'cubic-bezier(.4,0,.2,1)' });
-    parts.forEach(p => A(p, [{ transform: 'translateY(0)' }, { transform: `translateY(${H * 0.08}px)` }], { delay: 2500, duration: 1400, easing: 'ease-in-out' }));
+    /* 1.10 – 2.10  warm light spills from the lining */
+    A(glow, [{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'scale(1)' }], { delay: 1100, duration: 1000, easing: 'ease-out' });
 
-    /* 3.9 – 4.7  the envelope is dropped out of the frame */
-    parts.forEach(p => A(p, [{ transform: `translateY(${H * 0.08}px) rotate(0deg)` }, { transform: `translateY(${rr.height * 0.95}px) rotate(7deg)` }], { delay: 3900, duration: 820, easing: 'cubic-bezier(.55,0,.8,.3)' }));
+    /* 1.75 – 3.00  the card is drawn up out of the pocket and held, so the names can be read */
+    const cr = card.getBoundingClientRect(); // measured at rest, before anything has moved
+    const riseY = Math.min(ch * 0.72, Math.max(ch * 0.34, cr.top - rr.top - 14)); // on a short landscape screen the card must not leave the top
+    const rise = `translateY(${-riseY}px) rotate(-1.6deg) scale(1.015)`;
+    A(card, [{ transform: 'translateY(0) rotate(0deg) scale(1)' }, { transform: rise }], { delay: 1750, duration: 1250, easing: 'cubic-bezier(.3,0,.15,1)' });
 
-    /* 4.3 – 5.1  the card comes to the camera */
-    const cr = card.getBoundingClientRect();
+    /* 3.30 – 4.20  the envelope sinks and falls away */
+    parts.forEach(p => A(p, [{ transform: 'translateY(0) rotate(0deg)', opacity: 1 }, { transform: `translateY(${rr.height * 0.9}px) rotate(5deg)`, opacity: 0 }], { delay: 3300, duration: 900, easing: 'cubic-bezier(.55,0,.8,.35)' }));
+
+    /* 3.40 – 4.40  the card comes to the camera (it passes in front of the envelope once the pocket has dropped clear of it) */
     const sc = Math.min((rr.width * 0.88) / cr.width, (rr.height * 0.72) / cr.height, 2.4);
-    const dx = rr.left + rr.width / 2 - (cr.left + cr.width / 2), dy = rr.top + rr.height / 2 - (cr.top + cr.height / 2); // the card rect was measured before it moved
-    jump(card, 'zIndex', '2', '9', 4300);
-    A(card, [{ transform: `translateY(${-ch * 0.66}px) rotate(-2.4deg) scale(1.02)` }, { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(${sc})` }], { delay: 4300, duration: 850, easing: 'cubic-bezier(.5,0,.2,1)' });
+    const dx = rr.left + rr.width / 2 - (cr.left + cr.width / 2), dy = rr.top + rr.height / 2 - (cr.top + cr.height / 2); 
+    jump(card, 'zIndex', '2', '9', 3650);
+    A(card, [{ transform: rise }, { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(${sc})` }], { delay: 3400, duration: 1000, easing: 'cubic-bezier(.5,0,.2,1)' });
 
-    /* 4.95 – 5.9  fade through dark into the cover */
-    A(fade, [{ opacity: 0 }, { opacity: 1 }], { delay: 4950, duration: 380, easing: 'ease-in' });
-    A(scroller, [{ opacity: 0, visibility: 'hidden' }, { opacity: 1, visibility: 'visible' }], { delay: 5330, duration: 1, easing: 'steps(1, jump-start)' });
-    A(top, [{ opacity: 0 }, { opacity: 1 }], { delay: 5600, duration: 700 });
-    const last = A(fade, [{ opacity: 1 }, { opacity: 0 }], { delay: 5330, duration: 650, easing: 'ease-out' });
+    /* 4.05 – 5.30  the light of the card fills the screen and settles into the cover */
+    A(fade, [{ opacity: 0, transform: 'scale(.5)' }, { opacity: 1, transform: 'scale(1.1)' }], { delay: 4050, duration: 450, easing: 'ease-in' });
+    A(scroller, [{ opacity: 0, visibility: 'hidden' }, { opacity: 1, visibility: 'visible' }], { delay: 4500, duration: 1, easing: 'steps(1, jump-start)' });
+    A(top, [{ opacity: 0 }, { opacity: 1 }], { delay: 4900, duration: 700 });
+    const last = A(fade, [{ opacity: 1, transform: 'scale(1.1)' }, { opacity: 0, transform: 'scale(1.9)' }], { delay: 4500, duration: 800, easing: 'ease-out' });
     last.finished.then(() => { if (alive) finish(); }).catch(() => {});
   }
 
