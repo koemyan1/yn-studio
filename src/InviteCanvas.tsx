@@ -13,7 +13,7 @@ import {
 
 export const CANVAS_W = 390;
 
-export type ElType = 'text' | 'image' | 'shape' | 'button' | 'draw' | 'countdown';
+export type ElType = 'text' | 'image' | 'shape' | 'button' | 'draw' | 'countdown' | 'art';
 export type El = {
   id: string; type: ElType;
   x: number; y: number; w: number; h: number; rot: number; opacity: number; locked?: boolean;
@@ -22,10 +22,13 @@ export type El = {
   align?: 'left' | 'center' | 'right'; lh?: number; ls?: number; shadow?: boolean;
   src?: string; fit?: 'cover' | 'contain'; radius?: number; bw?: number; bc?: string;
   shape?: 'rect' | 'ellipse' | 'line'; fill?: string;
-  bg?: string; action?: 'link' | 'tel' | 'telegram' | 'map' | 'page'; value?: string; target?: string;
+  bg?: string; action?: 'link' | 'tel' | 'telegram' | 'map' | 'page' | 'calendar'; value?: string; target?: string;
   d?: string; sw?: number; vw?: number; vh?: number;
+  /* fields used by the Khmer Gold starter template in InviteArt.tsx (not wired into the builder panels yet) */
+  art?: string; color2?: string; flip?: boolean; arch?: boolean; dur?: number; par?: number;
+  cdStyle?: 'boxes' | 'plain'; cdDigits?: 'km' | 'en'; cdLang?: 'km' | 'en';
 };
-export type Page = { id: string; h: number; bg: string; bgImage?: string; bgFit?: 'cover' | 'contain'; hidden?: boolean; els: El[] };
+export type Page = { id: string; h: number; bg: string; bgImage?: string; bgFit?: 'cover' | 'contain'; hidden?: boolean; bg2?: string; els: El[] };
 export type Canvas = { pages: Page[] };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -103,6 +106,7 @@ function ElBody({ el, date, time, labels }: { el: El; date: string; time: string
     case 'button': return <div className="cvBtn" style={{ background: el.bg || '#c25b7a', color: el.color || '#fff', borderRadius: el.radius ?? 999, fontFamily: fontStack(el.font), fontSize: el.size || 16, fontWeight: el.bold ? 700 : 600 }}>{el.text}</div>;
     case 'draw': return <svg width="100%" height="100%" viewBox={`0 0 ${el.vw || el.w} ${el.vh || el.h}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}><path d={el.d} fill="none" stroke={el.color || '#c25b7a'} strokeWidth={el.sw || 4} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /></svg>;
     case 'countdown': return <Countdown el={el} date={date} time={time} labels={labels} />;
+    default: return null;
   }
 }
 

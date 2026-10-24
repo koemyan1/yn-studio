@@ -1,3 +1,5 @@
+/* NOTE: the artwork and the khmerGold() starter canvas below compile and are ready, but the canvas builder does not use them yet
+   (no 'Decor' menu, no template chooser, and the extra El fields such as arch / par / dur / cdStyle are not rendered). */
 import React from 'react';
 import type { Canvas, El, Page } from './InviteCanvas';
 
