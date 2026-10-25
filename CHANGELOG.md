@@ -6,6 +6,7 @@ Newest first. Versioned releases (v3 to v22) are included in full below. Smaller
 
 - Every time the security shield detects or blocks someone it now records **approximate location** (country, region, city, latitude, longitude, clickable Google Maps link) and **device** (mobile / tablet / desktop / bot, OS + version, browser + version, brand / model when available). Shown in `/admin/security` (*Location & device*, *Map* link) and in the auto-block alert. Stored in each event's `details`, so no SQL is needed.
 - Location comes from Cloudflare headers (turn on the free *Add visitor location headers* Managed Transform) with an optional free lookup fallback (`GEO_LOOKUP=off` disables it). Forged location headers are ignored unless the request really came through Cloudflare.
+- Build fix: added `src/qrcode.d.ts` (tsc error TS7016 for the `qrcode` import in `Invitations.tsx`).
 - Files: `server/security/{device,geo,intel}.js`, `store.js`, `shield.js`, `alerts.js`, `adminApi.js`, `src/AdminSecurity.tsx`, setup doc section 7b, 12 new tests.
 
 ## Unreleased: cinematic click-to-edit
