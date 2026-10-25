@@ -501,6 +501,7 @@ function WalletPage(){
  return <>
   <main className="shop walletPage">
    <Top title={tr('Wallet','កាបូប')} back/>
+   <WalletQrPanel balances={{usd:Number(w?.balance||0),khr:Number(w?.balance_khr||0)}} onTransferred={load}/>
    <section className="walletHero wlHero">
     <div className="wlHeroTop"><div className="wlBrand">{tr('YN Wallet · Secure payments','កាបូប YN · ការទូទាត់មានសុវត្ថិភាព')}</div><div className="walletGlow"><Wallet/></div></div>
     <div className="wlTiles">
@@ -508,7 +509,6 @@ function WalletPage(){
      <div className="wlTile"><div className="wlLabel"><i className="wlCoin">៛</i>{tr('Riel wallet','កាបូបរៀល')}</div><div className="wlAmt"><RollNumber n={fmtCur(w?.balance_khr,'KHR')}/></div><button type="button" className="wlAdd" onClick={()=>addTo('KHR')}><Plus/>{tr('Add','បន្ថែម')}</button></div>
     </div>
    </section>
-   <WalletQrPanel balances={{usd:Number(w?.balance||0),khr:Number(w?.balance_khr||0)}} onTransferred={load}/>
    <section className="walletPayPanel wlPanel" id="wlTopUp">
     <h2>{tr('Add money','បញ្ចូលប្រាក់')}</h2>
     <p>{tr('Dollars and riel are kept in separate wallets. Pick one, enter an amount, then scan the KHQR with your banking app.','ដុល្លារ និងរៀលត្រូវបានរក្សាទុកក្នុងកាបូបដាច់ដោយឡែកពីគ្នា។ ជ្រើសរើសមួយ បញ្ចូលចំនួន រួចស្កេន KHQR ជាមួយកម្មវិធីធនាគាររបស់អ្នក។')}</p>

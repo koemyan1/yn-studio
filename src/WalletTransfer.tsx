@@ -352,20 +352,21 @@ export function WalletQrPanel({ balances, onTransferred }: { balances: { usd: nu
 
   return (
     <>
-      <section className="wqPanel" aria-label={tr('My QR', 'QR របស់ខ្ញុំ')}>
-        <div className="wqPanelText">
-          <span className="wqEyebrow">{tr('MY QR', 'QR របស់ខ្ញុំ')}</span>
-          <h2>{tr('Send & receive with QR', 'ផ្ញើ និងទទួលតាម QR')}</h2>
-          <p>{tr('Show this QR to another YN Studio customer so they can send you money, or scan theirs to send.', 'បង្ហាញ QR នេះទៅអតិថិជន YN Studio ម្នាក់ទៀត ដើម្បីឱ្យគេផ្ញើប្រាក់មកអ្នក ឬស្កេន QR របស់គេដើម្បីផ្ញើ។')}</p>
-          <div className="wqRow">
-            <button type="button" className="wqBtn" onClick={() => setOpen(true)}><ScanLine />{tr('Scan to send', 'ស្កេនដើម្បីផ្ញើ')}</button>
-            <button type="button" className="wqBtn ghost" onClick={save} disabled={!img}><Download />{tr('Save QR', 'រក្សាទុក QR')}</button>
-            <button type="button" className="wqBtn ghost" onClick={copy} disabled={!code}><Copy />{copied ? tr('Copied', 'បានចម្លង') : tr('Copy code', 'ចម្លងកូដ')}</button>
-          </div>
-          {err && <p className="wqHint wqWarn" role="alert">{err}</p>}
+      <section className="wqPanel wqAba" aria-label={tr('My QR', 'QR របស់ខ្ញុំ')}>
+        <div className="wqAbaHead">
+          <span className="wqAbaBrand"><QrCode />{tr('YN Wallet', 'កាបូប YN')}</span>
+          <span className="wqEyebrow">{tr('SCAN TO PAY ME', 'ស្កេនដើម្បីផ្ញើមកខ្ញុំ')}</span>
         </div>
         <div className="wqQrBox">
           {img ? <img src={img} alt={tr('Your wallet QR code', 'QR កូដកាបូបរបស់អ្នក')} /> : <div className="wqQrLoading"><QrCode /></div>}
+        </div>
+        <p className="wqAbaName">{tr('Show this QR to another YN Studio customer to receive money', 'បង្ហាញ QR នេះទៅអតិថិជន YN Studio ម្នាក់ទៀត ដើម្បីទទួលប្រាក់')}</p>
+        {code && <p className="wqAbaCode">{code}</p>}
+        {err && <p className="wqHint wqWarn" role="alert">{err}</p>}
+        <div className="wqAbaActions">
+          <button type="button" className="wqAbaBtn primary" onClick={() => setOpen(true)}><ScanLine /><span>{tr('Scan to send', 'ស្កេនដើម្បីផ្ញើ')}</span></button>
+          <button type="button" className="wqAbaBtn" onClick={save} disabled={!img}><Download /><span>{tr('Save QR', 'រក្សាទុក QR')}</span></button>
+          <button type="button" className="wqAbaBtn" onClick={copy} disabled={!code}><Copy /><span>{copied ? tr('Copied', 'បានចម្លង') : tr('Copy code', 'ចម្លងកូដ')}</span></button>
         </div>
       </section>
       {open && <TransferModal balances={balances} onClose={() => setOpen(false)} onDone={onTransferred} />}
