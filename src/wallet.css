@@ -295,3 +295,82 @@ html body .wqBtn:active:not(:disabled){transform:scale(.95)}
   .walletPage .sectionHead h2::after,.wqOverlay,.wqCard,.wqStep,.wqFrame,.wqBig,.wqCheck{animation:none!important}
   .walletPage .wlRow,.walletPage .wlTile,.walletPage .wlChip{transition:none!important}
 }
+
+/* =====================================================================
+   WALLET PAGE v3 – QR hidden until asked for + "money sent" animation
+   ===================================================================== */
+
+/* ---- header QR icon (sits right before the language button) ---- */
+html:not([data-secret-theme="on"]) .top .icon.walletQrTop{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;padding:0;border-radius:14px;border:0;color:#fff;
+  background:linear-gradient(135deg,#9d6bff 0%,#7c3aed 55%,#5b21b6 100%);box-shadow:0 8px 20px rgba(109,40,217,.38),inset 0 1px 0 rgba(255,255,255,.4);
+  transition:transform .22s cubic-bezier(.3,1.5,.5,1),box-shadow .22s}
+html:not([data-secret-theme="on"]) .top .icon.walletQrTop:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(109,40,217,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+.top .icon.walletQrTop:active{transform:scale(.93)}
+.top .icon.walletQrTop svg{width:21px;height:21px;stroke-width:2.2}
+html:not([data-secret-theme="on"]) .top .icon.walletQrTop::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.5) 50%,transparent 65%);transform:translateX(-130%);animation:ynSheen 5s 1.5s ease-in-out infinite}
+@media(max-width:520px){.walletPage .top{gap:8px}.walletPage .top>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+/* ---- slim action strip that replaces the always-visible QR card ---- */
+.wqStrip{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 16px;animation:wlRise .5s both}
+html body .wqStripBtn{display:flex;align-items:center;justify-content:center;gap:9px;min-height:54px;padding:12px;border-radius:20px;font-size:14.5px;font-weight:800;line-height:1.1;cursor:pointer;
+  background:color-mix(in srgb,currentColor 6%,transparent)!important;color:inherit!important;border:1px solid color-mix(in srgb,currentColor 18%,transparent)!important;box-shadow:none!important;text-shadow:none!important;
+  transition:transform .18s cubic-bezier(.2,1.5,.4,1),box-shadow .2s}
+html body .wqStripBtn.primary{background:linear-gradient(135deg,#7c3aed,#5b21b6)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 10px 24px rgba(109,40,217,.35)!important}
+html body .wqStripBtn:hover{transform:translateY(-2px)}
+html body .wqStripBtn:active{transform:scale(.95)}
+.wqStripBtn svg{width:20px;height:20px}
+
+/* ---- the QR sheet (the old gradient card, now opened on demand) ---- */
+.wqSheetWrap{position:relative;width:min(380px,100%);max-height:calc(100dvh - 20px);overflow:auto;border-radius:34px;animation:wlModalIn .45s cubic-bezier(.2,1.2,.4,1) both}
+html body .wqSheetWrap .wqPanel.wqAba{margin:0}
+.wqSheet .wqAbaHead{margin-bottom:10px}
+.wqSheet .wqSheetTag{margin-bottom:14px}
+html body .wqSheetClose{width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,.2)!important;color:#fff!important;border:1px solid rgba(255,255,255,.35)!important;box-shadow:none!important;transition:transform .18s cubic-bezier(.2,1.5,.4,1)}
+html body .wqSheetClose:hover{transform:rotate(90deg)}
+.wqSheetClose svg{width:18px;height:18px}
+
+/* ---- success: You -> coins fly -> receiver bounces, tick + ring + confetti ---- */
+.wqSend{position:relative;width:100%;box-sizing:border-box;display:flex;align-items:flex-start;justify-content:space-between;padding:12px 30px 6px;overflow:hidden}
+.wqNode{flex:none;width:72px;display:grid;justify-items:center;gap:7px;position:relative;z-index:2}
+.wqNode i{position:relative;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:25px;color:#fff;
+  background:linear-gradient(135deg,#9d6bff,#6d28d9);box-shadow:0 10px 24px rgba(109,40,217,.35)}
+.wqNode.from i{background:linear-gradient(135deg,#6b5f86,#1b1230)}
+.wqNode i svg{width:28px;height:28px}
+.wqNode small{max-width:84px;font-size:12px;font-weight:700;color:#4a3f63;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wqNode.from i{animation:wqFromPush .5s .1s ease-out both}
+.wqNode.to i{animation:wqRecv 1.5s ease-out both}
+.wqNode.to i::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid #22c55e;opacity:0;pointer-events:none;animation:wqRing .9s 1.35s ease-out both}
+.wqNode i .wqTick{position:absolute;right:-7px;bottom:-5px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#168a57;border:3px solid #fff;box-sizing:border-box;
+  animation:wqTickIn .5s 1.35s cubic-bezier(.2,1.7,.4,1) both}
+.wqNode i .wqTick svg{width:13px;height:13px;stroke-width:3.6;color:#fff}
+.wqTrack{position:relative;flex:1;height:62px;margin:0 2px}
+.wqLine{position:absolute;left:6px;right:6px;top:50%;height:0;border-top:3px dotted #d9cff0;transform-origin:left;animation:wqLineGrow .5s .05s ease-out both}
+.wqCoin{position:absolute;top:50%;left:0;width:30px;height:30px;margin-top:-15px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:800;font-style:normal;color:#7a4b00;opacity:0;
+  background:radial-gradient(circle at 30% 25%,#fff3b0,#f7c531 55%,#d99a0b);box-shadow:0 4px 10px rgba(217,154,11,.45),inset 0 -2px 0 rgba(0,0,0,.12);
+  animation:wqCoinFly .8s cubic-bezier(.45,.05,.55,.95) both}
+.wqBit{position:absolute;left:50%;top:50%;width:8px;height:12px;margin:-6px 0 0 -4px;border-radius:2px;background:var(--bc,#7c3aed);opacity:0;pointer-events:none;
+  animation:wqBit 1s calc(1.3s + var(--d,0ms)) cubic-bezier(.1,.7,.3,1) both}
+.wqDone h2{margin:6px 0 0;animation:wlRise .5s 1.3s both}
+html body .wqDone .wqBig{animation:wlBigPop .55s 1.3s cubic-bezier(.2,1.5,.4,1) both}
+.wqDone .wqHint{animation:wlRise .5s 1.5s both}
+html body .wqDone .wqBtn{animation:wlRise .5s 1.65s backwards}
+
+@keyframes wqFromPush{0%{transform:scale(1)}40%{transform:scale(.88)}100%{transform:scale(1)}}
+@keyframes wqRecv{0%,50%{transform:scale(1)}55%{transform:scale(1.14)}60%{transform:scale(1)}66%{transform:scale(1.14)}71%{transform:scale(1)}77%{transform:scale(1.16)}82%{transform:scale(1)}87%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes wqRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.9)}}
+@keyframes wqTickIn{from{opacity:0;transform:scale(0) rotate(-90deg)}to{opacity:1;transform:none}}
+@keyframes wqLineGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes wqCoinFly{
+  0%{left:-4%;opacity:0;transform:translateY(0) scale(.4) rotateY(0)}
+  15%{opacity:1;transform:translateY(-6px) scale(1) rotateY(180deg)}
+  50%{transform:translateY(-22px) scale(1.05) rotateY(540deg)}
+  85%{opacity:1;transform:translateY(-4px) scale(.9) rotateY(900deg)}
+  100%{left:calc(100% - 22px);opacity:0;transform:translateY(0) scale(.5) rotateY(1080deg)}}
+@keyframes wqBit{0%{opacity:1;transform:translate(0,0) rotate(0) scale(.5)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r)) scale(1)}}
+
+/* less motion: show the finished state at once (coins / confetti / ring stay hidden, tick + text are visible) */
+@media(prefers-reduced-motion:reduce){
+  .wqSend *,.wqSend *::after,.wqDone h2,.wqDone .wqBig,.wqDone .wqHint,.wqDone .wqBtn,.wqStrip,.wqSheetWrap,.top .icon.walletQrTop::before{animation:none!important}
+}

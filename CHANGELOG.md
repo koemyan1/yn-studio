@@ -2,6 +2,13 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: wallet QR on demand + "money sent" animation
+
+- The wallet QR is no longer on the page. A **QR icon sits in the Wallet header, right next to the language button**; tapping it (or **My QR** on the page) opens the QR as a sheet. The code is only requested the first time it is opened.
+- The page now shows a slim strip instead: **Scan to send** and **My QR**. The sheet keeps **Scan to send**, **Save QR** and **Copy code**; Esc or a tap outside closes it.
+- New success animation after a transfer: coins fly from "You" to the receiver along a dotted track, the receiver bounces, gets a green tick, a ring and a small confetti burst, then the amount counts up. A short vibration on phones that support it. Respects "reduce motion".
+- Files: `src/WalletTransfer.tsx`, `src/wallet.css`, `src/main.tsx` (`Top` takes an optional `right` slot; Wallet page uses it).
+
 ## Unreleased: removed Wedding Invitations and the Video Editor
 
 - Removed both admin pages (sidebar links, dashboard shortcuts and routes), the public invitation pages (`/i/...`), the "My invitations" block on the customer Services page, and the server's invitation link-preview route.

@@ -1,10 +1,11 @@
 /* Wallet-to-wallet transfers by QR code.
-   - <WalletQrPanel/>  : the customer's own QR + "Scan to send" button (shown on the Wallet page)
+   - <WalletQrPanel/>  : slim "Scan to send / My QR" strip on the Wallet page. The customer's own QR is hidden until they
+                         tap the QR icon in the page header (or "My QR"); it then opens as a sheet.
    - <TransferModal/>  : scan -> choose currency + amount -> confirm -> done
    Database side: supabase/sql/supabase-wallet-transfer.sql (my_wallet_pay_code, lookup_wallet_recipient, transfer_wallet_funds).
    The QR only contains  YNPAY:<random code>  -  never the user id, email or balance. */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronRight, Copy, Download, Image as ImageIcon, QrCode, ScanLine, Send, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, Check, ChevronRight, Copy, Download, Image as ImageIcon, QrCode, ScanLine, Send, Wallet, X } from 'lucide-react';
 import { supabase } from './supabase';
 import { tr } from './lang';
 
@@ -172,6 +173,62 @@ function QrScanner({ onCode, onClose }: { onCode: (code: string) => void; onClos
   );
 }
 
+/* ------------------------------------------------------- success animation */
+/** Counts a number up from 0 once `delay` ms have passed (instant when the device asks for less motion). */
+function CountUp({ to, cur, delay = 1300, ms = 900 }: { to: number; cur: 'USD' | 'KHR'; delay?: number; ms?: number }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setV(to); return; }
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const step = (t: number) => {
+      const p = Math.min(1, Math.max(0, (t - t0) / ms));
+      setV(to * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to, delay, ms]);
+  return <>{fmt(cur === 'KHR' ? Math.round(v) : v, cur)}</>;
+}
+
+const BIT_COLORS = ['#f7c531', '#ec4899', '#7c3aed', '#22c55e'];
+
+/** You -> coins fly along a dotted track -> the receiver bounces, gets a green tick, ring and a little confetti burst. */
+function SendScene({ cur, name }: { cur: 'USD' | 'KHR'; name: string }) {
+  const sym = cur === 'KHR' ? '៛' : '$';
+  const bits = useMemo(() => Array.from({ length: 16 }, (_, i) => {
+    const a = (i / 16) * Math.PI * 2 + Math.random() * 0.35;
+    const d = 44 + Math.random() * 34;
+    const dx = Math.cos(a) * d, dy = Math.sin(a) * d;
+    return {
+      dx: Math.round(dx > 0 ? dx * 0.4 : dx),           // keep the burst inside the card on the right
+      dy: Math.round(Math.max(-46, Math.min(60, dy))),
+      r: Math.round(Math.random() * 540 - 270),
+      c: BIT_COLORS[i % BIT_COLORS.length],
+      d: Math.round(Math.random() * 120),
+    };
+  }), []);
+  useEffect(() => { try { navigator.vibrate?.([30, 50, 30]); } catch { /* not supported */ } }, []);
+  return (
+    <div className="wqSend" aria-hidden="true">
+      <div className="wqNode from"><i><Wallet /></i><small>{tr('You', 'អ្នក')}</small></div>
+      <div className="wqTrack">
+        <span className="wqLine" />
+        {[0, 1, 2, 3].map(k => <b key={k} className="wqCoin" style={{ animationDelay: `${0.15 + k * 0.16}s` }}>{sym}</b>)}
+      </div>
+      <div className="wqNode to">
+        <i>
+          {(name[0] || 'Y').toUpperCase()}
+          <span className="wqTick"><Check /></span>
+          {bits.map((b, k) => <span key={k} className="wqBit" style={{ '--dx': b.dx + 'px', '--dy': b.dy + 'px', '--r': b.r + 'deg', '--bc': b.c, '--d': b.d + 'ms' } as React.CSSProperties} />)}
+        </i>
+        <small>{name}</small>
+      </div>
+    </div>
+  );
+}
+
 /* --------------------------------------------------------------- transfer flow */
 export function TransferModal({ balances, onClose, onDone }: {
   balances: { usd: number; khr: number };
@@ -297,9 +354,9 @@ export function TransferModal({ balances, onClose, onDone }: {
 
         {step === 'done' && (
           <div className="wqStep wqDone">
-            <div className="wqCheck"><CheckCircle2 /></div>
+            <SendScene cur={cur} name={String(result?.to_name || name)} />
             <h2>{tr('Sent!', 'បានផ្ញើហើយ!')}</h2>
-            <div className="wqBig">{fmt(result?.amount ?? n, cur)}</div>
+            <div className="wqBig"><CountUp to={Number(result?.amount ?? n)} cur={cur} /></div>
             <p className="wqHint">{tr('to', 'ទៅ')} <b>{result?.to_name || name}</b></p>
             {result?.balance != null && <p className="wqHint">{walletName}: {fmt(result.balance, cur)}</p>}
             <button type="button" className="wqBtn" onClick={close}>{tr('Done', 'រួចរាល់')}</button>
@@ -311,34 +368,15 @@ export function TransferModal({ balances, onClose, onDone }: {
 }
 
 /* --------------------------------------------------------------- my QR panel */
-export function WalletQrPanel({ balances, onTransferred }: { balances: { usd: number; khr: number }; onTransferred: () => void }) {
-  const [code, setCode] = useState('');
-  const [img, setImg] = useState('');
-  const [err, setErr] = useState('');
+/** The customer's own QR as a sheet. Only mounted while open, so the QR is never on the page until they ask for it. */
+function MyQrSheet({ code, img, err, onClose, onScan }: { code: string; img: string; err: string; onClose: () => void; onScan: () => void }) {
   const [copied, setCopied] = useState(false);
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    let live = true;
-    (async () => {
-      const r = await supabase.rpc('my_wallet_pay_code');
-      if (!live) return;
-      if (r.error || !r.data) {
-        setErr(/my_wallet_pay_code|schema cache|PGRST202/i.test(r.error?.message || '')
-          ? tr('QR transfers are not set up yet.', 'ការផ្ទេរតាម QR មិនទាន់ត្រូវបានរៀបចំនៅឡើយទេ។')
-          : tr('The QR could not be created.', 'មិនអាចបង្កើត QR បានទេ។'));
-        return;
-      }
-      const c = String(r.data);
-      setCode(c);
-      try {
-        const m: any = await import('qrcode');
-        const url: string = await m.toDataURL(PREFIX + c, { margin: 2, width: 560, errorCorrectionLevel: 'M', color: { dark: '#1b1230', light: '#ffffff' } });
-        if (live) setImg(url);
-      } catch { if (live) setErr(tr('The QR could not be created.', 'មិនអាចបង្កើត QR បានទេ។')); }
-    })();
-    return () => { live = false; };
-  }, []);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   function save() {
     if (!img) return;
@@ -351,25 +389,76 @@ export function WalletQrPanel({ balances, onTransferred }: { balances: { usd: nu
   }
 
   return (
+    <div className="scannerOverlay wqOverlay" role="dialog" aria-modal="true" aria-label={tr('My QR', 'QR របស់ខ្ញុំ')}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="wqSheetWrap">
+        <section className="wqPanel wqAba wqSheet">
+          <div className="wqAbaHead">
+            <span className="wqAbaBrand"><QrCode />{tr('YN Wallet', 'កាបូប YN')}</span>
+            <button type="button" className="wqSheetClose" aria-label={tr('Close', 'បិទ')} onClick={onClose}><X /></button>
+          </div>
+          <span className="wqEyebrow wqSheetTag">{tr('SCAN TO PAY ME', 'ស្កេនដើម្បីផ្ញើមកខ្ញុំ')}</span>
+          <div className="wqQrBox">
+            {img ? <img src={img} alt={tr('Your wallet QR code', 'QR កូដកាបូបរបស់អ្នក')} /> : <div className="wqQrLoading"><QrCode /></div>}
+          </div>
+          <p className="wqAbaName">{tr('Show this QR to another YN Studio customer to receive money', 'បង្ហាញ QR នេះទៅអតិថិជន YN Studio ម្នាក់ទៀត ដើម្បីទទួលប្រាក់')}</p>
+          {code && <p className="wqAbaCode">{code}</p>}
+          {err && <p className="wqHint wqWarn" role="alert">{err}</p>}
+          <div className="wqAbaActions">
+            <button type="button" className="wqAbaBtn primary" onClick={onScan}><ScanLine /><span>{tr('Scan to send', 'ស្កេនដើម្បីផ្ញើ')}</span></button>
+            <button type="button" className="wqAbaBtn" onClick={save} disabled={!img}><Download /><span>{tr('Save QR', 'រក្សាទុក QR')}</span></button>
+            <button type="button" className="wqAbaBtn" onClick={copy} disabled={!code}><Copy /><span>{copied ? tr('Copied', 'បានចម្លង') : tr('Copy code', 'ចម្លងកូដ')}</span></button>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/** Wallet page block: a slim action strip (Scan to send / My QR). The QR sheet is opened from here or from the header icon. */
+export function WalletQrPanel({ balances, onTransferred, qrOpen, setQrOpen }: {
+  balances: { usd: number; khr: number };
+  onTransferred: () => void;
+  qrOpen: boolean;
+  setQrOpen: (v: boolean) => void;
+}) {
+  const [code, setCode] = useState('');
+  const [img, setImg] = useState('');
+  const [err, setErr] = useState('');
+  const [scan, setScan] = useState(false);
+  const fetching = useRef(false);
+
+  /* the code is only requested the first time the customer opens their QR */
+  useEffect(() => {
+    if (!qrOpen || code || fetching.current) return;
+    fetching.current = true;
+    setErr('');
+    (async () => {
+      try {
+        const r = await supabase.rpc('my_wallet_pay_code');
+        if (r.error || !r.data) {
+          setErr(/my_wallet_pay_code|schema cache|PGRST202/i.test(r.error?.message || '')
+            ? tr('QR transfers are not set up yet.', 'ការផ្ទេរតាម QR មិនទាន់ត្រូវបានរៀបចំនៅឡើយទេ។')
+            : tr('The QR could not be created.', 'មិនអាចបង្កើត QR បានទេ។'));
+          return;
+        }
+        const c = String(r.data);
+        const m: any = await import('qrcode');
+        const url: string = await m.toDataURL(PREFIX + c, { margin: 2, width: 560, errorCorrectionLevel: 'M', color: { dark: '#1b1230', light: '#ffffff' } });
+        setCode(c); setImg(url);
+      } catch { setErr(tr('The QR could not be created.', 'មិនអាចបង្កើត QR បានទេ។')); }
+      finally { fetching.current = false; }
+    })();
+  }, [qrOpen, code]);
+
+  return (
     <>
-      <section className="wqPanel wqAba" aria-label={tr('My QR', 'QR របស់ខ្ញុំ')}>
-        <div className="wqAbaHead">
-          <span className="wqAbaBrand"><QrCode />{tr('YN Wallet', 'កាបូប YN')}</span>
-          <span className="wqEyebrow">{tr('SCAN TO PAY ME', 'ស្កេនដើម្បីផ្ញើមកខ្ញុំ')}</span>
-        </div>
-        <div className="wqQrBox">
-          {img ? <img src={img} alt={tr('Your wallet QR code', 'QR កូដកាបូបរបស់អ្នក')} /> : <div className="wqQrLoading"><QrCode /></div>}
-        </div>
-        <p className="wqAbaName">{tr('Show this QR to another YN Studio customer to receive money', 'បង្ហាញ QR នេះទៅអតិថិជន YN Studio ម្នាក់ទៀត ដើម្បីទទួលប្រាក់')}</p>
-        {code && <p className="wqAbaCode">{code}</p>}
-        {err && <p className="wqHint wqWarn" role="alert">{err}</p>}
-        <div className="wqAbaActions">
-          <button type="button" className="wqAbaBtn primary" onClick={() => setOpen(true)}><ScanLine /><span>{tr('Scan to send', 'ស្កេនដើម្បីផ្ញើ')}</span></button>
-          <button type="button" className="wqAbaBtn" onClick={save} disabled={!img}><Download /><span>{tr('Save QR', 'រក្សាទុក QR')}</span></button>
-          <button type="button" className="wqAbaBtn" onClick={copy} disabled={!code}><Copy /><span>{copied ? tr('Copied', 'បានចម្លង') : tr('Copy code', 'ចម្លងកូដ')}</span></button>
-        </div>
+      <section className="wqStrip" aria-label={tr('Send and receive', 'ផ្ញើ និងទទួល')}>
+        <button type="button" className="wqStripBtn primary" onClick={() => setScan(true)}><ScanLine /><span>{tr('Scan to send', 'ស្កេនដើម្បីផ្ញើ')}</span></button>
+        <button type="button" className="wqStripBtn" onClick={() => setQrOpen(true)}><QrCode /><span>{tr('My QR', 'QR របស់ខ្ញុំ')}</span></button>
       </section>
-      {open && <TransferModal balances={balances} onClose={() => setOpen(false)} onDone={onTransferred} />}
+      {qrOpen && <MyQrSheet code={code} img={img} err={err} onClose={() => setQrOpen(false)} onScan={() => { setQrOpen(false); setScan(true); }} />}
+      {scan && <TransferModal balances={balances} onClose={() => setScan(false)} onDone={onTransferred} />}
     </>
   );
 }
