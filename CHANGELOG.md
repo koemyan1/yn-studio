@@ -2,6 +2,24 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: location + device on security events
+
+- Every time the security shield detects or blocks someone it now records **approximate location** (country, region, city, latitude, longitude, clickable Google Maps link) and **device** (mobile / tablet / desktop / bot, OS + version, browser + version, brand / model when available). Shown in `/admin/security` (*Location & device*, *Map* link) and in the auto-block alert. Stored in each event's `details`, so no SQL is needed.
+- Location comes from Cloudflare headers (turn on the free *Add visitor location headers* Managed Transform) with an optional free lookup fallback (`GEO_LOOKUP=off` disables it). Forged location headers are ignored unless the request really came through Cloudflare.
+- Files: `server/security/{device,geo,intel}.js`, `store.js`, `shield.js`, `alerts.js`, `adminApi.js`, `src/AdminSecurity.tsx`, setup doc section 7b, 12 new tests.
+
+## Unreleased: cinematic click-to-edit
+
+- **Edit on preview** (Cinematic mode, button above the phone). Hover any part of the invitation to see it outlined, click it to select it; a panel opens beside the phone with exactly the fields behind that part (names, date, venue, parents, words, photos, programme items, love-story moments, gallery photos, gift QR codes, colours, wax seal, thank-you text, …). Changes show live and use the same data as the form.
+- **All fixed wording is editable** (headings, labels, button texts) per language. Saved in `cine.texts`; "Standard wording" resets one.
+- Empty sections show a "+ Add ..." band in edit mode so everything can be reached. Added "Open envelope" button for edit mode (a click only selects).
+- Preview keeps its scroll position while you edit (it used to jump to the top on every keystroke).
+- Fix: love-story strip layout (track was wider than the screen, heading not centred).
+- **Add elements** (Edit on preview → Add): text, picture, button (link / @telegram / phone), shapes (circle, box, line, heart, diamond) and emoji stickers. They are placed on the section you are looking at, scroll with it, and are saved in `cine.extras`. Each has font, size, colour, gold foil, rounding, see-through, turn, movement (float, pulse, wiggle, sway, spin), layer order, duplicate and delete.
+- **Drag / resize / turn on the preview**: drag to move (snaps to the centre line), corner dot to resize, top dot to turn (snaps to 15°), arrow keys to nudge, Delete to remove.
+- **Built-in parts can be moved, resized, turned too** (arch photo, words, parents, couple frames, countdown, venue, map, love-story photos, thank-you text and logo, cover blocks), and photos have a "photo focus" to slide the picture inside its frame. Saved in `cine.tweaks`; "Reset position & size" undoes it.
+- Guests never get the editing markup. Files: `src/cinematic/*`, `src/Cinematic.tsx`, `src/Invitations.tsx` (`CineInspector`), `src/invitations.css`.
+
 ## Unreleased: repo upgrade + server-side order pricing
 
 - **Checkout is now priced by the database.** New `yn_place_order()` (`supabase/sql/supabase-server-side-order.sql`) rebuilds unit prices, delivery fee, subtotal and total from the catalogue and settings, applies the coupon, creates the order and its items, and clears the cart in one transaction. The browser no longer decides what an order costs. If the SQL is not installed yet, checkout falls back to the old path so nothing breaks during rollout.

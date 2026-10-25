@@ -21,3 +21,4 @@
 .secPage .secForm input{flex:1 1 140px;min-width:0}
 .secPage .secMuted{color:var(--a-mute);font-size:13px}
 .secPage button.small{padding:6px 12px;font-size:12px}
+.secPage .secWho{min-width:210px;font-size:13px;line-height:1.4}.secPage .secWho small{color:var(--a-mute)}.secPage .secWho a{font-weight:700}

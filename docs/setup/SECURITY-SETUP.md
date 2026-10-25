@@ -63,6 +63,21 @@ Set a **file size limit** (e.g. 5 MB) and **allowed MIME types** (`image/png, im
 - Test the alert: from a phone on mobile data (not your allow-listed IP) open `https://YOUR-SITE/wp-login.php` once → you should get a "Security: IP auto-blocked" notification and see the IP in the dashboard; click **Unblock**.
 - Check "Cloudflare detected" shows green after step 4 (if it stays orange, traffic is still reaching Render directly).
 
+## 7b. "Who was it?": location and device on every detection (free)
+Every time the shield detects or blocks someone it now records, next to the IP:
+- **Approximate location**: country, region, city, latitude, longitude, plus a clickable Google Maps link (`https://www.google.com/maps/search/?api=1&query=LAT,LNG`).
+- **Device**: type (mobile / tablet / desktop / bot), OS + version, browser + version, and brand / model when the browser reveals it.
+
+You see it in **/admin/security** (columns *Location & device*, with a **Map** link) and in the push / Telegram alert for an automatic block. It is stored inside each event's `details` (no SQL to run) and is deleted with the event after 30 days.
+
+**One switch to flip in Cloudflare (free, 1 minute):** Rules → Settings → **Managed Transforms** → turn ON **Add visitor location headers**. Without it Cloudflare only tells us the *country*; with it we also get city, region, latitude and longitude instantly. If you skip it, the server asks a free public lookup service (default `ipwho.is`) for the missing city / coordinates; that sends only the offender's IP address to that service, is cached for 24 h and capped at 30 lookups per minute. Set `GEO_LOOKUP=off` on Render to disable it, or `GEO_LOOKUP_URL=https://other-provider/{ip}` to use another one.
+
+How far to trust it:
+- Location is **approximate** (city level at best). Mobile carriers, VPNs, proxies and Tor often place a visitor in another city or country, and the pin is the middle of the guessed area, never a street address. Never use it as proof against a person.
+- Device info is whatever the visitor's browser *claims*. Honest visitors are accurate; attackers can fake it. Desktop browsers never reveal a hardware model, iPhones show only "iPhone", and Chrome on Android shows the phone model only after the browser has also sent the model client hint (the server asks for it automatically, so it appears from the second request on).
+- Location headers are believed **only** when the request really came through Cloudflare. A request sent straight to the `onrender.com` address with forged headers is ignored (location then comes from the lookup).
+- CSP reports and your own admin actions are deliberately **not** tracked this way.
+
 ## 8. Turning the strict modes on (after a quiet week)
 - **Content-Security-Policy:** dashboard → "CSP reports" count. If it stays near zero while you click through the shop, Render → `CSP_MODE=enforce`. If reports name a legitimate host, add it with `CSP_CONNECT_EXTRA=https://that-host` (or ask me).
 - **Order price check:** `/admin/security` → *Order price check* → **Enforce**, after normal orders (wallet + KHQR, with and without coupons, variant products) produced no "Order price check failed" alerts.

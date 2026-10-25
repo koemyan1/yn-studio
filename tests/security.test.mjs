@@ -247,3 +247,144 @@ test('integrity: report mode never blocks, enforce mode blocks; missing SQL func
   const missing = createIntegrity({ sb: async () => { throw new Error('404 function not found'); }, store, alerts, log: quiet });
   const r = await missing.check({ id: 'o3' }); assert.equal(r.ok, true); assert.equal(r.skipped, true);
 });
+
+/* ------------------- location + device recorded with every detection ------------------- */
+import { parseDevice } from '../server/security/device.js';
+import { geoFromCloudflare, mapsUrl, parseLookup, createGeoLookup, mergeGeo } from '../server/security/geo.js';
+import { createIntel } from '../server/security/intel.js';
+
+const UA = {
+  galaxy: 'Mozilla/5.0 (Linux; Android 14; SM-S918B Build/UP1A.231005.007) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.122 Mobile Safari/537.36',
+  pixelReduced: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
+  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+  ipad: 'Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+  tabletAndroid: 'Mozilla/5.0 (Linux; Android 13; SM-X700) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  win: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.2592.81',
+  mac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  firefoxLinux: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
+  oppo: 'Mozilla/5.0 (Linux; Android 13; CPH2387) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  fbApp: 'Mozilla/5.0 (Linux; Android 12; RMX3511 Build/SP1A) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.0.0 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/450.0.0.38.108;]',
+};
+test('device: Android phone with model in the UA', () => {
+  const d = parseDevice(UA.galaxy);
+  assert.equal(d.type, 'mobile'); assert.equal(d.os, 'Android'); assert.equal(d.osVersion, '14');
+  assert.equal(d.browser, 'Chrome'); assert.equal(d.browserVersion, '126.0.6478.122'); assert.equal(d.brand, 'Samsung'); assert.equal(d.model, 'SM-S918B');
+  assert.match(d.summary, /Mobile · Android 14 · Chrome 126/);
+});
+test('device: reduced Chrome UA hides the model, client hints bring it back', () => {
+  assert.equal(parseDevice(UA.pixelReduced).model, null);
+  const d = parseDevice(UA.pixelReduced, { model: '"Pixel 8"', platform: '"Android"', platformVersion: '"14.0.0"', mobile: '?1' });
+  assert.equal(d.model, 'Pixel 8'); assert.equal(d.brand, 'Google'); assert.equal(d.osVersion, '14'); assert.equal(d.browserVersion, '126'); assert.equal(d.type, 'mobile');
+});
+test('device: iPhone, iPad, Android tablet, Windows 11 via hints, Mac, Linux', () => {
+  const i = parseDevice(UA.iphone); assert.deepEqual([i.type, i.os, i.osVersion, i.browser, i.browserVersion, i.brand, i.model], ['mobile', 'iOS', '17.5.1', 'Safari', '17.5', 'Apple', 'iPhone']);
+  const p = parseDevice(UA.ipad); assert.deepEqual([p.type, p.os, p.model], ['tablet', 'iPadOS', 'iPad']);
+  const t = parseDevice(UA.tabletAndroid); assert.equal(t.type, 'tablet'); assert.equal(t.brand, 'Samsung');
+  const w = parseDevice(UA.win); assert.deepEqual([w.type, w.os, w.osVersion, w.browser, w.browserVersion], ['desktop', 'Windows', '10/11', 'Edge', '126.0.2592.81']);
+  assert.equal(parseDevice(UA.win, { platform: '"Windows"', platformVersion: '"15.0.0"' }).osVersion, '11');
+  assert.equal(parseDevice(UA.win, { platform: '"Windows"', platformVersion: '"10.0.0"' }).osVersion, '10');
+  const m = parseDevice(UA.mac); assert.deepEqual([m.type, m.os, m.browser, m.brand], ['desktop', 'macOS', 'Safari', 'Apple']);
+  const l = parseDevice(UA.firefoxLinux); assert.deepEqual([l.type, l.os, l.browser, l.browserVersion], ['desktop', 'Ubuntu', 'Firefox', '127.0']);
+});
+test('device: common Cambodian phone brands and in-app browsers', () => {
+  assert.equal(parseDevice(UA.oppo).brand, 'OPPO'); assert.equal(parseDevice(UA.oppo).model, 'CPH2387');
+  const f = parseDevice(UA.fbApp); assert.equal(f.brand, 'realme'); assert.equal(f.browser, 'Facebook app');
+});
+test('device: bots, scanners, tools and empty UA are typed "bot"', () => {
+  for (const [ua, name] of [['sqlmap/1.7.2#stable (https://sqlmap.org)', 'sqlmap'], ['curl/8.4.0', 'curl'], ['python-requests/2.31.0', 'python-requests'], ['Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', 'Googlebot'], ['Go-http-client/1.1', 'Go-http-client'], ['', 'no user agent']]) {
+    const d = parseDevice(ua); assert.equal(d.type, 'bot', ua); assert.equal(d.bot.toLowerCase(), name.toLowerCase(), ua);
+  }
+  assert.equal(parseDevice('curl/8.4.0').browserVersion, '8.4.0');
+  assert.equal(parseDevice('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/126.0.0.0 Safari/537.36').type, 'bot');
+  assert.equal(parseDevice(UA.galaxy).bot, null);
+});
+test('device: hostile User-Agent text is neutralised', () => {
+  const d = parseDevice('Mozilla/5.0 <script>alert(1)</script> "quoted" (Linux; Android 14; <img onerror=x> Build/X)');
+  assert.ok(!/[<>"]/.test(JSON.stringify(d).replace(/"/g, '')), 'no angle brackets survive');
+});
+
+test('geo: Cloudflare headers become country/region/city/lat/lng + exact Google Maps link', () => {
+  const g = geoFromCloudflare({ 'cf-ipcountry': 'KH', 'cf-ipcity': 'Phnom Penh', 'cf-region': 'Phnom Penh', 'cf-region-code': '12', 'cf-iplatitude': '11.5564', 'cf-iplongitude': '104.9282', 'cf-timezone': 'Asia/Phnom_Penh' });
+  assert.equal(g.country, 'Cambodia'); assert.equal(g.countryCode, 'KH'); assert.equal(g.city, 'Phnom Penh'); assert.equal(g.region, 'Phnom Penh');
+  assert.equal(g.lat, 11.5564); assert.equal(g.lng, 104.9282);
+  assert.equal(g.mapsUrl, 'https://www.google.com/maps/search/?api=1&query=11.5564,104.9282');
+  assert.equal(mapsUrl(11.5564, 104.9282), g.mapsUrl); assert.equal(g.label, 'Phnom Penh, Cambodia'); assert.equal(g.source, 'cloudflare');
+});
+test('geo: country-only (Cloudflare Free default), Tor, unknown and non-ASCII / encoded names', () => {
+  const c = geoFromCloudflare({ 'cf-ipcountry': 'US' }); assert.equal(c.country, 'United States'); assert.equal(c.mapsUrl, null); assert.equal(c.lat, null);
+  assert.equal(geoFromCloudflare({ 'cf-ipcountry': 'T1' }).tor, true);
+  assert.equal(geoFromCloudflare({ 'cf-ipcountry': 'XX' }), null);
+  assert.equal(geoFromCloudflare({}), null);
+  assert.equal(geoFromCloudflare({ 'cf-ipcountry': 'FR', 'cf-ipcity': 'Saint-%C3%89tienne' }).city, 'Saint-Étienne');
+  assert.equal(geoFromCloudflare({ 'cf-ipcountry': 'FR', 'cf-ipcity': Buffer.from('Besançon', 'utf8').toString('latin1') }).city, 'Besançon');
+  assert.equal(geoFromCloudflare({ 'cf-ipcountry': 'KH', 'cf-iplatitude': '999', 'cf-iplongitude': '104' }).lat, null);
+});
+test('geo: free lookup providers parse, fill only the gaps, cache, and respect the per-minute cap', async () => {
+  const ipwho = { success: true, country: 'Cambodia', country_code: 'KH', region: 'Phnom Penh', city: 'Phnom Penh', latitude: 11.5564, longitude: 104.9282, timezone: { id: 'Asia/Phnom_Penh' } };
+  const ipapi = { status: 'success', country: 'Cambodia', countryCode: 'KH', region: '12', regionName: 'Phnom Penh', city: 'Phnom Penh', lat: 11.55, lon: 104.91 };
+  assert.equal(parseLookup(ipwho).mapsUrl, 'https://www.google.com/maps/search/?api=1&query=11.5564,104.9282');
+  assert.equal(parseLookup(ipapi).regionCode, '12'); assert.equal(parseLookup(ipapi).lng, 104.91);
+  assert.equal(parseLookup({ success: false }), null); assert.equal(parseLookup({ status: 'fail' }), null);
+  const merged = mergeGeo(geoFromCloudflare({ 'cf-ipcountry': 'KH' }), parseLookup(ipwho));
+  assert.equal(merged.city, 'Phnom Penh'); assert.equal(merged.source, 'cloudflare+lookup');
+  const keep = mergeGeo(geoFromCloudflare({ 'cf-ipcountry': 'KH', 'cf-ipcity': 'Siem Reap', 'cf-iplatitude': '13.36', 'cf-iplongitude': '103.86' }), parseLookup(ipwho));
+  assert.equal(keep.city, 'Siem Reap'); assert.equal(keep.lat, 13.36);   // Cloudflare's own values win
+
+  let calls = 0; const urls = [];
+  const fetchFn = async url => { calls++; urls.push(url); return { ok: true, json: async () => ipwho }; };
+  const lookup = createGeoLookup({ fetchFn, perMinute: 2, log: quiet });
+  assert.equal((await lookup('203.0.113.7')).city, 'Phnom Penh');
+  await lookup('203.0.113.7');                         // cached
+  assert.equal(calls, 1); assert.equal(urls[0], 'https://ipwho.is/203.0.113.7');
+  await lookup('203.0.113.8'); assert.equal(await lookup('203.0.113.9'), null);   // third distinct IP in the minute is refused
+  assert.equal(calls, 2);
+  assert.equal(await lookup('10.0.0.1'), null); assert.equal(await lookup('104.16.1.1'), null); assert.equal(await lookup('nope'), null);
+  assert.equal(calls, 2);
+  const broken = createGeoLookup({ fetchFn: async () => { throw new Error('offline'); }, log: quiet });
+  assert.equal(await broken('203.0.113.50'), null);    // never throws
+});
+
+test('shield records location + device on a block, a strike and a repeat request', async () => {
+  const intel = createIntel({});
+  const store = createStore({ sb: async () => ({}), enabled: false, intel, now: () => Date.now() });
+  const alertsSeen = [];
+  const sh = createShield({ store, alerts: { ipBlocked: a => alertsSeen.push(a), spike() {}, integrity() {} }, intel, env: {}, log: quiet });
+  const cfHeaders = { 'cf-ipcountry': 'KH', 'cf-ipcity': 'Phnom Penh', 'cf-region': 'Phnom Penh', 'cf-iplatitude': '11.5564', 'cf-iplongitude': '104.9282' };
+  const hit = (url, extra = {}) => run(sh, { url, ip: '198.51.100.7', ua: UA.galaxy, headers: { 'x-forwarded-for': '198.51.100.7, 172.70.1.2', ...cfHeaders, 'sec-ch-ua-model': '"SM-S918B"', 'sec-ch-ua-mobile': '?1', ...extra } });
+  assert.equal(hit('/.env').status, 404);              // honeypot: 12 points => auto-block in one go
+  assert.ok(sh.isBlocked('198.51.100.7'));
+  await store.flush();
+  const rows = store.ring.filter(e => e.ip === '198.51.100.7');
+  assert.ok(rows.length >= 2);
+  for (const e of rows) {
+    assert.equal(e.geo.city, 'Phnom Penh', e.type); assert.equal(e.geo.country, 'Cambodia');
+    assert.equal(e.geo.mapsUrl, 'https://www.google.com/maps/search/?api=1&query=11.5564,104.9282');
+    assert.equal(e.device.type, 'mobile'); assert.equal(e.device.os, 'Android'); assert.equal(e.device.browser, 'Chrome'); assert.equal(e.device.model, 'SM-S918B'); assert.equal(e.device.brand, 'Samsung');
+  }
+  assert.equal(alertsSeen.length, 1); assert.equal(alertsSeen[0].geo.label, 'Phnom Penh, Cambodia'); assert.match(alertsSeen[0].device.summary, /Samsung SM-S918B/);
+  const out = await store.queryEvents({ limit: 10 });     // dashboard fallback path carries them inside details
+  assert.ok(out.every(r => r.details.geo && r.details.device));
+});
+test('shield: forged Cloudflare location headers are ignored when the request did not come through Cloudflare', () => {
+  const intel = createIntel({});
+  const store = createStore({ sb: async () => ({}), enabled: false, intel });
+  const sh = createShield({ store, intel, env: {}, log: quiet });
+  // direct to the origin: no Cloudflare hop in X-Forwarded-For, attacker sends fake CF headers
+  run(sh, { url: '/.env', ip: '198.51.100.99', ua: 'curl/8.4.0', headers: { 'cf-ipcountry': 'US', 'cf-ipcity': 'Forgeville', 'cf-iplatitude': '1', 'cf-iplongitude': '2' } });
+  const e = store.ring.find(x => x.ip === '198.51.100.99');
+  assert.equal(e.geo, null); assert.equal(e.device.type, 'bot'); assert.equal(e.device.bot, 'curl');
+});
+test('intel: a pending free lookup finishes before the event is saved; CSP reports and admin audit rows are not tracked', async () => {
+  const lookup = async () => parseLookup({ success: true, country: 'Cambodia', country_code: 'KH', city: 'Phnom Penh', region: 'Phnom Penh', latitude: 11.5564, longitude: 104.9282 });
+  const intel = createIntel({ lookup });
+  const saved = [];
+  const store = createStore({ sb: async (path, opt) => { saved.push(...JSON.parse(opt.body)); return null; }, enabled: true, intel });
+  intel.remember({ headers: { 'user-agent': UA.iphone, 'cf-ipcountry': 'KH' } }, '198.51.100.5', true);
+  store.log({ ip: '198.51.100.5', type: 'honeypot', severity: 'high', action: 'blocked' });
+  store.log({ ip: '198.51.100.5', type: 'csp_violation', severity: 'low' });
+  store.log({ ip: '198.51.100.5', type: 'admin_action', severity: 'low' });
+  await store.flush();
+  const h = saved.find(r => r.type === 'honeypot');
+  assert.equal(h.details.geo.city, 'Phnom Penh'); assert.equal(h.details.geo.source, 'cloudflare+lookup'); assert.equal(h.details.device.os, 'iOS');
+  for (const t of ['csp_violation', 'admin_action']) { const r = saved.find(x => x.type === t); assert.equal(r.details.geo, undefined); assert.equal(r.details.device, undefined); }
+});

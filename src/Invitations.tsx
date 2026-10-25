@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom';
 import {
   Plus, Pencil, Trash2, Copy, ExternalLink, Save, ArrowLeft, Music2, Upload, X, Heart,
   Link2, Eye, EyeOff, RefreshCw, ImagePlus, MapPin, CalendarDays, Sparkles, Volume2, VolumeX, SkipForward,
-  Move, Users, Share2, Search, UserPlus, Check, Send,
+  Move, Users, Share2, Search, UserPlus, Check, Send, MousePointerClick, Play,
 } from 'lucide-react';
 import { supabase } from './supabase';
 import { tr, useLang } from './lang';
-import { CinematicView } from './Cinematic';
-import type { CineCfg } from './cinematic/types';
+import { CinematicView, type CineViewHandle } from './Cinematic';
+import type { CineCfg, EditHit, CineEl, Tweak } from './cinematic/types';
+import { blankEl, TWEAK_DEFAULT } from './cinematic/extras';
+import { TEXT } from './cinematic/text';
 import { optimizeImage } from './imageTools';
 import { CanvasBuilder, CanvasPages, emptyCanvas, type Canvas } from './InviteCanvas';
 import './invitations.css';
@@ -59,6 +61,10 @@ export type CineData = {
   archPhoto: string; groomPhoto: string; bridePhoto: string; candlePhoto: string;
   story: { photo: string; caption: string }[]; qrs: { label: string; url: string }[];
   palette: 'jade' | 'silk' | 'olive' | 'rose' | 'navy' | 'custom'; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; wax: string; ogImage: string;
+  /* wording the admin changed by clicking it on the preview, per language (anything not here keeps the standard wording) */
+  texts: { km: Record<string, string>; en: Record<string, string> };
+  /* free elements added on the preview, and move / size / turn / photo-focus tweaks of the built-in parts */
+  extras: CineEl[]; tweaks: Record<string, Partial<Tweak>>;
 };
 type CinePalette = { name: string; paper: string; cream: string; night: string; foil: 'gold' | 'rose' | 'silver'; wax: string };
 /* Each palette is five colours that belong together: envelope paper, card cream, dark background, foil, and a wax that contrasts with the paper. */
@@ -72,7 +78,7 @@ CINE_PALETTES.olive = CINE_PALETTES.jade; // invitations saved with the old gree
 const CINE_DEFAULTS: CineData = {
   groomEn: '', brideEn: '', groomShort: '', brideShort: '', groomFather: '', groomMother: '', brideFather: '', brideMother: '',
   lunar: '', lat: '', lng: '', words: '', blessing: '', thanks: '', archPhoto: '', groomPhoto: '', bridePhoto: '', candlePhoto: '',
-  story: [], qrs: [], palette: 'jade', paper: CINE_PALETTES.jade.paper, cream: CINE_PALETTES.jade.cream, night: CINE_PALETTES.jade.night, foil: 'gold', wax: CINE_PALETTES.jade.wax, ogImage: '',
+  story: [], qrs: [], palette: 'jade', paper: CINE_PALETTES.jade.paper, cream: CINE_PALETTES.jade.cream, night: CINE_PALETTES.jade.night, foil: 'gold', wax: CINE_PALETTES.jade.wax, ogImage: '', texts: { km: {}, en: {} }, extras: [], tweaks: {},
 };
 /* Texts the admin has not changed follow the guest's language; texts the admin typed are shown as typed. */
 const TXT = {
@@ -203,7 +209,9 @@ const merge = (raw: any): InviteData => ({
   ...DEFAULTS, ...(raw || {}),
   look: { ...DEFAULTS.look, ...(raw?.look || {}) },
   khFonts: { ...DEFAULTS.khFonts, ...(raw?.khFonts || {}) },
-  cine: { ...CINE_DEFAULTS, ...(raw?.cine || {}), story: Array.isArray(raw?.cine?.story) ? raw.cine.story : [], qrs: Array.isArray(raw?.cine?.qrs) ? raw.cine.qrs : [] },
+  cine: { ...CINE_DEFAULTS, ...(raw?.cine || {}), story: Array.isArray(raw?.cine?.story) ? raw.cine.story : [], qrs: Array.isArray(raw?.cine?.qrs) ? raw.cine.qrs : [],
+    texts: { km: { ...(raw?.cine?.texts?.km || {}) }, en: { ...(raw?.cine?.texts?.en || {}) } },
+    extras: Array.isArray(raw?.cine?.extras) ? raw.cine.extras : [], tweaks: raw?.cine?.tweaks && typeof raw.cine.tweaks === 'object' ? raw.cine.tweaks : {} },
   opening: { ...DEFAULTS.opening, ...(raw?.opening || {}) },
   butterflies: { ...DEFAULTS.butterflies, ...(raw?.butterflies || {}) },
   songs: Array.isArray(raw?.songs) ? raw.songs : [],
@@ -398,8 +406,9 @@ function buildCineCfg(d: InviteData, lang: Lang, guestName: string, preview: boo
     ics: ok ? { title: names || 'Wedding', start: iso(ok), end: iso(new Date(ok.getTime() + 4 * 3600 * 1000)), location: d.venue.replace(/\n/g, ', ') } : null,
     words: c.words, blessing: c.blessing, thanks: c.thanks,
     photo: d.opening.image || d.gallery[0] || '', archPhoto: c.archPhoto || d.gallery[0] || '', groomPhoto: c.groomPhoto, bridePhoto: c.bridePhoto, candlePhoto: c.candlePhoto,
-    gallery: d.gallery, story: c.story, qrs: c.qrs.filter(q => q.url),
-    schedule: d.schedule.filter(e => e.name).map(e => ({ time: fmtTime(e.time, L), name: e.name, date: fmtShort(e.date, L) })),
+    gallery: d.gallery, story: c.story.map((x, i) => ({ ...x, i })), qrs: c.qrs.map((q, i) => ({ ...q, i })).filter(q => q.url),
+    schedule: d.schedule.map((e, i) => ({ e, i })).filter(({ e }) => e.name).map(({ e, i }) => ({ time: fmtTime(e.time, L), name: e.name, date: fmtShort(e.date, L), i })),
+    texts: c.texts?.[L], extras: c.extras, tweaks: c.tweaks,
     guestName: d.opening.nameEnabled ? guestName : '', shareUrl, shareTitle: names ? `${names} · ${L === 'km' ? 'សិរីសួស្តីអាពាហ៍ពិពាហ៍' : 'Wedding invitation'}` : '',
     palette: { paper: pal.paper, cream: pal.cream, night: pal.night, foil: pal.foil, wax: pal.wax }, preview,
   };
@@ -428,8 +437,10 @@ function Reveal({ children, className = '' }: { children: React.ReactNode; class
   return <div ref={ref} className={`ivReveal ${on ? 'on' : ''} ${className}`}>{children}</div>;
 }
 
-export function InvitationView({ data, preview = false, replayKey = 0, onViewed, guestName = '', layoutEdit = false, onLayout, shareUrl = '' }: {
+export function InvitationView({ data, preview = false, replayKey = 0, onViewed, guestName = '', layoutEdit = false, onLayout, shareUrl = '', cineEdit = false, cineSelected = '', onCineEdit, onCineXform, cineApi }: {
   data: InviteData; preview?: boolean; replayKey?: number; onViewed?: () => void; guestName?: string; layoutEdit?: boolean; onLayout?: (patch: { btnPos?: Pos; namePos?: Pos }) => void; shareUrl?: string;
+  /* cinematic click-to-edit (admin preview only) */
+  cineEdit?: boolean; cineSelected?: string; onCineEdit?: (hit: EditHit) => void; onCineXform?: (key: string, patch: Record<string, number | boolean>) => void; cineApi?: React.MutableRefObject<CineViewHandle | null>;
 }) {
   useInviteFonts();
   /* Guests start in the invitation's language (Khmer by default) and can switch, unless it is set to bilingual. */
@@ -491,7 +502,7 @@ export function InvitationView({ data, preview = false, replayKey = 0, onViewed,
 
   return (
     <div className={`ivRoot ${preview ? 'ivPreview' : ''}`} data-kh={lang !== 'en' ? '1' : '0'} style={themeVars(d)}>
-      {cinematic && cineCfg ? <CinematicView cfg={cineCfg} replayKey={replayKey} onOpen={() => { setOpened(true); startMusic(); }} /> : (
+      {cinematic && cineCfg ? <CinematicView cfg={cineCfg} replayKey={replayKey} onOpen={() => { setOpened(true); startMusic(); }} edit={cineEdit} selected={cineSelected} onEdit={onCineEdit} onXform={onCineXform} apiRef={cineApi} /> : (
       <div className={`ivScroll ${gone ? '' : 'ivLocked'}`}>
         {data.mode === 'canvas' && data.canvas ? <CanvasPages canvas={data.canvas} date={d.date} time={d.time} labels={L} /> : <>
         <section className="ivHero" style={heroImg ? { backgroundImage: `url("${heroImg}")` } : undefined}>
@@ -1039,6 +1050,207 @@ function CinematicCard({ data, set, setCine, pick, busy, uploadBlob, uploadFile,
   );
 }
 
+/* stable (top-level) pieces of the inspector: defining them inside CineInspector would remount them on every keystroke and drop the focus */
+function InsTxt({ label, value, onChange, rows = 1, ph, auto = false }: { label: string; value: string; onChange: (v: string) => void; rows?: number; ph?: string; auto?: boolean }) {
+  return <label>{label}{rows > 1 ? <textarea rows={rows} value={value} autoFocus={auto} placeholder={ph} onChange={e => onChange(e.target.value)} /> : <input value={value} autoFocus={auto} placeholder={ph} onChange={e => onChange(e.target.value)} />}</label>;
+}
+function InsRange({ label, value, min, max, step = 1, unit = '', onChange }: { label: string; value: number; min: number; max: number; step?: number; unit?: string; onChange: (v: number) => void }) {
+  return <label>{label}: <b>{Math.round(value * 10) / 10}{unit}</b><input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /></label>;
+}
+function InsColor({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return <label>{label}<input type="color" value={value} onChange={e => onChange(e.target.value)} style={{ height: 44, padding: 4 }} /></label>;
+}
+function InsPhoto({ label, url, k, onUrl, onClear, busy, pick }: { label: string; url: string; k: string; onUrl: (u: string) => void; onClear: () => void; busy: string; pick: (f: File | undefined, kind: 'image' | 'audio', onUrl: (u: string) => void, label: string) => void }) {
+  return <PhotoTile wide label={label} url={url} busy={busy === k} onFile={f => pick(f, 'image', onUrl, k)} onClear={onClear} />;
+}
+
+/* ------------------------------------------------------------------ click-to-edit on the cinematic preview ------------------------------------------------------------------
+   With "Edit on preview" on, every part of the invitation can be clicked. The preview reports which part (a key such as "f:groom",
+   "f:step:2" or "t:wordsHead") and this panel shows exactly the fields behind it. Changes go to the same data as the form on the left,
+   so the form, the preview and the saved invitation always agree. */
+type InspectorProps = {
+  updCine: (fn: (c: CineData) => Partial<CineData>) => void;
+  hit: EditHit; data: InviteData; busy: string; close: () => void; go: (key: string) => void;
+  set: (p: Partial<InviteData>) => void; setCine: (p: Partial<CineData>) => void; setIn: <K extends 'look' | 'opening' | 'butterflies'>(k: K, patch: Partial<InviteData[K]>) => void;
+  onDate: (d: string) => void; pick: (f: File | undefined, kind: 'image' | 'audio', onUrl: (u: string) => void, label: string) => void;
+  uploadFile: (f: File) => Promise<string>; setNote: (t: string) => void;
+};
+const EL_NAME: Record<CineEl['type'], string> = { text: 'Text', image: 'Picture', button: 'Button', shape: 'Shape' };
+function CineInspector({ updCine, hit, data, busy, close, go, set, setCine, setIn, onDate, pick, uploadFile, setNote }: InspectorProps) {
+  const c = data.cine, L = hit.lang, [kind, a, b] = hit.key.split(':');
+  const idx = Number(b);
+  const ov = c.texts[L] || {};
+  const dict = TEXT[L] as unknown as Record<string, string>;
+  const setText = (k: string, v: string) => setCine({ texts: { ...c.texts, [L]: { ...ov, [k]: v } } });
+  const resetText = (k: string) => { const next = { ...ov }; delete next[k]; setCine({ texts: { ...c.texts, [L]: next } }); };
+  const pal = (patch: Partial<CineData>) => setCine({ palette: 'custom', ...patch });
+  const applyPalette = (id: 'jade' | 'silk' | 'rose' | 'navy') => { const q = CINE_PALETTES[id]; setCine({ palette: id, paper: q.paper, cream: q.cream, night: q.night, foil: q.foil, wax: q.wax }); };
+  const hex = (v: string, fb: string) => (/^#[0-9a-f]{6}$/i.test(v) ? v : fb);
+
+  /* a list item that no longer exists (deleted) closes the panel */
+  const missing = (kind === 'f' && a === 'step' && b !== 'new' && !data.schedule[idx]) || (kind === 'f' && a === 'story' && b !== 'new' && !c.story[idx]) || (kind === 'f' && a === 'gallery' && b !== 'new' && !data.gallery[idx]) || (kind === 'f' && a === 'qr' && b !== 'new' && !c.qrs[idx]) || (kind === 'x' && !c.extras.some(z => z.id === a));
+  useEffect(() => { if (missing) close(); }, [missing]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [close]);
+  if (missing) return null;
+
+  const presets = () => (
+    <div className="ivSwatches" style={{ gridTemplateColumns: 'repeat(2,1fr)' }}>
+      {(['jade', 'silk', 'rose', 'navy'] as const).map(id => { const q = CINE_PALETTES[id]; return (
+        <button key={id} type="button" className={'ivSwatch ivSwatch4 ' + (c.palette === id ? 'on' : '')} onClick={() => applyPalette(id)}><i style={{ background: q.paper }} /><i style={{ background: q.cream }} /><i style={{ background: q.night }} /><i style={{ background: q.wax }} /><small>{q.name}</small></button>); })}
+    </div>);
+  const names = (who: 'groom' | 'bride') => {
+    const g = who === 'groom';
+    return (<>
+      <InsTxt label={g ? 'Groom, Khmer' : 'Bride, Khmer'} value={g ? data.groom : data.bride} onChange={v => set(g ? { groom: v } : { bride: v })} />
+      <InsTxt label={g ? 'Groom, English' : 'Bride, English'} value={g ? c.groomEn : c.brideEn} onChange={v => setCine(g ? { groomEn: v } : { brideEn: v })} />
+      <InsTxt label={g ? 'Name-logo: short name' : 'Name-logo: short name'} value={g ? c.groomShort : c.brideShort} onChange={v => setCine(g ? { groomShort: v } : { brideShort: v })} ph="first name only" />
+    </>);
+  };
+  const photoKey = (key: 'archPhoto' | 'groomPhoto' | 'bridePhoto' | 'candlePhoto', label: string, bk: string) => <InsPhoto busy={busy} pick={pick} label={label} url={c[key]} k={bk} onUrl={u => setCine({ [key]: u } as Partial<CineData>)} onClear={() => setCine({ [key]: '' } as Partial<CineData>)} />;
+  const updEv = (i: number, p: Partial<CeremonyItem>) => set({ schedule: data.schedule.map((s, j) => (j === i ? { ...s, ...p } : s)) });
+  const updStory = (i: number, p: Partial<{ photo: string; caption: string }>) => setCine({ story: c.story.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+  const updQr = (i: number, p: Partial<{ label: string; url: string }>) => setCine({ qrs: c.qrs.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+  async function addGallery(files: File[]) {
+    if (!files.length) return; setNote('Uploading photos…'); const urls: string[] = [];
+    for (const f of files) { try { urls.push(await uploadFile(f)); } catch (er: any) { setNote(er?.message || 'Upload failed.'); } }
+    if (urls.length) { set({ gallery: [...data.gallery, ...urls] }); setNote(''); if (a === 'gallery' && b === 'new') go('f:gallery:' + data.gallery.length); }
+  }
+  const galleryAdd = () => (<label className="button secondary ivUpload"><Upload /> {busy === 'gal' ? '…' : 'Add photos'}<input type="file" accept="image/*" multiple hidden onChange={e => { const fs = Array.from(e.target.files || []); e.target.value = ''; addGallery(fs); }} /></label>);
+
+  let title = hit.label, body: React.ReactNode = null;
+  if (kind === 't') {
+    const val = ov[a] ?? dict[a] ?? '';
+    body = (<>
+      <InsTxt auto rows={dict[a] && dict[a].length > 40 ? 3 : 1} label={`Text (${L === 'km' ? 'Khmer' : 'English'} version)`} value={val} onChange={v => setText(a, v)} />
+      <div className="row" style={{ flexWrap: 'wrap' }}>{ov[a] !== undefined && <button className="secondary" onClick={() => resetText(a)}><RefreshCw /> Standard wording</button>}</div>
+      <small className="muted">Guests who read the invitation in {L === 'km' ? 'Khmer' : 'English'} see this. Switch the ខ្មែរ | EN button on the preview to edit the other language.</small>
+    </>);
+  } else if (kind === 'x') {
+    const el = c.extras.find(z => z.id === a);
+    if (el) {
+      title = EL_NAME[el.type];
+      const upd = (p: Partial<CineEl>) => updCine(cc => ({ extras: cc.extras.map(z => (z.id === el.id ? { ...z, ...p } : z)) }));
+      const ratio = (
+        <label>Shape of the picture<select value={String(el.ar)} onChange={e => upd({ ar: Number(e.target.value) })}><option value="0">Natural</option><option value="1">Square</option><option value="1.25">Portrait 4:5</option><option value="1.333">Portrait 3:4</option><option value="0.5625">Wide 16:9</option></select></label>);
+      const ownBody = el.type === 'text' ? (<>
+        <InsTxt auto rows={3} label="Text" value={el.text} onChange={v => upd({ text: v })} />
+        <div className="two"><label>Font<select value={el.font} onChange={e => upd({ font: e.target.value as CineEl['font'] })}><option value="body">Normal</option><option value="title">Khmer title (Moulpali)</option><option value="serif">Serif</option><option value="script">Script</option></select></label>
+          <label>Weight<select value={el.weight} onChange={e => upd({ weight: Number(e.target.value) })}><option value={400}>Light</option><option value={600}>Medium</option><option value={800}>Bold</option></select></label></div>
+        <InsRange label="Text size" value={el.fs} min={1.5} max={30} step={0.5} onChange={v => upd({ fs: v })} />
+        <label className="ivCheck"><input type="checkbox" checked={el.foil} onChange={e => upd({ foil: e.target.checked })} /> Gold foil text</label>
+        {!el.foil && <div className="row" style={{ alignItems: 'end' }}><InsColor label="Colour" value={hex(el.color, '#ffffff')} onChange={v => upd({ color: v })} />{el.color && <button className="secondary" onClick={() => upd({ color: '' })}>Match section</button>}</div>}
+        <div className="ivSeg">{(['left', 'center', 'right'] as const).map(al => <button key={al} type="button" className={el.align === al ? 'on' : ''} onClick={() => upd({ align: al })}><b>{al}</b></button>)}</div></>)
+        : el.type === 'image' ? (<>
+          <InsPhoto busy={busy} pick={pick} label="Picture (PNG with a clear background works best)" url={el.image} k="ximg" onUrl={u => upd({ image: u })} onClear={() => upd({ image: '' })} />
+          {ratio}<label>Fit<select value={el.fit} onChange={e => upd({ fit: e.target.value as CineEl['fit'] })}><option value="cover">Fill (crop)</option><option value="contain">Whole picture</option></select></label>
+          <InsRange label="Rounded corners" value={el.radius} min={0} max={50} unit="%" onChange={v => upd({ radius: v })} /></>)
+        : el.type === 'button' ? (<>
+          <InsTxt auto label="Button text" value={el.text} onChange={v => upd({ text: v })} />
+          <InsTxt label="Opens (link, @telegram or phone number)" value={el.url} onChange={v => upd({ url: v })} ph="https://… or @name or +855…" />
+          <div className="two"><InsColor label="Button colour" value={hex(el.bg, '#d4af37')} onChange={v => upd({ bg: v })} /><InsColor label="Text colour" value={hex(el.color, '#2a1c06')} onChange={v => upd({ color: v })} /></div>
+          <div className="row">{el.bg && <button className="secondary" onClick={() => upd({ bg: '' })}>Gold foil button</button>}</div>
+          <InsRange label="Text size" value={el.fs} min={2} max={12} step={0.5} onChange={v => upd({ fs: v })} />
+          <InsRange label="Roundness" value={Math.min(el.radius, 60)} min={0} max={60} onChange={v => upd({ radius: v })} /></>)
+        : (<>
+          <label>Shape<select value={el.shape} onChange={e => upd({ shape: e.target.value as CineEl['shape'] })}><option value="circle">Circle</option><option value="rect">Box</option><option value="line">Line</option><option value="heart">Heart</option><option value="diamond">Diamond</option></select></label>
+          <div className="two"><InsColor label="Fill" value={hex(el.bg, '#d4af37')} onChange={v => upd({ bg: v })} /><InsColor label="Outline" value={hex(el.bcolor, '#ffffff')} onChange={v => upd({ bcolor: v })} /></div>
+          <InsRange label="Outline" value={el.border} min={0} max={10} unit="px" onChange={v => upd({ border: v })} />
+          {el.shape === 'rect' && <><InsRange label="Height" value={el.ar || 1} min={0.1} max={3} step={0.05} onChange={v => upd({ ar: v })} /><InsRange label="Rounded corners" value={el.radius} min={0} max={50} unit="%" onChange={v => upd({ radius: v })} /></>}</>);
+      const dup = () => { const nid = 'x' + Math.random().toString(36).slice(2, 9); updCine(cc => ({ extras: [...cc.extras, { ...el, id: nid, x: Math.min(95, el.x + 4), y: Math.min(95, el.y + 4), z: el.z + 1 }] })); go('x:' + nid); };
+      body = (<>
+        <small className="muted">Drag it on the preview. Corner dot = resize, top dot = turn, arrow keys = nudge, Delete = remove.</small>
+        {ownBody}
+        <InsRange label="Width" value={el.w} min={4} max={100} unit="%" onChange={v => upd({ w: v })} />
+        <InsRange label="Turn" value={el.rot} min={-180} max={180} unit="°" onChange={v => upd({ rot: v })} />
+        <InsRange label="See-through" value={el.op} min={10} max={100} unit="%" onChange={v => upd({ op: v })} />
+        <label>Movement<select value={el.anim} onChange={e => upd({ anim: e.target.value as CineEl['anim'] })}><option value="none">Still</option><option value="float">Float</option><option value="pulse">Pulse</option><option value="wiggle">Wiggle</option><option value="sway">Sway</option><option value="spin">Spin</option></select></label>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          <button className="secondary" onClick={() => upd({ z: el.z + 1 })}>Bring forward</button><button className="secondary" onClick={() => upd({ z: Math.max(0, el.z - 1) })}>Send back</button>
+          <button className="secondary" onClick={dup}><Copy /> Duplicate</button><button className="secondary danger" onClick={() => { updCine(cc => ({ extras: cc.extras.filter(z => z.id !== el.id) })); close(); }}><Trash2 /> Delete</button></div></>);
+    }
+  } else if (kind === 'bg') {
+    title = a === 'light' ? 'Light sections' : 'Dark sections';
+    body = (<>{presets()}{a === 'light' ? <InsColor label="Card cream (light sections)" value={hex(c.cream, '#f8f1de')} onChange={v => pal({ cream: v })} /> : <InsColor label="Night (dark sections)" value={hex(c.night, '#0a1f1b')} onChange={v => pal({ night: v })} />}</>);
+  } else if (kind === 'f') {
+    switch (a) {
+      case 'coverPhoto': title = 'Cover photo'; body = (<><InsPhoto busy={busy} pick={pick} label="Cover photo (envelope background & cover)" url={data.opening.image} k="cover" onUrl={u => setIn('opening', { image: u })} onClear={() => setIn('opening', { image: '' })} /><InsColor label="Night colour" value={hex(c.night, '#0a1f1b')} onChange={v => pal({ night: v })} /></>); break;
+      case 'archPhoto': body = photoKey('archPhoto', 'Arch photo (empty uses the cover photo)', 'arch'); break;
+      case 'candle': body = photoKey('candlePhoto', 'Candlelight photo (empty uses the cover photo)', 'cph'); break;
+      case 'groom': case 'bride': {
+        const g = a === 'groom'; title = g ? 'Groom' : 'Bride';
+        body = (<>{photoKey(g ? 'groomPhoto' : 'bridePhoto', g ? 'Groom photo' : 'Bride photo', g ? 'gph' : 'bph')}{names(a as 'groom' | 'bride')}</>); break;
+      }
+      case 'names': body = (<><div className="two"><div className="ivInsCol"><b>Groom</b>{names('groom')}</div><div className="ivInsCol"><b>Bride</b>{names('bride')}</div></div></>); break;
+      case 'namesEn': body = (<div className="two"><InsTxt auto label="Groom, English" value={c.groomEn} onChange={v => setCine({ groomEn: v })} /><InsTxt label="Bride, English" value={c.brideEn} onChange={v => setCine({ brideEn: v })} /></div>); break;
+      case 'date': body = (<><div className="two"><label>Wedding date<input type="date" value={data.date} onChange={e => onDate(e.target.value)} /></label><label>Wedding time<input type="time" value={data.time} onChange={e => set({ time: e.target.value })} /></label></div><small className="muted">The weekday, Khmer numerals, countdown and calendar button all follow this date.</small></>); break;
+      case 'lunar': title = 'Khmer lunar date'; body = <InsTxt auto label="Khmer lunar date (ត្រូវនឹង…)" value={c.lunar} onChange={v => setCine({ lunar: v })} />; break;
+      case 'venue': body = <InsTxt auto rows={3} label="Venue / address" value={data.venue} onChange={v => set({ venue: v })} />; break;
+      case 'map': title = 'Map location'; body = (<><div className="two"><InsTxt auto label="Latitude" value={c.lat} onChange={v => setCine({ lat: v })} ph="e.g. 11.5564" /><InsTxt label="Longitude" value={c.lng} onChange={v => setCine({ lng: v })} ph="e.g. 104.9282" /></div><InsTxt label="Google Maps link (optional)" value={data.mapUrl} onChange={v => set({ mapUrl: v })} ph="https://maps.google.com/…" /></>); break;
+      case 'mapbtn': title = 'Map button'; body = (<><InsTxt auto label="Button text" value={ov.openMap ?? dict.openMap} onChange={v => setText('openMap', v)} /><InsTxt label="Google Maps link (empty uses the pin above)" value={data.mapUrl} onChange={v => set({ mapUrl: v })} ph="https://maps.google.com/…" /></>); break;
+      case 'words': title = 'Invitation words'; body = (<><InsTxt auto rows={6} label="One line per row (empty = the standard words)" value={c.words} onChange={v => setCine({ words: v })} ph={dict.wordsDefault} /></>); break;
+      case 'groomParents': case 'brideParents': {
+        const g = a === 'groomParents'; title = g ? 'Groom’s parents' : 'Bride’s parents';
+        body = (<div className="two"><InsTxt auto label="Father" value={g ? c.groomFather : c.brideFather} onChange={v => setCine(g ? { groomFather: v } : { brideFather: v })} /><InsTxt label="Mother" value={g ? c.groomMother : c.brideMother} onChange={v => setCine(g ? { groomMother: v } : { brideMother: v })} /></div>); break;
+      }
+      case 'countdown': title = 'Countdown & blessing'; body = (<><div className="two"><label>Wedding date<input type="date" value={data.date} onChange={e => onDate(e.target.value)} /></label><label>Wedding time<input type="time" value={data.time} onChange={e => set({ time: e.target.value })} /></label></div><InsTxt label="Blessing line behind the countdown" value={c.blessing} onChange={v => setCine({ blessing: v })} ph={dict.blessingDefault} /></>); break;
+      case 'step': {
+        if (b === 'new') { title = 'Programme'; body = (<><small className="muted">No programme items yet.</small><button onClick={() => { set({ schedule: [...data.schedule, { name: '', date: data.date, time: '' }] }); go('f:step:' + data.schedule.length); }}><Plus /> Add a programme item</button></>); break; }
+        const ev = data.schedule[idx]; if (!ev) break; title = `Programme item ${idx + 1}`;
+        body = (<><InsTxt auto label="Ceremony name" value={ev.name} onChange={v => updEv(idx, { name: v })} ph="ពិធី…" /><div className="two"><label>Date<input type="date" value={ev.date} onChange={e => updEv(idx, { date: e.target.value })} /></label><label>Time<input type="time" value={ev.time} onChange={e => updEv(idx, { time: e.target.value })} /></label></div>
+          <div className="row" style={{ flexWrap: 'wrap' }}><button className="secondary" onClick={() => { set({ schedule: [...data.schedule, { name: '', date: data.date, time: '' }] }); go('f:step:' + data.schedule.length); }}><Plus /> Add another</button><button className="secondary danger" onClick={() => { set({ schedule: data.schedule.filter((_, j) => j !== idx) }); close(); }}><Trash2 /> Delete</button></div><small className="muted">An item without a name is not shown to guests.</small></>); break;
+      }
+      case 'story': {
+        if (b === 'new') { title = 'Love story'; body = (<><small className="muted">The love story is a pinned strip of photos with captions.</small><button onClick={() => { setCine({ story: [...c.story, { photo: '', caption: '' }] }); go('f:story:' + c.story.length); }}><Plus /> Add a love-story moment</button></>); break; }
+        const st = c.story[idx]; if (!st) break; title = `Love-story moment ${idx + 1}`;
+        body = (<><InsPhoto busy={busy} pick={pick} label="Photo" url={st.photo} k="story" onUrl={u => updStory(idx, { photo: u })} onClear={() => updStory(idx, { photo: '' })} /><InsTxt auto rows={2} label="Caption" value={st.caption} onChange={v => updStory(idx, { caption: v })} />
+          <div className="row" style={{ flexWrap: 'wrap' }}><button className="secondary" onClick={() => { setCine({ story: [...c.story, { photo: '', caption: '' }] }); go('f:story:' + c.story.length); }}><Plus /> Add another</button><button className="secondary danger" onClick={() => { setCine({ story: c.story.filter((_, j) => j !== idx) }); close(); }}><Trash2 /> Delete</button></div><small className="muted">A moment with no photo and no caption is not shown to guests.</small></>); break;
+      }
+      case 'gallery': {
+        if (b === 'new') { title = 'Gallery'; body = (<><small className="muted">Photos become a masonry grid with a full-screen swipe viewer.</small>{galleryAdd()}</>); break; }
+        const u = data.gallery[idx]; if (!u) break; title = `Gallery photo ${idx + 1}`;
+        body = (<><div className="ivInsThumb" style={{ backgroundImage: `url("${u}")` }} />
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            <label className="button secondary ivUpload"><Upload /> {busy === 'galr' ? '…' : 'Replace'}<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; pick(f, 'image', nu => set({ gallery: data.gallery.map((x, j) => (j === idx ? nu : x)) }), 'galr'); }} /></label>
+            <button className="secondary" disabled={idx === 0} onClick={() => { const g = [...data.gallery]; [g[idx - 1], g[idx]] = [g[idx], g[idx - 1]]; set({ gallery: g }); go('f:gallery:' + (idx - 1)); }}>← Earlier</button>
+            <button className="secondary" disabled={idx >= data.gallery.length - 1} onClick={() => { const g = [...data.gallery]; [g[idx + 1], g[idx]] = [g[idx], g[idx + 1]]; set({ gallery: g }); go('f:gallery:' + (idx + 1)); }}>Later →</button>
+            <button className="secondary danger" onClick={() => { set({ gallery: data.gallery.filter((_, j) => j !== idx) }); close(); }}><Trash2 /> Remove</button></div>
+          {galleryAdd()}{idx === 0 && !data.opening.image && <small className="muted">The first photo is also used as the cover when there is no cover photo.</small>}</>); break;
+      }
+      case 'qr': {
+        if (b === 'new') { title = 'Wedding gift'; body = (<><small className="muted">KHQR / ABA images guests can save.</small><button onClick={() => { setCine({ qrs: [...c.qrs, { label: '', url: '' }] }); go('f:qr:' + c.qrs.length); }}><Plus /> Add a QR code</button></>); break; }
+        const q = c.qrs[idx]; if (!q) break; title = `Gift QR code ${idx + 1}`;
+        body = (<><InsPhoto busy={busy} pick={pick} label="QR image" url={q.url} k="qr" onUrl={u => updQr(idx, { url: u })} onClear={() => updQr(idx, { url: '' })} /><InsTxt auto label="Account name / bank" value={q.label} onChange={v => updQr(idx, { label: v })} />
+          <div className="row" style={{ flexWrap: 'wrap' }}><button className="secondary" onClick={() => { setCine({ qrs: [...c.qrs, { label: '', url: '' }] }); go('f:qr:' + c.qrs.length); }}><Plus /> Add another</button><button className="secondary danger" onClick={() => { setCine({ qrs: c.qrs.filter((_, j) => j !== idx) }); close(); }}><Trash2 /> Delete</button></div><small className="muted">A QR code without an image is not shown to guests.</small></>); break;
+      }
+      case 'thanks': title = 'Thank-you message'; body = <InsTxt auto rows={3} label="Message under “Thank you” (optional)" value={c.thanks} onChange={v => setCine({ thanks: v })} />; break;
+      case 'paper': title = 'Envelope colour'; body = (<>{presets()}<InsColor label="Paper (envelope)" value={hex(c.paper, '#2e6b5c')} onChange={v => pal({ paper: v })} /></>); break;
+      case 'seal': title = 'Wax seal'; body = (<><InsColor label="Wax seal" value={hex(c.wax, '#8d1f2d')} onChange={v => pal({ wax: v })} /><label>Metallic foil<select value={c.foil} onChange={e => pal({ foil: e.target.value as CineData['foil'] })}><option value="gold">Gold</option><option value="rose">Rose gold</option><option value="silver">Silver</option></select></label></>); break;
+      case 'foil': title = 'Gold style'; body = (<><label>Metallic foil (titles, ornaments, numbers)<select value={c.foil} onChange={e => pal({ foil: e.target.value as CineData['foil'] })}><option value="gold">Gold</option><option value="rose">Rose gold</option><option value="silver">Silver</option></select></label>{presets()}</>); break;
+      case 'guest': title = 'Guest name'; body = (<><label className="ivCheck"><input type="checkbox" checked={data.opening.nameEnabled} onChange={e => setIn('opening', { nameEnabled: e.target.checked })} /> Write the guest’s name on the envelope</label>
+        {data.opening.nameEnabled && <div className="two"><label>Size: <b>{data.opening.nameSize}px</b><input type="range" min={12} max={48} value={data.opening.nameSize} onChange={e => setIn('opening', { nameSize: Number(e.target.value) })} /></label><InsColor label="Colour" value={hex(data.opening.nameColor, '#ffffff')} onChange={v => setIn('opening', { nameColor: v })} /></div>}</>); break;
+    }
+  }
+  if (hit.tw && body) {
+    const id = hit.tw, tw = { ...TWEAK_DEFAULT, ...(c.tweaks[id] || {}) };
+    const setTw = (p: Partial<Tweak>) => updCine(cc => ({ tweaks: { ...cc.tweaks, [id]: { ...(cc.tweaks[id] || {}), ...p } } }));
+    body = (<>{body}<div className="ivInsSep" />
+      <b>Position & size</b>
+      <small className="muted">Or drag it on the preview: corner dot = resize, top dot = turn.</small>
+      <div className="two"><InsRange label="Left / right" value={tw.dx} min={-60} max={60} step={0.5} onChange={v => setTw({ dx: v })} /><InsRange label="Up / down" value={tw.dy} min={-60} max={60} step={0.5} onChange={v => setTw({ dy: v })} /></div>
+      <div className="two"><InsRange label="Size" value={Math.round(tw.s * 100)} min={30} max={300} unit="%" onChange={v => setTw({ s: v / 100 })} /><InsRange label="Turn" value={tw.r} min={-180} max={180} unit="°" onChange={v => setTw({ r: v })} /></div>
+      {hit.photo && <div className="two"><InsRange label="Photo focus ←→" value={tw.fx} min={0} max={100} unit="%" onChange={v => setTw({ fx: v })} /><InsRange label="Photo focus ↑↓" value={tw.fy} min={0} max={100} unit="%" onChange={v => setTw({ fy: v })} /></div>}
+      {c.tweaks[id] && <button className="secondary" onClick={() => updCine(cc => { const t = { ...cc.tweaks }; delete t[id]; return { tweaks: t }; })}><RefreshCw /> Reset position & size</button>}</>);
+  }
+  if (!body) return null;
+  return (
+    <div className="ivInspector" role="dialog" aria-label={`Edit: ${title}`}>
+      <div className="ivInsHead"><div><small>Editing</small><b>{title}</b></div><button type="button" className="icon" onClick={close} aria-label="Close"><X /></button></div>
+      <div className="ivInsBody">{body}</div>
+      <small className="muted ivInsFoot">Changes show on the preview straight away. Press Save to keep them.</small>
+    </div>
+  );
+}
+
 function Sub({ children }: { children: React.ReactNode }) { return <h4 className="ivSubHead">{children}</h4>; }
 
 function PhotoTile({ label, url, busy, onFile, onClear, wide = false }: { label: string; url: string; busy: boolean; onFile: (f: File) => void; onClear: () => void; wide?: boolean }) {
@@ -1071,6 +1283,32 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
   const [replay, setReplay] = useState(0);
+  const [editOn, setEditOn] = useState(false);          // cinematic: click anything on the preview to edit it
+  const [hit, setHit] = useState<EditHit | null>(null);  // the element being edited
+  const cineApi = useRef<CineViewHandle | null>(null);
+  const closeHit = useCallback(() => setHit(null), []);
+  const [addOpen, setAddOpen] = useState(false);
+  const updCine = (fn: (c: CineData) => Partial<CineData>) => { setData(d => ({ ...d, cine: { ...d.cine, ...fn(d.cine) } })); setDirty(true); };
+  /* the preview reports a finished drag / resize / turn / delete */
+  const onXform = (key: string, patch: Record<string, number | boolean>) => {
+    if (key.startsWith('x:')) {
+      const id = key.slice(2);
+      if (patch.del) { updCine(c => ({ extras: c.extras.filter(e => e.id !== id) })); setHit(null); return; }
+      updCine(c => ({ extras: c.extras.map(e => (e.id === id ? { ...e, ...(patch as Partial<CineEl>) } : e)) }));
+    } else if (key.startsWith('tw:')) {
+      const id = key.slice(3);
+      updCine(c => ({ tweaks: { ...c.tweaks, [id]: { ...(c.tweaks[id] || {}), ...(patch as Partial<Tweak>) } } }));
+    }
+  };
+  /* add a free element where the reader is looking on the preview */
+  function addEl(type: CineEl['type'], o: Partial<CineEl> = {}) {
+    const at = cineApi.current?.place();
+    if (!at) { setNote('Press “Open envelope” first, then scroll the preview to where you want the new element.'); return; }
+    const el = blankEl(type, at.sec, at.y, o);
+    updCine(c => ({ extras: [...c.extras, { ...el, z: 5 + c.extras.length }] }));
+    setAddOpen(false); setNote('');
+    setHit({ key: 'x:' + el.id, label: '', lang: data.lang === 'en' ? 'en' : 'km', rect: { x: 0, y: 120, w: 0, h: 0, rw: 0, rh: 0 } });
+  }
   const [qr, setQr] = useState('');
   const [dirty, setDirty] = useState(false);
   const slugTouched = useRef(!!row);
@@ -1097,6 +1335,8 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
 
   /* weekday follows the date automatically until the admin types their own */
   const onDate = (date: string) => { setData(d => ({ ...d, date, weekday: isAutoWeekday(d.weekday) ? autoWeekday(date) : d.weekday })); setDirty(true); };
+
+  useEffect(() => { if (!cineMode) { setEditOn(false); setHit(null); } }, [cineMode]);
 
   const link = slug ? inviteUrl(slug) : '';
   useEffect(() => {
@@ -1424,8 +1664,34 @@ function InviteEditor({ row, onClose, startCanvas = false }: { row: Row | null; 
       </div>
 
       <aside className="ivPhoneCol">
-        <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} shareUrl={slug ? inviteUrl(slug) : ''} layoutEdit={layout} onLayout={p => setIn('opening', p)} /></div></div>
-        <small className="muted">Live preview. Tap the opening to try it, including the music.</small>
+        {cineMode && (
+          <div className="ivEditBar">
+            <button type="button" className={editOn ? '' : 'secondary'} onClick={() => { setEditOn(v => !v); setHit(null); }} aria-pressed={editOn}><MousePointerClick /> {editOn ? 'Editing on preview' : 'Edit on preview'}</button>
+            {editOn && <button type="button" className="secondary" onClick={() => cineApi.current?.open()} title="Play the envelope opening"><Play /> Open envelope</button>}
+            {editOn && <button type="button" className={addOpen ? '' : 'secondary'} onClick={() => setAddOpen(v => !v)} aria-expanded={addOpen}><Plus /> Add</button>}
+            <button type="button" className="secondary" onClick={() => { setHit(null); setReplay(n => n + 1); }} title="Back to the closed envelope"><RefreshCw /> Replay</button>
+            {editOn && addOpen && (
+              <div className="ivAddMenu">
+                <b>Add to the section you are looking at</b>
+                <div className="ivAddGrid">
+                  <button type="button" className="secondary" onClick={() => addEl('text')}>Aa Text</button>
+                  <label className="button secondary ivUpload"><ImagePlus /> {busy === 'xadd' ? '…' : 'Picture'}<input type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; pick(f, 'image', u => addEl('image', { image: u }), 'xadd'); }} /></label>
+                  <button type="button" className="secondary" onClick={() => addEl('button')}>Button</button>
+                  {(['circle', 'rect', 'line', 'heart', 'diamond'] as const).map(sh => <button key={sh} type="button" className="secondary" onClick={() => addEl('shape', { shape: sh, ...(sh === 'line' ? { w: 40 } : {}) })}>{({ circle: '● Circle', rect: '▬ Box', line: '— Line', heart: '♥ Heart', diamond: '◆ Diamond' })[sh]}</button>)}
+                </div>
+                <div className="ivAddEmoji">{['🦋', '🌸', '💍', '🕊️', '✨', '💖', '🌿', '🕯️', '🎉', '🪷', '🥂', '🌹'].map(em => <button key={em} type="button" onClick={() => addEl('text', { text: em, fs: 12, w: 22 })} aria-label={em}>{em}</button>)}</div>
+              </div>)}
+          </div>)}
+        <div className="ivPhoneWrap">
+          <div className="ivPhone"><div className="ivPhoneScreen"><InvitationView data={data} preview replayKey={replay} shareUrl={slug ? inviteUrl(slug) : ''} layoutEdit={layout} onLayout={p => setIn('opening', p)}
+            cineEdit={cineMode && editOn} cineSelected={hit?.key || ''} onCineEdit={h => { setHit(h.key ? h : null); if (h.key) setAddOpen(false); }} onCineXform={onXform} cineApi={cineApi} /></div></div>
+          {cineMode && editOn && hit && (
+            <div className="ivInsWrap" style={{ top: Math.round(Math.min(Math.max(hit.rect.y - 14, 0), 330)) }}>
+              <CineInspector hit={hit} data={data} busy={busy} close={closeHit} updCine={updCine} go={key => setHit(h => (h ? { ...h, key, label: '' } : h))}
+                set={set} setCine={setCine} setIn={setIn} onDate={onDate} pick={pick} uploadFile={f => uploadAsset(f, 'pictures', 'image')} setNote={setNote} />
+            </div>)}
+        </div>
+        <small className="muted">{cineMode && editOn ? 'Click anything on the invitation to edit it. Scroll the preview to reach every section.' : cineMode ? 'Live preview. Turn on “Edit on preview” to click and change anything.' : 'Live preview. Tap the opening to try it, including the music.'}</small>
       </aside>
       {builder && data.canvas && (
         <CanvasBuilder canvas={data.canvas} onChange={c => set({ canvas: c })} onClose={() => setBuilder(false)} onSave={() => save()} saving={!!busy}

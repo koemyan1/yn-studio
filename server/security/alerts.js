@@ -3,6 +3,12 @@
 // Alerts are throttled so an attack cannot flood your phone (or your database) with notifications.
 const MIN = 60000;
 
+// "where / what" suffix for alerts, e.g.  Phnom Penh, Phnom Penh, Cambodia | Mobile · Android 14 · Chrome 126 · Samsung SM-S918B | map: https://...
+const who = (geo, device) => {
+  const parts = [geo?.label ? geo.label + (geo.approximate ? ' (approx.)' : '') : null, device?.summary || null, geo?.mapsUrl ? 'map: ' + geo.mapsUrl : null].filter(Boolean);
+  return parts.length ? ' ' + parts.join(' | ') : '';
+};
+
 export function createAlerts({ notify, now = Date.now, log = console } = {}) {
   const last = new Map();
   const suppressed = new Map();
@@ -18,9 +24,9 @@ export function createAlerts({ notify, now = Date.now, log = console } = {}) {
   const send = (title, message, link = '/admin/security') => { try { Promise.resolve(notify(title, message, link)).catch(() => {}); } catch (e) { log.warn('[security] alert failed', e?.message); } };
 
   return {
-    ipBlocked({ ip, reason, minutes, permanent }) {
+    ipBlocked({ ip, reason, minutes, permanent, geo, device }) {
       if (!allow('ip_blocked', 5 * MIN)) return;
-      send('Security: IP auto-blocked', `${ip} was blocked ${permanent ? 'permanently' : `for ${minutes} min`} (${reason}).${take('ip_blocked')}`);
+      send('Security: IP auto-blocked', `${ip} was blocked ${permanent ? 'permanently' : `for ${minutes} min`} (${reason}).${who(geo, device)}${take('ip_blocked')}`);
     },
     spike(deniedLastMinute) {
       if (!allow('spike', 15 * MIN)) return;

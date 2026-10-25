@@ -477,3 +477,35 @@ body.ivPublicBody{background:#111;overflow:hidden}
 /* three-way mode chooser (guided form / cinematic / blank canvas) */
 .ivModeSeg3{grid-template-columns:repeat(3,1fr)}
 @media(max-width:640px){.ivModeSeg3{grid-template-columns:1fr}}
+
+/* ===================== Cinematic: click-to-edit on the preview ===================== */
+.ivEditBar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;width:340px;max-width:100%}
+.ivEditBar button{padding:8px 12px;font-size:13px;min-height:0}
+.ivEditBar button svg{width:15px;height:15px}
+.ivPhoneWrap{position:relative;width:340px;max-width:100%}
+.ivInsWrap{position:absolute;right:calc(100% + 16px);width:330px;z-index:40}
+.ivInspector{display:grid;gap:10px;padding:14px;border-radius:16px;background:var(--card,#fff);color:var(--text,#241b35);border:1px solid var(--line,#e6dff0);box-shadow:0 24px 60px rgba(40,10,60,.28);max-height:min(76vh,620px);overflow:auto;overscroll-behavior:contain}
+.ivInspector label{display:grid;gap:4px;font-size:13px}
+.ivInsHead{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:-14px;margin:-14px -14px 0;padding:12px 14px;background:inherit;border-bottom:1px solid var(--line,#e6dff0);z-index:1;border-radius:16px 16px 0 0}
+.ivInsHead small{display:block;font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:.06em}
+.ivInsHead b{font-size:15px}
+.ivInsBody{display:grid;gap:10px}
+.ivInsBody .two{gap:10px}
+.ivInsCol{display:grid;gap:8px;align-content:start}
+.ivInsThumb{width:100%;aspect-ratio:4/3;border-radius:12px;background:#eee center/cover no-repeat;border:1px solid var(--line,#e6dff0)}
+.ivInsFoot{font-size:11px}
+.ivInspector .danger{color:#b42318}
+@media(max-width:1100px){
+  .ivEditBar,.ivPhoneWrap{width:300px}
+  .ivInsWrap{position:fixed;left:8px;right:8px;bottom:8px;top:auto!important;width:auto;z-index:80}
+  .ivInspector{max-height:54vh}
+}
+.ivEditBar{position:relative}
+.ivAddMenu{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:50;display:grid;gap:8px;padding:12px;border-radius:14px;background:var(--card,#fff);border:1px solid var(--line,#e6dff0);box-shadow:0 18px 40px rgba(40,10,60,.25)}
+.ivAddMenu>b{font-size:12px}
+.ivAddGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ivAddGrid>*{justify-content:center;text-align:center}
+.ivAddEmoji{display:flex;flex-wrap:wrap;gap:4px}
+.ivAddEmoji button{background:transparent;border:1px solid var(--line,#e6dff0);border-radius:10px;font-size:20px;padding:4px 8px;min-height:0}
+.ivInsSep{height:1px;background:var(--line,#e6dff0);margin:4px 0}
+.ivInspector input[type=range]{width:100%}

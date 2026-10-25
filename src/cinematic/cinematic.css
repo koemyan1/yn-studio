@@ -291,10 +291,10 @@
 
 /* love story: pinned strip, day to dusk */
 .cn-story{position:relative;height:calc(var(--n,1) * 100cqh);--t:0;--day:color-mix(in srgb,var(--cream) 92%,#ffd9a0);--dusk:color-mix(in srgb,var(--paper) 35%,#160f2a)}
-.cn-pin{position:sticky;top:0;height:100cqh;overflow:hidden;display:grid;align-content:center;justify-items:center;gap:3cqh;
+.cn-pin{position:sticky;top:0;height:100cqh;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);align-content:center;justify-items:center;gap:3cqh;text-align:center;
   background:linear-gradient(180deg,color-mix(in srgb,var(--day) calc((1 - var(--t)) * 100%),var(--dusk)),color-mix(in srgb,color-mix(in srgb,var(--cream) 80%,#e9a56a) calc((1 - var(--t)) * 100%),color-mix(in srgb,var(--paper) 55%,#4a2a50)))}
 .cn-storyH{position:absolute;top:calc(6cqh + 40px);left:0;right:0;font-size:clamp(18px,5.6cqw,28px)}
-.cn-track{display:flex;width:calc(var(--n,1) * 100%);will-change:transform}
+.cn-track{display:flex;width:calc(var(--n,1) * 100%);justify-self:start;will-change:transform}
 .cn-slide{flex:0 0 calc(100% / var(--n,1));display:grid;justify-items:center;gap:3.2cqh;padding:0 8cqw;opacity:.35;scale:.94;transition:opacity .7s,scale .7s}
 .cn-slide.on{opacity:1;scale:1}
 .cn-polaroid{width:min(66cqw,38cqh * .8,300px);padding:10px 10px 28px;background:#fffdf8;box-shadow:0 18px 40px -10px rgba(0,0,0,.5);rotate:var(--r);transition:rotate .8s}
@@ -376,3 +376,53 @@
 
 /* the love-story heading sits on a sky that goes from day to dusk, so it follows the sky instead of using the bright foil */
 .cn-storyH.cn-foil{background:none;-webkit-text-fill-color:currentColor;color:color-mix(in srgb,var(--gold-deep) calc((1 - var(--t)) * 100%),var(--gold-hi))}
+
+/* ================================================================ preview editor (admin only) ================================================================ */
+.cn-edlayer{position:absolute;inset:0;z-index:95;pointer-events:none;overflow:hidden}
+.cn-edbox{position:absolute;left:0;top:0;display:none;box-sizing:border-box;border:1.5px dashed #8b5cf6;border-radius:5px;background:rgba(139,92,246,.07);pointer-events:none}
+.cn-edsel{border:2px solid #7c3aed;background:rgba(124,58,237,.1);box-shadow:0 0 0 1px rgba(255,255,255,.85),0 0 0 4px rgba(124,58,237,.22)}
+.cn-edsel b{position:absolute;left:-2px;bottom:100%;margin-bottom:3px;padding:2px 8px;border-radius:6px 6px 6px 0;background:#7c3aed;color:#fff;font:600 11px/1.5 system-ui,sans-serif;white-space:nowrap;letter-spacing:0;max-width:70cqw;overflow:hidden;text-overflow:ellipsis}
+.cn-edsel.low b{bottom:auto;top:100%;margin:3px 0 0;border-radius:0 6px 6px 6px}
+.cn-edit [data-ed]{cursor:pointer}
+/* things that are normally click-through must be hittable in edit mode; the iframe would swallow the click */
+.cn-edit .cn-map iframe{pointer-events:none}
+.cn-edit .cn-top{pointer-events:none}.cn-edit .cn-top [data-ed]{pointer-events:auto}
+.cn-edit .cn-candleHint{pointer-events:auto}
+.cn-edit .cn-corner,.cn-edit .cn-crest{pointer-events:auto}
+/* empty sections are shown as a small "add" band so every part of the invitation can be reached */
+.cn-addsec{min-height:0!important;padding:26px 7cqw!important}
+.cn-addsec>span{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:1.6px dashed color-mix(in srgb,var(--gold) 70%,transparent);border-radius:14px;font:600 13px var(--cn-body);opacity:.85}
+.cn-mapPh{display:grid;place-items:center;background:color-mix(in srgb,var(--night) 70%,var(--paper));color:var(--gold-hi)}
+.cn-mapPh svg{width:34px;height:34px}
+/* in edit mode the reveal choreography is already done, so a re-render after every keystroke does not replay it */
+.cn-edit .cn-cover .cn-reveal,.cn-edit .cn-cover .cn-fl-line,.cn-edit .cn-cover .cn-heart,.cn-edit .cn-cover .cn-bf,.cn-edit .cn-cover .cn-wing-l,.cn-edit .cn-cover .cn-wing-r,.cn-edit .cn-cover .cn-corner,
+.cn-edit .cn-cover .cn-cA,.cn-edit .cn-cover .cn-cC,.cn-edit .cn-cover .cn-scroll,.cn-edit .cn-cover .cn-en,
+.cn-edit [data-rv].in .cn-sh>.cn-h,.cn-edit [data-rv].in .cn-sh>.cn-div,.cn-edit [data-rv].in .cn-archImg,.cn-edit [data-rv].in .cn-wl>span,.cn-edit [data-rv].in .cn-par,.cn-edit [data-rv].in .cn-fig,
+.cn-edit [data-rv].in .cn-cd>div,.cn-edit [data-rv].in .cn-gi,.cn-edit [data-rv].in .cn-big,.cn-edit [data-rv].in .cn-thanksTxt,.cn-edit [data-rv].in .cn-logoBox,.cn-edit [data-rv].in .cn-shareH,
+.cn-edit [data-rv].in .cn-share,.cn-edit [data-rv].in .cn-credit{animation-duration:.001s!important;animation-delay:0s!important}
+.cn-edit [data-rv].in .cn-flame{animation:cnFlick 1.6s ease-in-out infinite alternate!important;scale:1}
+.cn-edit .cn-ic-box,.cn-edit .cn-ic-g *{transition:none}
+/* the cover's text layer must not hide the corner ornaments and photo from the editor: only its marked children take clicks */
+.cn-edit .cn-cmain{pointer-events:none}.cn-edit .cn-cmain [data-ed]{pointer-events:auto}
+
+/* ================================================================ free elements + move / resize handles ================================================================ */
+.cn-x{position:absolute;z-index:var(--z,5);translate:-50% -50%;rotate:var(--r,0deg);max-width:none}
+.cn-xi{display:block;width:100%;margin:0}
+.cn-xt{line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.cn-xt.cn-foil{display:block}
+.cn-xm{height:auto}
+.cn-xph{display:grid;place-items:center;background:rgba(127,127,127,.25);color:inherit;font-size:28px;border:1.5px dashed currentColor}
+.cn-xb{display:flex;align-items:center;justify-content:center;text-align:center;padding:.75em 1em;text-decoration:none;color:#2a1c06;background:var(--foil);box-shadow:0 8px 18px -8px rgba(0,0,0,.6);line-height:1.4}
+.cn-xs{display:block}
+.cn-a-float{animation:cnXfloat 4s ease-in-out infinite}.cn-a-pulse{animation:cnXpulse 2.2s ease-in-out infinite}.cn-a-spin{animation:cnXspin 12s linear infinite}
+.cn-a-wiggle{animation:cnXwig 1.6s ease-in-out infinite}.cn-a-sway{animation:cnXsway 5s ease-in-out infinite;transform-origin:50% 0}
+@keyframes cnXfloat{50%{translate:0 -8px}}@keyframes cnXpulse{50%{scale:1.08}}@keyframes cnXspin{to{rotate:360deg}}@keyframes cnXwig{25%{rotate:-5deg}75%{rotate:5deg}}@keyframes cnXsway{50%{rotate:6deg}}
+@media (prefers-reduced-motion:reduce){.cn-xi{animation:none!important}}
+.cn-edit [data-x],.cn-edit [data-tw] [data-ed]{touch-action:none}
+.cn-edit [data-x]{cursor:move}
+.cn-edit [data-x] a{pointer-events:none}
+.cn-edh{position:absolute;display:none;width:16px;height:16px;box-sizing:border-box;border-radius:50%;background:#fff;border:2px solid #7c3aed;box-shadow:0 1px 4px rgba(0,0,0,.35);pointer-events:auto;touch-action:none}
+.cn-edsel.xf .cn-edh{display:block}
+.cn-edh-rs{right:-9px;bottom:-9px;cursor:nwse-resize}
+.cn-edh-rot{left:50%;top:-30px;margin-left:-8px;cursor:grab;background:#7c3aed;border-color:#fff}
+.cn-edsel.xf.low .cn-edh-rot{top:auto;bottom:-30px}

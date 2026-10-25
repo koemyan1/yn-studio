@@ -24,3 +24,15 @@ export const TEXT = {
     thanksHead: 'Thank you', shareHead: 'Share this invitation', shareTg: 'Send via Telegram', shareMs: 'Send via Messenger', shareFb: 'Send via Facebook', copy: 'Copy link', copied: 'Link copied', credit: 'Design inspired by ynstudio',
   },
 } as const;
+
+/* The fixed wording with any per-invitation overrides (typed by the admin on the preview) laid over it.
+   Only plain strings can be overridden; the unit / label lists stay as they are. */
+export function getT(cfg: { lang: 'km' | 'en'; texts?: Record<string, string> }): Dict {
+  const base = TEXT[cfg.lang] as Record<string, unknown>;
+  const out: Record<string, unknown> = { ...base };
+  const o = cfg.texts || {};
+  Object.keys(o).forEach(k => { if (typeof base[k] === 'string' && typeof o[k] === 'string' && o[k] !== '') out[k] = o[k]; });
+  return out as Dict;
+}
+/* Keys of TEXT that are plain strings (what the preview editor may change). */
+export const TEXT_KEYS = Object.keys(TEXT.km).filter(k => typeof (TEXT.km as Record<string, unknown>)[k] === 'string');

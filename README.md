@@ -26,7 +26,7 @@ Set on Render (see `render.yaml`). Secrets must never use a `VITE_` prefix.
 | `PUBLIC_URL` | Payment callbacks |
 | `BAKONG_API_TOKEN`, `BAKONG_ACCOUNT_ID`, `BAKONG_MERCHANT_NAME`, `BAKONG_CURRENCY` (+ `BAKONG_KHR_RATE`, `BAKONG_QR_MINUTES`, ...) | KHQR payments |
 | `ABA_PAYWAY_MERCHANT_ID`, `ABA_PAYWAY_API_KEY`, `ABA_PAYWAY_ENV` (+ `_CURRENCY`, `_KHR_RATE`, ...) | ABA PayWay (optional) |
-| `SECURITY_SHIELD`, `RL_*`, `BLOCK_SCORE`, `ALLOW_IPS`, `TRUSTED_PROXY_CIDRS`, `CSP_*`, `HSTS_SUBDOMAINS` | Security shield tuning (all optional) |
+| `SECURITY_SHIELD`, `RL_*`, `BLOCK_SCORE`, `ALLOW_IPS`, `TRUSTED_PROXY_CIDRS`, `CSP_*`, `HSTS_SUBDOMAINS`, `GEO_LOOKUP`, `GEO_LOOKUP_URL` | Security shield tuning (all optional) |
 
 ## Where things are
 

@@ -26,6 +26,16 @@ const LABEL: Record<string, string> = {
   tamper_attempt: 'Database tamper attempt', csp_violation: 'Browser script/CSP report', admin_action: 'Admin action', bad_payload: 'Malformed request body',
 };
 const nice = (t: string) => LABEL[t] || t;
+// Approximate location (from the visitor's IP) + device, recorded by the server with every detection / block.
+const safeMap = (u: any) => (typeof u === 'string' && u.startsWith('https://www.google.com/maps/') ? u : '');
+function Who({ geo, device }: { geo?: any; device?: any }) {
+  if (!geo && !device) return <span className="secMuted">—</span>;
+  const map = safeMap(geo?.mapsUrl);
+  return <div className="secWho">
+    {geo && <div>{geo.tor ? 'Tor network' : geo.label || 'Unknown location'}{geo.lat != null && geo.lng != null ? <small> ({geo.lat}, {geo.lng})</small> : null}{map ? <> · <a href={map} target="_blank" rel="noopener noreferrer">Map</a></> : null}</div>}
+    {device && <div className="secMuted">{device.summary || device.type}</div>}
+  </div>;
+}
 
 export default function AdminSecurity({ Shell }: { Shell: Shell }) {
   const [sum, setSum] = useState<any>(null);
@@ -106,9 +116,9 @@ export default function AdminSecurity({ Shell }: { Shell: Shell }) {
 
           <div className="panel">
             <h2>Top sources (24 h)</h2>
-            <div className="secScroll"><table><thead><tr><th>IP</th><th>Events</th><th>What</th><th /></tr></thead><tbody>
-              {sum.topIps.map((x: any) => <tr key={x.ip}><td><code>{x.ip}</code></td><td>{x.count}</td><td>{x.types.map(nice).join(', ')}</td><td><button className="secondary small" disabled={busy} onClick={() => act('/block', { ip: x.ip, minutes: 1440, reason: 'manual block from top sources' }, 'Blocked ' + x.ip + ' for 24 h')}>Block 24 h</button></td></tr>)}
-              {!sum.topIps.length && <tr><td colSpan={4} className="secMuted">Nothing suspicious in the last 24 hours.</td></tr>}
+            <div className="secScroll"><table><thead><tr><th>IP</th><th>Events</th><th>What</th><th>Location &amp; device</th><th /></tr></thead><tbody>
+              {sum.topIps.map((x: any) => <tr key={x.ip}><td><code>{x.ip}</code></td><td>{x.count}</td><td>{x.types.map(nice).join(', ')}</td><td><Who geo={x.geo} device={x.device} /></td><td><button className="secondary small" disabled={busy} onClick={() => act('/block', { ip: x.ip, minutes: 1440, reason: 'manual block from top sources' }, 'Blocked ' + x.ip + ' for 24 h')}>Block 24 h</button></td></tr>)}
+              {!sum.topIps.length && <tr><td colSpan={5} className="secMuted">Nothing suspicious in the last 24 hours.</td></tr>}
             </tbody></table></div>
             <h2 style={{ marginTop: 18 }}>Order price check</h2>
             <p className="secMuted">Customers&apos; browsers send the prices and totals of an order themselves. This check compares every order with your real product prices before a payment QR is made or an order is marked paid.
@@ -128,9 +138,9 @@ export default function AdminSecurity({ Shell }: { Shell: Shell }) {
               {sum.byType.map((x: any) => <option key={x.type} value={x.type}>{nice(x.type)} ({x.count})</option>)}
             </select>
           </div>
-          <div className="secScroll"><table><thead><tr><th>Time</th><th>Type</th><th>Level</th><th>IP</th><th>Where</th><th>×</th></tr></thead><tbody>
-            {events.map((e, i) => <tr key={(e.id || i) + '-' + e.created_at}><td>{when(e.created_at)}</td><td>{nice(e.type)}</td><td><span className={'sev ' + (e.severity || 'low')}>{e.severity || 'low'}</span></td><td><code>{e.ip || '—'}</code></td><td><code>{(e.path || '').slice(0, 60)}</code></td><td>{e.count || 1}</td></tr>)}
-            {!events.length && <tr><td colSpan={6} className="secMuted">No events yet.</td></tr>}
+          <div className="secScroll"><table><thead><tr><th>Time</th><th>Type</th><th>Level</th><th>IP</th><th>Location &amp; device</th><th>Path</th><th>×</th></tr></thead><tbody>
+            {events.map((e, i) => <tr key={(e.id || i) + '-' + e.created_at}><td>{when(e.created_at)}</td><td>{nice(e.type)}</td><td><span className={'sev ' + (e.severity || 'low')}>{e.severity || 'low'}</span></td><td><code>{e.ip || '—'}</code></td><td><Who geo={e.details?.geo} device={e.details?.device} /></td><td><code>{(e.path || '').slice(0, 60)}</code></td><td>{e.count || 1}</td></tr>)}
+            {!events.length && <tr><td colSpan={7} className="secMuted">No events yet.</td></tr>}
           </tbody></table></div>
         </div>
       </>}

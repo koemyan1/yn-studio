@@ -69,13 +69,15 @@ function applyHeaders(req, res, hdr) {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self)');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  // Lets Chromium browsers send the device model / OS version on later requests, so security events can name the phone.
+  res.setHeader('Accept-CH', 'Sec-CH-UA-Model, Sec-CH-UA-Platform-Version');
   const https = req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
   if (https) res.setHeader('Strict-Transport-Security', `max-age=15552000${process.env.HSTS_SUBDOMAINS === '1' ? '; includeSubDomains' : ''}`);
   if (hdr.cspHeader) res.setHeader(hdr.cspHeader, hdr.csp);
 }
 
 /* ------------------------------- shield ------------------------------- */
-export function createShield({ store, alerts, env = process.env, now = Date.now, log = console } = {}) {
+export function createShield({ store, alerts, intel = null, env = process.env, now = Date.now, log = console } = {}) {
   const cfg = {
     enabled: env.SECURITY_SHIELD !== 'off',
     globalPerMin: num(env.RL_GLOBAL_PER_MIN, 900),   // every request type, per IP
@@ -107,6 +109,7 @@ export function createShield({ store, alerts, env = process.env, now = Date.now,
     for (const [k, g] of strikeGate) if (g <= t) strikeGate.delete(k);
     for (const m of [counters, scores, blocks, levels]) if (m.size > cfg.maxKeys) m.clear(); // hard cap: fail open rather than grow forever
     runtime.deniedWindow = runtime.deniedWindow.filter(x => t - x < MIN);
+    intel?.sweep();
   }
   let sweeper = null;
   const startSweeper = () => { if (!sweeper) { sweeper = setInterval(sweep, 30000); sweeper.unref?.(); } };
@@ -136,8 +139,16 @@ export function createShield({ store, alerts, env = process.env, now = Date.now,
     scores.delete(key);
     store?.saveBlock(b);
     store?.log({ ip, type: 'ip_blocked', severity: 'high', action: 'blocked', details: { reason, minutes: mins, level, by, permanent } });
-    if (by === 'auto') alerts?.ipBlocked({ ip, reason, minutes: mins, permanent });
+    if (by === 'auto') notifyBlocked({ ip, reason, minutes: mins, permanent });
     return b;
+  }
+  /** Alert the admin with WHERE and WHAT the blocked visitor is. Waits (max ~2.5 s) for a free location lookup if needed. */
+  function notifyBlocked(a) {
+    try {
+      const info = intel?.describe({ ip: a.ip }) || {};
+      const fire = geo => { try { alerts?.ipBlocked({ ...a, geo: geo ?? info.geo ?? null, device: info.device ?? null }); } catch { /* alert failures never matter */ } };
+      if (info.pending) info.pending.then(fire, () => fire(null)); else fire(info.geo);
+    } catch { alerts?.ipBlocked(a); }
   }
   function unblock(ip) {
     const key = ipKey(ip);
@@ -203,6 +214,7 @@ export function createShield({ store, alerts, env = process.env, now = Date.now,
 
       const allowed = isAllowed(ip, key);
       if (!allowed) {
+        intel?.remember(req, key, viaCloudflare);   // cheap: keeps header references so a later event can say where / what
         const b = activeBlock(key);
         if (b) { store?.log({ ip, type: 'blocked_request', severity: 'low', action: 'blocked', method: req.method, path, details: { reason: b.reason } }); return deny(res, 403, 'Access temporarily blocked.', Math.ceil((b.until - now()) / 1000)); }
         if (isHoneypot(path)) { strike(ip, 'honeypot', 12, META(req)); return deny(res, 404, 'Not found'); }

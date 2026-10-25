@@ -1,9 +1,10 @@
 // Persistence for security events / blocks / allowlist / settings (Supabase tables, service-role key, $0).
 // Design rules: (1) logging must never slow down or crash a request, (2) logging must not become its own DoS
 // (events are de-duplicated and capped), (3) if the database is unreachable everything keeps working from memory.
+import { NO_INTEL } from './intel.js';
 const MIN = 60000;
 
-export function createStore({ sb, enabled, now = Date.now, log = console, retentionDays = 30 } = {}) {
+export function createStore({ sb, enabled, now = Date.now, log = console, retentionDays = 30, intel = null } = {}) {
   const buffer = [];                 // waiting to be flushed to the database
   const ring = [];                   // last events, always available in memory (dashboard fallback)
   const dedupe = new Map();          // `${ip}|${type}` -> buffered event being aggregated
@@ -11,11 +12,20 @@ export function createStore({ sb, enabled, now = Date.now, log = console, retent
   const state = { dbOk: null, failing: 0, backoffUntil: 0, dropped: 0, perMinute: 0, minuteStart: now(), warned: false };
   const MAX_BUFFER = 1000, MAX_RING = 400, MAX_PER_MINUTE = 240, DEDUPE_MS = 30000;
 
+  // Location + device travel inside the existing `details` jsonb column, so no database migration is needed:
+  //   details.geo    = { country, countryCode, region, city, lat, lng, mapsUrl, label, source, approximate }
+  //   details.device = { type, os, osVersion, browser, browserVersion, brand, model, bot, summary }
+  const detailsOf = e => {
+    const d = { ...(e.details || {}) };
+    if (e.geo) d.geo = e.geo;
+    if (e.device) d.device = e.device;
+    return d;
+  };
   const rowOf = e => ({
     ip: e.ip || null, type: e.type, severity: e.severity || 'low', action: e.action || 'logged',
     method: e.method || null, path: e.path ? String(e.path).slice(0, 300) : null,
     user_agent: e.ua ? String(e.ua).slice(0, 200) : null, user_id: e.userId || null,
-    details: e.details || {}, count: e.count || 1,
+    details: detailsOf(e), count: e.count || 1,
   });
 
   function logEvent(e) {
@@ -26,6 +36,12 @@ export function createStore({ sb, enabled, now = Date.now, log = console, retent
       const hit = dedupe.get(k);
       if (hit && t - hit.t < DEDUPE_MS) { hit.ev.count = (hit.ev.count || 1) + (e.count || 1); return; }
       const ev = { ...e, count: e.count || 1, ts: new Date(t).toISOString() };
+      if (intel && ev.ip && !NO_INTEL.has(ev.type)) {
+        const info = intel.describe(ev);
+        ev.geo = info.geo; ev.device = info.device;
+        // A free lookup may still be filling in city / coordinates: flush() waits for it (max ~2.5 s), so it is saved too.
+        if (info.pending) ev.pending = info.pending.then(g => { ev.geo = g; }).catch(() => {}).finally(() => { ev.pending = null; });
+      }
       ring.push(ev); if (ring.length > MAX_RING) ring.shift();
       dedupe.set(k, { t, ev });
       if (dedupe.size > 5000) for (const [kk, v] of dedupe) if (t - v.t > DEDUPE_MS) dedupe.delete(kk);
@@ -39,6 +55,7 @@ export function createStore({ sb, enabled, now = Date.now, log = console, retent
     if (!enabled || !buffer.length || now() < state.backoffUntil) return;
     const batch = buffer.splice(0, 100);
     try {
+      await Promise.all(batch.map(e => e.pending).filter(Boolean));
       await sb('security_events', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(batch.map(rowOf)) });
       state.dbOk = true; state.failing = 0; state.warned = false;
     } catch (e) {
@@ -83,7 +100,7 @@ export function createStore({ sb, enabled, now = Date.now, log = console, retent
     await flush();
     if (!enabled || state.dbOk === false) {
       return ring.filter(e => (!type || e.type === type) && (!ip || e.ip === ip)).slice(-limit).reverse()
-        .map(e => ({ created_at: e.ts, ip: e.ip, type: e.type, severity: e.severity || 'low', action: e.action || 'logged', method: e.method, path: e.path, count: e.count || 1, details: e.details || {} }));
+        .map(e => ({ created_at: e.ts, ip: e.ip, type: e.type, severity: e.severity || 'low', action: e.action || 'logged', method: e.method, path: e.path, count: e.count || 1, details: detailsOf(e) }));
     }
     let q = `security_events?select=id,created_at,ip,type,severity,action,method,path,count,details&order=created_at.desc&limit=${Math.min(limit, 5000)}`;
     if (sinceIso) q += `&created_at=gte.${encodeURIComponent(sinceIso)}`;

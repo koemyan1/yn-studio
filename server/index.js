@@ -8,6 +8,8 @@ import { createAlerts } from './security/alerts.js';
 import { createShield } from './security/shield.js';
 import { createAdminApi } from './security/adminApi.js';
 import { createIntegrity } from './security/integrity.js';
+import { createIntel } from './security/intel.js';
+import { createGeoLookup } from './security/geo.js';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -96,9 +98,13 @@ async function userFromToken(req) {
 /* ------------------------------------------------------------------ *
  *  Security layer (setup + dashboard: docs/setup/SECURITY-SETUP.md, /admin/security)
  * ------------------------------------------------------------------ */
-const secStore = createStore({ sb, enabled: !!(SB.url && SB.service) });
+// Location + device of everyone the shield detects or blocks. Cloudflare headers first; the free lookup only fills gaps
+// (GEO_LOOKUP=off disables it, GEO_LOOKUP_URL swaps the provider). See docs/setup/SECURITY-SETUP.md "Who was it?".
+const geoLookup = /^off$/i.test(process.env.GEO_LOOKUP || '') ? null : createGeoLookup({ url: process.env.GEO_LOOKUP_URL || undefined });
+const secIntel = createIntel({ lookup: geoLookup });
+const secStore = createStore({ sb, enabled: !!(SB.url && SB.service), intel: secIntel });
 const secAlerts = createAlerts({ notify: (title, message, link) => notifyAdmin(title, message, link) });
-shield = createShield({ store: secStore, alerts: secAlerts });
+shield = createShield({ store: secStore, alerts: secAlerts, intel: secIntel });
 const integrity = createIntegrity({ sb, store: secStore, alerts: secAlerts });
 const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
 app.use('/api/admin/security', adminApi.handler);

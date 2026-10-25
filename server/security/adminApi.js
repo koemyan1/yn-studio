@@ -53,7 +53,7 @@ export function createAdminApi({ shield, store, sb, userFromToken, now = Date.no
       const c = Number(r.count) || 1;
       byType.set(r.type, (byType.get(r.type) || 0) + c);
       if (r.action === 'blocked' || r.action === 'rate_limited') blockedRequests += c;
-      if (r.ip) { const e = byIp.get(r.ip) || { ip: r.ip, count: 0, last: r.created_at, types: new Set() }; e.count += c; e.types.add(r.type); if (r.created_at > e.last) e.last = r.created_at; byIp.set(r.ip, e); }
+      if (r.ip) { const e = byIp.get(r.ip) || { ip: r.ip, count: 0, last: r.created_at, types: new Set(), geo: null, device: null }; e.count += c; e.types.add(r.type); if (r.created_at > e.last) e.last = r.created_at; if (!e.geo && r.details?.geo) e.geo = r.details.geo; if (!e.device && r.details?.device) e.device = r.details.device; byIp.set(r.ip, e); }
       const hk = hourKey(r.created_at); if (timeline.has(hk)) timeline.set(hk, timeline.get(hk) + c);
     }
     const t = k => byType.get(k) || 0;
@@ -72,7 +72,7 @@ export function createAdminApi({ shield, store, sb, userFromToken, now = Date.no
         cspReports: t('csp_violation'),
       },
       byType: [...byType].map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count),
-      topIps: [...byIp.values()].map(e => ({ ip: e.ip, count: e.count, last: e.last, types: [...e.types].slice(0, 4) })).sort((a, b) => b.count - a.count).slice(0, 10),
+      topIps: [...byIp.values()].map(e => ({ ip: e.ip, count: e.count, last: e.last, types: [...e.types].slice(0, 4), geo: e.geo, device: e.device })).sort((a, b) => b.count - a.count).slice(0, 10),
       timeline: [...timeline].map(([hour, count]) => ({ hour, count })),
       activeBlocks: shield.listBlocks().length,
       settings: { integrity_mode: await store.getSetting('integrity_mode', 'report') },
