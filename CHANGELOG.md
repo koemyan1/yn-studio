@@ -2,6 +2,21 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: removed Wedding Invitations and the Video Editor
+
+- Removed both admin pages (sidebar links, dashboard shortcuts and routes), the public invitation pages (`/i/...`), the "My invitations" block on the customer Services page, and the server's invitation link-preview route.
+- Deleted their code and assets: `Invitations.tsx`, `InviteArt.tsx`, `InviteCanvas.tsx`, `Cinematic.tsx`, `cinematic/`, `invitations.css`, `AdminVideoEditor.tsx`, `avatar.tsx`, `public/avatar-doodle.svg`, `tools/cinematic-qa/`, `supabase-wedding-invitations.sql` (and its RUN-ORDER row).
+- Your live Supabase data is untouched: the `wedding_invitations` table and its storage stay in the database, unused. Old changelog notes for these two features are kept as history.
+- `qrcode` and `html-to-image` stay installed (the wallet QR and the CV PDF use them).
+
+## Unreleased: wallet transfers by QR code
+
+- Every customer has their own wallet QR on the **Wallet page** (`YNPAY:<random code>`; no user id, email or balance inside). Buttons: **Scan to send**, **Save QR**, **Copy code**.
+- **Scan to send** opens the camera (also works from a saved photo or by typing the code), shows who you are paying, lets you pick the **dollar or riel wallet**, enter the amount (+ optional note), review, then confirm. Dollars stay dollars and riel stays riel.
+- The money moves in one database transaction (both wallets locked in a fixed order, no double-spend). Limits: $0.01 / 100 riel minimum, $1,000 / 4,000,000 riel maximum, 20 transfers per hour. Both people get a wallet history row and a notification; the admin Transactions page shows them too.
+- **Run once:** `supabase/sql/supabase-wallet-transfer.sql` (RUN-ORDER 33b). Until it is run, the QR panel shows "not set up yet".
+- Files: `src/WalletTransfer.tsx` (new), `src/wallet.css`, `src/main.tsx` (import, panel on the Wallet page, readable type names on the transaction page), `supabase/sql/supabase-wallet-transfer.sql`.
+
 ## Unreleased: location + device on security events
 
 - Every time the security shield detects or blocks someone it now records **approximate location** (country, region, city, latitude, longitude, clickable Google Maps link) and **device** (mobile / tablet / desktop / bot, OS + version, browser + version, brand / model when available). Shown in `/admin/security` (*Location & device*, *Map* link) and in the auto-block alert. Stored in each event's `details`, so no SQL is needed.

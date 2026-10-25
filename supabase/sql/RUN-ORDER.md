@@ -81,6 +81,7 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 31 | `supabase-wallet-riel.sql` | header: after supabase-bakong.sql and supabase-debt-multi-currency.sql (stated in the file) |
 | 32 | `supabase-debt-riel-pay.sql` | header: AFTER supabase-wallet-riel.sql and supabase-debt-khqr-fix.sql (stated in the file) |
 | 33 | `supabase-wallet-separate-riel.sql` | header: AFTER supabase-debt-riel-pay.sql (stated in the file); final writer of bakong_apply_payment |
+| 33b | `supabase-wallet-transfer.sql` | NEW: wallet-to-wallet transfers by QR code; needs `supabase-wallet-separate-riel.sql` (balance_khr + currency column) and uses the existing wallet notification trigger |
 | 34 | `supabase-debt-customer-access-fix.sql` | header: after the debt tables/functions exist (stated in the file) |
 
 ## 6. Themes
@@ -105,7 +106,6 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 45 | `supabase-push.sql` | inferred (no dependency found; grouped by topic) |
 | 46 | `supabase-services.sql` | detected: needs a table the earlier file creates |
 | 47 | `yn-studio-feature-fix.sql` | inferred (no dependency found; grouped by topic) |
-| 47b | `supabase-wedding-invitations.sql` | NEW: wedding e-invitations; needs `profiles` (admin role check). Independent of the other files, run any time |
 
 ## 8. Security (last; redefines pay_order_with_wallet)
 

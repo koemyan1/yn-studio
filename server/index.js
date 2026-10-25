@@ -679,58 +679,6 @@ app.get('/api/bakong/health', shield.limiter('bakong-health', 6), async (_req, r
   }
 });
 
-/* ---------- Wedding invitation link previews (Telegram, Messenger, Facebook...) ----------
-   The site is a single-page app, so every link would show the same generic card. For /i/:slug we read the
-   PUBLISHED invitation (public data only, with the anon key) and write its own title, description and picture into
-   index.html before it is sent. No new packages; any failure falls back to the normal page. */
-const KH_D = '០១២៣៤៥៦៧៨៩';
-const KH_M = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
-const khDate = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); if (!m) return ''; const kh = n => String(n).replace(/\d/g, c => KH_D[+c]); return `ថ្ងៃទី${kh(+m[3])} ខែ${KH_M[+m[2] - 1]} ឆ្នាំ${kh(m[1])}`; };
-const escAttr = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const ogCache = new Map();
-let indexHtml = null;
-async function inviteMeta(slug) {
-  const hit = ogCache.get(slug);
-  if (hit && Date.now() - hit.t < 60_000) return hit.v;
-  let v = null;
-  try {
-    if (SB.url && SB.anon && /^[a-z0-9][a-z0-9-]{2,60}$/.test(slug)) {
-      const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 2500);
-      const r = await fetch(`${SB.url}/rest/v1/wedding_invitations?slug=eq.${encodeURIComponent(slug)}&published=eq.true&select=title,data&limit=1`, { headers: { apikey: SB.anon, Authorization: `Bearer ${SB.anon}` }, signal: ac.signal });
-      clearTimeout(to);
-      if (r.ok) { const rows = await r.json(); if (rows[0]) v = rows[0]; }
-    }
-  } catch { /* fall back to the plain page */ }
-  ogCache.set(slug, { t: Date.now(), v });
-  if (ogCache.size > 500) ogCache.delete(ogCache.keys().next().value);
-  return v;
-}
-app.get(['/i/:slug', '/i/:slug/:code'], shield.limiter('og', 240), async (req, res, next) => {
-  try {
-    const row = await inviteMeta(String(req.params.slug).toLowerCase());
-    if (!row) return next();
-    if (!indexHtml) indexHtml = (await import('node:fs')).readFileSync(path.join(distPath, 'index.html'), 'utf8');
-    const d = row.data || {}, c = d.cine || {};
-    const names = [d.groom, d.bride].filter(Boolean).join(' & ') || [c.groomEn, c.brideEn].filter(Boolean).join(' & ') || row.title || 'Wedding invitation';
-    const when = khDate(d.date);
-    const title = `${names} · សិរីសួស្តីអាពាហ៍ពិពាហ៍`;
-    const desc = `សូមគោរពអញ្ជើញចូលរួមក្នុងពិធីអាពាហ៍ពិពាហ៍${when ? ' · ' + when : ''} — You are invited to our wedding`;
-    const img = [c.ogImage, d.opening && d.opening.image, d.gallery && d.gallery[0]].find(u => typeof u === 'string' && /^https:\/\//.test(u)) || '';
-    const proto = String(req.headers['x-forwarded-proto'] || req.protocol).split(',')[0];
-    const origin = (env.PUBLIC_URL || `${proto}://${req.headers['x-forwarded-host'] || req.headers.host}`).replace(/\/$/, '');
-    const tags = [
-      `<title>${escAttr(title)}</title>`,
-      '<meta property="og:type" content="website">', '<meta property="og:locale" content="km_KH">', '<meta property="og:site_name" content="YN Studio">',
-      `<meta property="og:title" content="${escAttr(title)}">`, `<meta property="og:description" content="${escAttr(desc)}">`, `<meta property="og:url" content="${escAttr(origin + req.originalUrl)}">`,
-      img ? `<meta property="og:image" content="${escAttr(img)}">` : '', img && c.ogImage ? '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">' : '',
-      `<meta name="twitter:card" content="${img ? 'summary_large_image' : 'summary'}">`, `<meta name="twitter:title" content="${escAttr(title)}">`, `<meta name="twitter:description" content="${escAttr(desc)}">`, img ? `<meta name="twitter:image" content="${escAttr(img)}">` : '',
-      `<meta name="description" content="${escAttr(desc)}">`, '<meta name="theme-color" content="#14160c">',
-    ].filter(Boolean).join('\n    ');
-    const html = indexHtml.replace(/<title>[\s\S]*?<\/title>/i, '').replace(/<meta\s+(?:property="og:[^"]*"|name="(?:twitter:[^"]*|description)")[^>]*>\s*/gi, '').replace('</head>', `    ${tags}\n  </head>`);
-    res.set({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60' }).send(html);
-  } catch { next(); }
-});
-
 app.use(express.static(distPath));
 app.get('/{*splat}', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });

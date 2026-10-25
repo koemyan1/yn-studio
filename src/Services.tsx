@@ -7,7 +7,6 @@ import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
-import { MyInvitations } from './Invitations';
 import './services.css';
 
 /* ---------------------------------------------------------------------------------------------
@@ -213,8 +212,6 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
           </div>
         </article>
         <div style={{ height: 22 }} />
-
-        <MyInvitations />
 
         <h2 className="svcGroup" data-rv>{tr('Print and copy', 'បោះពុម្ព និងថតចម្លង')}</h2>
         <div className="svcList">{PRINT_COPY.map((s, i) => renderCard(s, i))}</div>
