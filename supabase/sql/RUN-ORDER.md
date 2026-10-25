@@ -82,6 +82,7 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 32 | `supabase-debt-riel-pay.sql` | header: AFTER supabase-wallet-riel.sql and supabase-debt-khqr-fix.sql (stated in the file) |
 | 33 | `supabase-wallet-separate-riel.sql` | header: AFTER supabase-debt-riel-pay.sql (stated in the file); final writer of bakong_apply_payment |
 | 33b | `supabase-wallet-transfer.sql` | NEW: wallet-to-wallet transfers by QR code; needs `supabase-wallet-separate-riel.sql` (balance_khr + currency column) and uses the existing wallet notification trigger |
+| 33c | `supabase-wallet-realtime.sql` | NEW: live Wallet page (auto-updating balance/history + "money received" animation); needs the wallet tables, run any time after 33b |
 | 34 | `supabase-debt-customer-access-fix.sql` | header: after the debt tables/functions exist (stated in the file) |
 
 ## 6. Themes

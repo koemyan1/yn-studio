@@ -2,6 +2,13 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: live Wallet page + "money received" animation
+
+- The customer Wallet page now updates **by itself** (Supabase Realtime): balance and history refresh the moment money moves, and again when the customer returns to the tab. No manual reload.
+- When another customer sends money while the page is open, a green banner slides in from the top: coins fall, the amount counts up, "From <name>", short vibration, closes after 6 s or on tap.
+- **Run once:** `supabase/sql/supabase-wallet-realtime.sql` (RUN-ORDER 33c). Until it is run the page still works; it just refreshes when the tab is reopened.
+- Files: `src/main.tsx` (WalletPage), `src/WalletTransfer.tsx` (`MoneyReceived`), `src/wallet.css`, `supabase/sql/supabase-wallet-realtime.sql`, `supabase/sql/RUN-ORDER.md`.
+
 ## Unreleased: wallet QR on demand + "money sent" animation
 
 - The wallet QR is no longer on the page. A **QR icon sits in the Wallet header, right next to the language button**; tapping it (or **My QR** on the page) opens the QR as a sheet. The code is only requested the first time it is opened.

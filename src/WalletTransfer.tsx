@@ -5,7 +5,7 @@
    Database side: supabase/sql/supabase-wallet-transfer.sql (my_wallet_pay_code, lookup_wallet_recipient, transfer_wallet_funds).
    The QR only contains  YNPAY:<random code>  -  never the user id, email or balance. */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Check, ChevronRight, Copy, Download, Image as ImageIcon, QrCode, ScanLine, Send, Wallet, X } from 'lucide-react';
+import { ArrowDownLeft, Camera, Check, ChevronRight, Copy, Download, Image as ImageIcon, QrCode, ScanLine, Send, Wallet, X } from 'lucide-react';
 import { supabase } from './supabase';
 import { tr } from './lang';
 
@@ -225,6 +225,30 @@ function SendScene({ cur, name }: { cur: 'USD' | 'KHR'; name: string }) {
         </i>
         <small>{name}</small>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------ money received (live) */
+/** Slides in from the top when another customer sends money while this page is open. Tap to dismiss; closes itself after 6 s. */
+export function MoneyReceived({ amount, currency, desc, onClose }: { amount: number; currency: 'USD' | 'KHR'; desc: string; onClose: () => void }) {
+  const m = /^Received from\s+(.*)$/i.exec(desc || '');
+  const sub = m ? tr('From', 'ពី') + ' ' + m[1] : (desc || '');
+  useEffect(() => {
+    try { navigator.vibrate?.([40, 60, 40]); } catch { /* not supported */ }
+    const t = window.setTimeout(onClose, 6000);
+    return () => window.clearTimeout(t);
+  }, [onClose]);
+  return (
+    <div className="wqGot" role="status" aria-live="polite" onClick={onClose}>
+      {[0, 1, 2, 3, 4, 5, 6].map(k => <b key={k} className="wqGotCoin" aria-hidden="true" style={{ left: 8 + k * 14 + '%', animationDelay: k * 0.13 + 's' }}>{currency === 'KHR' ? '៛' : '$'}</b>)}
+      <span className="wqGotIco"><ArrowDownLeft /></span>
+      <span className="wqGotText">
+        <small>{tr('Money received', 'បានទទួលប្រាក់')}</small>
+        <strong>+<CountUp to={amount} cur={currency} delay={150} ms={800} /></strong>
+        {sub && <em>{sub}</em>}
+      </span>
+      <i className="wqGotBar" aria-hidden="true" />
     </div>
   );
 }
