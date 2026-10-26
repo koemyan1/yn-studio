@@ -587,6 +587,7 @@ export function CvSheet({ tpl, data, blank = false, km = false, onFit }: { tpl: 
     if (blank) return;
     let live = true;
     const LIMIT = 1123 - 24;
+    const GROW = 1.3;   // short content is enlarged up to 130% so the page never looks half empty
     const run = () => {
       const rootEl = root.current, page = rootEl?.querySelector('.cvPage') as HTMLElement | null;
       if (!rootEl || !page || !live || !rootEl.offsetWidth) return;   // hidden / not laid out yet: ResizeObserver runs us again
@@ -603,7 +604,22 @@ export function CvSheet({ tpl, data, blank = false, km = false, onFit }: { tpl: 
           return (last.getBoundingClientRect().bottom - rr.top) / sc;
         };
         setZoom(1);
-        if (bottom() <= lim) continue;
+        if (bottom() <= lim) {
+          /* GROW-TO-FILL: the content is shorter than the page, so instead of leaving a big empty gap at the bottom,
+             enlarge it (text, spacing, bars...) up to GROW x, as far as it still fits. Only real content columns grow
+             (not the name/title header, the photo or small boxes). */
+          if (!col.classList.contains('cvph') && col.offsetHeight >= 170 && col.offsetWidth >= 150) {
+            const target = lim - 8;
+            if (bottom() < target - 24) {
+              let g0 = 1, g1 = GROW;
+              setZoom(g1);
+              if (bottom() <= target) g0 = g1;
+              else for (let i = 0; i < 9; i++) { const mid = (g0 + g1) / 2; setZoom(mid); if (bottom() <= target) g0 = mid; else g1 = mid; }
+              setZoom(g0);
+            }
+          }
+          continue;
+        }
         let lo = 0.2, hi = 1;
         setZoom(lo);
         if (bottom() > lim) { over = true; continue; }

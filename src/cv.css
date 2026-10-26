@@ -122,3 +122,14 @@
   #cvPrintHost .cvSheetRoot{box-shadow:none}
 }
 .cvmKind{display:flex;gap:8px;margin-bottom:12px}.cvmKind button{flex:1;background:#fff;color:var(--ink);border:1px solid var(--line)}.cvmKind button.on{background:var(--purple);color:#fff;border-color:transparent}
+
+/* free AI helper under the intro boxes */
+.cvmAi{display:grid;gap:8px;margin-top:-4px}
+.cvmAiBtn{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:9px 14px;border-radius:12px;background:linear-gradient(135deg,var(--purple),#a779f5);color:#fff;font-weight:800;font-size:13px;box-shadow:0 6px 16px #7c3aed33}
+.cvmAiBtn svg{width:15px;height:15px}.cvmAiBtn:disabled{opacity:.55;box-shadow:none}
+.cvmAiOut{display:grid;gap:8px;padding:12px;border-radius:14px;background:#f6f0ff;border:1px solid #dccbfa}
+.cvmAiOut p{margin:0;font-size:14px;line-height:1.55;white-space:pre-wrap}
+.cvmAiAct{display:flex;flex-wrap:wrap;gap:8px}
+.cvmAiUse,.cvmAiNo{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;font-weight:800;font-size:13px}
+.cvmAiUse{background:var(--purple);color:#fff}.cvmAiUse svg{width:14px;height:14px}
+.cvmAiNo{background:#fff;color:var(--purple);border:1px solid #dfd2f4}

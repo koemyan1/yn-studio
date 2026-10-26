@@ -99,6 +99,41 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="cvmF"><span>{label}</span>{children}</label>;
 }
 
+/** Free AI helper under the "introduce yourself" boxes: rewrites the customer's text so it reads clearly and professionally. */
+function AiHelp({ value, title, lang, onUse }: { value: string; title: string; lang: CvLang; onUse: (t: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState('');
+  const [src, setSrc] = useState<'ai' | 'basic'>('ai');
+  const [err, setErr] = useState('');
+  const run = async () => {
+    setErr(''); setOut(''); setBusy(true);
+    try {
+      const j = await api('/api/cv/improve', { text: value, title, lang });
+      setOut(String(j.text || '')); setSrc(j.source === 'basic' ? 'basic' : 'ai');
+    } catch (e: any) { setErr(e?.message || tr('Something went wrong.', 'មានបញ្ហាអ្វីមួយ។')); }
+    setBusy(false);
+  };
+  return (
+    <div className="cvmAi">
+      <button type="button" className="cvmAiBtn" disabled={busy || (!value.trim() && !title.trim())} onClick={run}>
+        <Sparkles />{busy ? tr('Improving…', 'កំពុងកែលម្អ…') : value.trim() ? tr('Improve with AI (free)', 'កែលម្អដោយ AI (ឥតគិតថ្លៃ)') : tr('Write it for me with AI (free)', 'ឱ្យ AI សរសេរឱ្យ (ឥតគិតថ្លៃ)')}
+      </button>
+      {err && <small className="cvmErr">{err}</small>}
+      {out && (
+        <div className="cvmAiOut" role="status">
+          <p>{out}</p>
+          {src === 'basic' && <small className="cvmHint">{tr('The AI is resting right now, so only spelling and spacing were tidied.', 'AI កំពុងសម្រាក ដូច្នេះគ្រាន់តែរៀបចំអក្ខរាវិរុទ្ធ និងដំណាក់កាលប៉ុណ្ណោះ។')}</small>}
+          <div className="cvmAiAct">
+            <button type="button" className="cvmAiUse" onClick={() => { onUse(out); setOut(''); }}><Check />{tr('Use this', 'ប្រើអត្ថបទនេះ')}</button>
+            <button type="button" className="cvmAiNo" onClick={run} disabled={busy}>{tr('Try again', 'ព្យាយាមម្តងទៀត')}</button>
+            <button type="button" className="cvmAiNo" onClick={() => setOut('')}>{tr('Keep mine', 'ទុកអត្ថបទខ្ញុំ')}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RowList<T>({ title, hint, items, cap, blank, onChange, render }: {
   title: string; hint?: string; items: T[]; cap: number; blank: () => T; onChange: (v: T[]) => void;
   render: (it: T, set: (p: Partial<T>) => void, i: number) => React.ReactNode;
@@ -126,7 +161,7 @@ function LevelSelect({ value, onChange, labels }: { value: number; onChange: (l:
   );
 }
 
-function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partial<CvData>) => void }) {
+function CvForm({ tpl, data, set, lang }: { tpl: TplKey; data: CvData; set: (p: Partial<CvData>) => void; lang: CvLang }) {
   const T = tplOf(tpl);
   const has = (s: string) => (T.sections as string[]).includes(s);
   const [photoErr, setPhotoErr] = useState('');
@@ -153,8 +188,8 @@ function CvForm({ tpl, data, set }: { tpl: TplKey; data: CvData; set: (p: Partia
         )}
         <Field label={tr('Full name', 'ឈ្មោះពេញ')}><input value={data.name} onChange={e => set({ name: e.target.value })} maxLength={40} autoComplete="name" /></Field>
         <Field label={tr('Job title', 'មុខតំណែង')}><input value={data.title} onChange={e => set({ title: e.target.value })} maxLength={40} /></Field>
-        {has('about') && <Field label={tr('Short intro (About me)', 'ការណែនាំខ្លី (អំពីខ្ញុំ)')}><textarea rows={3} value={data.about} onChange={e => set({ about: e.target.value })} /></Field>}
-        {has('summary') && <Field label={has('about') ? tr('Summary', 'សេចក្តីសង្ខេប') : tr('Profile / About me', 'ប្រវត្តិរូប / អំពីខ្ញុំ')}><textarea rows={4} value={data.summary} onChange={e => set({ summary: e.target.value })} /></Field>}
+        {has('about') && <><Field label={tr('Short intro (About me)', 'ការណែនាំខ្លី (អំពីខ្ញុំ)')}><textarea rows={3} value={data.about} onChange={e => set({ about: e.target.value })} /></Field><AiHelp value={data.about} title={data.title} lang={lang} onUse={t => set({ about: t })} /></>}
+        {has('summary') && <><Field label={has('about') ? tr('Summary', 'សេចក្តីសង្ខេប') : tr('Profile / About me', 'ប្រវត្តិរូប / អំពីខ្ញុំ')}><textarea rows={4} value={data.summary} onChange={e => set({ summary: e.target.value })} /></Field><AiHelp value={data.summary} title={data.title} lang={lang} onUse={t => set({ summary: t })} /></>}
       </fieldset>
 
       {has('contact') && (
@@ -533,7 +568,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
           <>
             <section className="cvmHero"><h1>{tr('Add your info', 'បញ្ចូលព័ត៌មានរបស់អ្នក')}</h1>
               <p>{tr('Fill in what you want on your CV. After payment we place it into the design for you.', 'បំពេញអ្វីដែលអ្នកចង់បានលើ CV។ បន្ទាប់ពីទូទាត់ យើងនឹងដាក់វាចូលក្នុងគំរូឱ្យអ្នក។')}</p></section>
-            <CvForm tpl={tpl} data={data} set={set} />
+            <CvForm tpl={tpl} data={data} set={set} lang={lang} />
             {err && <p className="cvmErr" role="alert">{err}</p>}
             {!canNext && <p className="cvmHint center">{tr('Add your name and job title to continue.', 'សូមបញ្ចូលឈ្មោះ និងមុខតំណែងដើម្បីបន្ត។')}</p>}
             <div className="cvmBar two">
@@ -594,7 +629,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
             </div>
             <div className={'cvmEd t-' + tab}>
               <div className="cvmEdPrev"><div className="cvmPaper"><Scaled><CvSheet tpl={tpl} data={data} km={km} onFit={setOverflow} /></Scaled></div></div>
-              <div className="cvmEdForm"><CvForm tpl={tpl} data={data} set={set} /></div>
+              <div className="cvmEdForm"><CvForm tpl={tpl} data={data} set={set} lang={lang} /></div>
             </div>
             <p className="cvmHint center">{tr('Tip: in the print window choose “Save as PDF” and set margins to “None”.', 'គន្លឹះ៖ នៅក្នុងផ្ទាំងបោះពុម្ព សូមជ្រើស «Save as PDF» ហើយកំណត់គែមទៅ «None»។')}</p>
             <div className="cvmBar two">
