@@ -136,3 +136,18 @@ html .shop .saleTrack .saleItem .pcopy strong{
   overflow:hidden;white-space:normal;line-height:1.25;min-height:2.5em;word-break:break-word}
 /* price row always sits at the bottom of the card */
 html .shop .saleTrack .saleItem .pcopy>div{margin-top:auto;padding-top:5px}
+
+/* ── Smaller cards: on-sale rail only ── */
+html .shop .saleTrack .saleItem{flex:0 0 clamp(140px,38vw,184px)}
+html:not([data-secret-theme="on"]) .shop .saleTrack .saleItem{flex:0 0 clamp(124px,34vw,164px)}
+html:not([data-secret-theme="on"]) .shop .saleTrack{gap:11px}
+html:not([data-secret-theme="on"]) .shop .saleItem .product{border-radius:20px}
+html:not([data-secret-theme="on"]) .shop .saleItem .product>img,
+html:not([data-secret-theme="on"]) .shop .saleItem .product>.ph{width:calc(100% - 12px);margin:6px 6px 0;border-radius:15px}
+html:not([data-secret-theme="on"]) .shop .saleItem .pcopy{padding:8px 10px 11px}
+html:not([data-secret-theme="on"]) .shop .saleItem .pcopy strong{font-size:12.5px}
+html:not([data-secret-theme="on"]) .shop .saleItem .pcopy span{font-size:16px}
+html:not([data-secret-theme="on"]) .shop .saleItem .pcopy del{font-size:10.5px}
+html:not([data-secret-theme="on"]) .shop .saleItem .saleTag{font-size:11px;padding:4px 8px;left:9px;top:9px}
+html:not([data-secret-theme="on"]) .shop .saleItem .product .heart{width:28px;height:28px;right:9px;top:9px}
+html:not([data-secret-theme="on"]) .shop .saleItem .product .heart svg{width:14px;height:14px}
