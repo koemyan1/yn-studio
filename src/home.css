@@ -18,3 +18,105 @@
 .saleItem .product{width:100%}
 @media(min-width:900px){.saleTrack{margin:0;padding-left:2px;padding-right:2px}}
 @media(prefers-reduced-motion:reduce){.productSkel span,.productSkel i{animation:none}}
+
+/* =====================================================================
+   HOME RESTYLE v12 – "Flash" look. Default storefront only: secret themes are untouched.
+   ===================================================================== */
+
+/* ---------- header: calmer, sharper ---------- */
+html:not([data-secret-theme="on"]) .shop .brandrow h1{animation:none;background-size:100% 100%}
+html:not([data-secret-theme="on"]) .shop .brandrow .eyebrow{animation:none}
+html:not([data-secret-theme="on"]) .shop .homeActions .icon,
+html:not([data-secret-theme="on"]) .shop .homeActions .avatar{width:46px;height:46px;border-radius:16px}
+
+/* ---------- search: glassy pill ---------- */
+html:not([data-secret-theme="on"]) .shop .search{min-height:56px;box-shadow:0 14px 34px rgba(76,29,149,.10),0 1px 0 #fff inset}
+
+/* ---------- category pills: dark active pill with glow ---------- */
+html:not([data-secret-theme="on"]) .shop .categoryRail button{font-size:14px;padding:10px 18px;background:rgba(255,255,255,.9);border:1px solid #e6dbfa}
+html:not([data-secret-theme="on"]) .shop .categoryRail button.on{
+  background:linear-gradient(135deg,#1f1535,#4c1d95 70%,#7c3aed);color:#fff;border-color:transparent;
+  box-shadow:0 10px 24px rgba(76,29,149,.38),0 0 0 3px rgba(124,58,237,.14);transform:translateY(-1px)}
+
+/* ---------- product cards: bigger photo, readable price ---------- */
+html:not([data-secret-theme="on"]) .shop .product{border-radius:24px;background:#fff;border:1px solid #efe7fc}
+html:not([data-secret-theme="on"]) .shop .product>img,
+html:not([data-secret-theme="on"]) .shop .product>.ph{width:calc(100% - 12px);margin:6px 6px 0;border-radius:19px}
+html:not([data-secret-theme="on"]) .shop .pcopy{padding:11px 13px 14px}
+html:not([data-secret-theme="on"]) .shop .pcopy span{background:none;-webkit-background-clip:initial;background-clip:initial;color:#5b21b6;font-weight:800;font-size:18px}
+html:not([data-secret-theme="on"]) .shop .pcopy del{color:#a79bbd;font-size:12px}
+
+/* ---------- ON SALE: featured flash band ---------- */
+html:not([data-secret-theme="on"]) .shop .saleRail{
+  position:relative;isolation:isolate;overflow:hidden;margin:6px 0 22px;padding:18px 0 4px;border-radius:32px;
+  background:
+    radial-gradient(60% 90% at 0% 0%,rgba(244,114,182,.55),transparent 62%),
+    radial-gradient(55% 80% at 100% 100%,rgba(251,146,60,.45),transparent 60%),
+    linear-gradient(135deg,#2a0e5c 0%,#5b1fa6 55%,#a21caf 100%);
+  box-shadow:0 28px 56px rgba(91,33,182,.34),0 0 0 1px rgba(255,255,255,.12) inset}
+html:not([data-secret-theme="on"]) .shop .saleRail::before{ /* dotted shine */
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.22) 1px,transparent 1.5px);background-size:22px 22px;
+  -webkit-mask-image:linear-gradient(120deg,#000,transparent 65%);mask-image:linear-gradient(120deg,#000,transparent 65%)}
+html:not([data-secret-theme="on"]) .shop .saleRail .sectionHead{margin:0 0 14px;padding:0 18px;gap:10px;justify-content:flex-start}
+html:not([data-secret-theme="on"]) .shop .saleRail .sectionHead h2{
+  display:flex;align-items:center;gap:10px;font-size:clamp(24px,5vw,30px);letter-spacing:-.04em;color:#fff;margin:0}
+html:not([data-secret-theme="on"]) .shop .saleRail .sectionHead h2::before{
+  content:'🔥';display:grid;place-items:center;width:40px;height:40px;font-size:21px;border-radius:14px;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.saleUpTo{margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:900;letter-spacing:.01em;white-space:nowrap;
+  color:#3b0764;background:linear-gradient(120deg,#fde047,#fb923c);box-shadow:0 8px 20px rgba(251,146,60,.45)}
+html:not([data-secret-theme="on"]) .shop .saleTrack{margin:0;padding:4px 18px 20px;gap:14px;scroll-padding-left:18px}
+html:not([data-secret-theme="on"]) .shop .saleItem{flex:0 0 clamp(158px,44vw,214px)}
+html:not([data-secret-theme="on"]) .shop .saleItem .product{
+  background:#fff;border:0;border-radius:24px;box-shadow:0 18px 36px rgba(20,5,50,.38);animation:none}
+html:not([data-secret-theme="on"]) .shop .saleItem .saleTag{
+  left:12px;top:12px;font-size:13px;font-weight:900;padding:6px 11px;border-radius:12px 12px 12px 4px;
+  background:linear-gradient(135deg,#f43f5e,#fb923c);box-shadow:0 10px 20px rgba(244,63,94,.45);transform:rotate(-4deg)}
+html:not([data-secret-theme="on"]) .shop .saleItem .pcopy span{color:#e11d48;font-size:20px}
+html:not([data-secret-theme="on"]) .shop .saleItem .product .heart{right:12px;top:12px}
+@media(min-width:900px){
+  html:not([data-secret-theme="on"]) .shop .saleRail{padding-top:22px;border-radius:36px}
+  html:not([data-secret-theme="on"]) .shop .saleRail .sectionHead{padding:0 26px}
+  html:not([data-secret-theme="on"]) .shop .saleTrack{padding:4px 26px 24px;gap:18px}
+}
+@media(hover:hover){
+  html:not([data-secret-theme="on"]) .shop .saleItem .product:hover{transform:translateY(-8px) rotate(-.6deg);box-shadow:0 28px 48px rgba(20,5,50,.5)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .saleUpTo{animation:saleGlow 2.4s ease-in-out infinite}
+  @keyframes saleGlow{50%{box-shadow:0 8px 28px rgba(253,224,71,.85)}}
+}
+
+/* polish: room for the active pill's glow, and no inner box inside the search pill */
+html:not([data-secret-theme="on"]) .shop .categoryRail{padding:12px 10px 22px;margin:0 -10px -6px}
+html:not([data-secret-theme="on"]) .shop .search input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),
+html:not([data-secret-theme="on"]) .shop .search input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]):focus{
+  border:0;background:transparent;box-shadow:none;transform:none;border-radius:0}
+
+/* ---------- ON SALE motion (off when the phone has "reduce motion" on) ---------- */
+@media(prefers-reduced-motion:no-preference){
+  /* 1. slow light sweep across the band */
+  html:not([data-secret-theme="on"]) .shop .saleRail::after{
+    content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.2) 50%,transparent 62%);
+    transform:translateX(-130%);animation:saleSweep 6.5s ease-in-out 1.2s infinite}
+  @keyframes saleSweep{0%{transform:translateX(-130%)}38%,100%{transform:translateX(130%)}}
+
+  /* 2. discount badges wiggle one after another */
+  html:not([data-secret-theme="on"]) .shop .saleItem .saleTag{animation:saleWiggle 5s ease-in-out infinite}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(2) .saleTag{animation-delay:.7s}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(3) .saleTag{animation-delay:1.4s}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(4) .saleTag{animation-delay:2.1s}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(n+5) .saleTag{animation-delay:2.8s}
+  @keyframes saleWiggle{0%,14%,100%{transform:rotate(-4deg) scale(1)}3%{transform:rotate(5deg) scale(1.12)}6%{transform:rotate(-9deg) scale(1.12)}9%{transform:rotate(3deg) scale(1.06)}12%{transform:rotate(-6deg)}}
+
+  /* 3. cards get dealt in from the right, one by one */
+  html:not([data-secret-theme="on"]) .shop .saleItem{animation:saleDeal .7s var(--yn-ease,cubic-bezier(.22,1,.36,1)) both;animation-delay:calc(.25s + var(--s,0)*90ms)}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(1){--s:0}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(2){--s:1}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(3){--s:2}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(4){--s:3}
+  html:not([data-secret-theme="on"]) .shop .saleItem:nth-child(n+5){--s:4}
+  @keyframes saleDeal{from{opacity:0;transform:translateX(56px) scale(.94)}to{opacity:1;transform:none}}
+}
