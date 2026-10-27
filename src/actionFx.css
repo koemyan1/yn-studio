@@ -1,0 +1,63 @@
+/* Action feedback ("you just did something") — see actionFx.tsx. Pure CSS, free.
+   The host element is a 0x0 point at the screen centre (or on the tapped button); everything is drawn around it. */
+
+@media (prefers-reduced-motion:no-preference){
+
+  .afx{position:fixed;width:0;height:0;z-index:10002;pointer-events:none;
+    --afx-a:#34d399;--afx-b:#059669;
+    animation:afxOut .32s ease-in 1.2s forwards}
+  .afx.afxSmall{scale:.62;animation-delay:.72s}
+
+  .afx-removed{--afx-a:#fb7185;--afx-b:#e11d48}
+  .afx-sent{--afx-a:#60a5fa;--afx-b:#7c3aed}
+  .afx-claimed{--afx-a:#fbbf24;--afx-b:#ec4899}
+  .afx-coupon{--afx-a:#f59e0b;--afx-b:#db2777}
+  .afx-copied{--afx-a:#2dd4bf;--afx-b:#0891b2}
+  .afx-wish{--afx-a:#ff7aa8;--afx-b:#e11d48}
+  .afx-unwish{--afx-a:#a8b3c4;--afx-b:#64748b}
+
+  .afxBadge{position:absolute;left:-42px;top:-42px;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;
+    background:linear-gradient(145deg,var(--afx-a),var(--afx-b));color:#fff;
+    box-shadow:0 18px 40px color-mix(in srgb,var(--afx-b) 45%,transparent),inset 0 2px 0 rgba(255,255,255,.45);
+    animation:afxPop .6s cubic-bezier(.3,1.7,.5,1) backwards}
+  .afxBadge svg{width:44px;height:44px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+  .afxBadge path{stroke-dasharray:1;stroke-dashoffset:1;animation:afxDraw .5s calc(.16s + var(--k,0) * .09s) ease-out forwards}
+  .afx-wish .afxBadge svg,.afx-unwish .afxBadge svg{fill:rgba(255,255,255,.28)}
+  .afx-wish .afxBadge{animation:afxPop .6s cubic-bezier(.3,1.7,.5,1) backwards,afxBeat .7s .55s ease-in-out}
+  .afx-unwish .afxBadge svg{fill:none;opacity:.9}
+  .afx-removed .afxBadge{animation:afxPop .5s cubic-bezier(.3,1.7,.5,1) backwards,afxWobble .5s .5s ease-in-out}
+  .afx-sent .afxBadge svg{animation:afxFly .7s .5s cubic-bezier(.5,0,.8,.4) forwards}
+
+  .afxRing{position:absolute;left:-42px;top:-42px;width:84px;height:84px;border-radius:50%;
+    border:3px solid var(--afx-b);opacity:0;animation:afxRing .9s .05s cubic-bezier(.2,.7,.3,1) forwards}
+  .afxRing2{border-color:var(--afx-a);animation-delay:.2s}
+  .afxGlow{position:absolute;left:-130px;top:-130px;width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle,color-mix(in srgb,var(--afx-a) 50%,transparent) 0%,transparent 65%);
+    opacity:0;animation:afxGlow .9s ease-out forwards}
+
+  .afxSpark{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;
+    background:var(--afx-a);opacity:0;animation:afxSpark .85s .1s cubic-bezier(.2,.7,.3,1) forwards}
+  .afxSpark:nth-child(even){background:var(--afx-b);width:6px;height:6px}
+  .afxSpark:nth-child(3n){border-radius:2px;width:5px;height:11px}
+
+  .afxLabel{position:absolute;left:0;top:62px;translate:-50% 0;white-space:nowrap;font-style:normal;
+    padding:8px 16px;border-radius:999px;background:rgba(26,17,44,.92);color:#fff;font:800 14px/1 Inter,system-ui,sans-serif;
+    box-shadow:0 10px 26px rgba(26,17,44,.3);animation:afxLabel .5s .22s cubic-bezier(.22,1,.36,1) backwards}
+  .afx-removed .afxLabel,.afx-unwish .afxLabel{background:rgba(51,41,66,.92)}
+
+  @keyframes afxPop{0%{scale:0;rotate:-25deg}60%{scale:1.16;rotate:4deg}100%{scale:1;rotate:0}}
+  @keyframes afxDraw{to{stroke-dashoffset:0}}
+  @keyframes afxRing{0%{scale:.5;opacity:.75}100%{scale:2.3;opacity:0}}
+  @keyframes afxGlow{0%{scale:.3;opacity:.85}100%{scale:1;opacity:0}}
+  @keyframes afxSpark{0%{opacity:1;transform:rotate(var(--a)) translateY(-24px) scale(1)}
+    100%{opacity:0;transform:rotate(var(--a)) translateY(calc(var(--d,76px) * -1)) scale(.2)}}
+  @keyframes afxLabel{from{opacity:0;translate:-50% 14px;scale:.9}}
+  @keyframes afxOut{to{opacity:0}}
+  @keyframes afxBeat{0%,100%{scale:1}30%{scale:1.2}60%{scale:.94}}
+  @keyframes afxWobble{0%,100%{rotate:0}25%{rotate:-10deg}60%{rotate:8deg}}
+  @keyframes afxFly{to{translate:46px -46px;opacity:0}}
+
+  /* notice / toast that comes from an action: a tiny green or red edge pulse so the message itself feels alive */
+  .notice.ok,.notice.success{animation:mvNotice .55s var(--yn-ease,cubic-bezier(.22,1,.36,1)) backwards,afxNoticeOk 1.2s .2s ease-out}
+  @keyframes afxNoticeOk{0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)}100%{box-shadow:0 0 0 14px rgba(52,211,153,0)}}
+}

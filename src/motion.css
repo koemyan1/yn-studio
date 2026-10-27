@@ -1,0 +1,61 @@
+/* Site-wide motion layer — pairs with motion.ts. Free, no libraries.
+   Uses the independent CSS properties `translate` and `scale`, so it never fights the
+   `transform` that themes (Coraline / Spidey / Chiikawa) or existing animations already set.
+   Everything lives inside prefers-reduced-motion:no-preference. */
+
+@media (prefers-reduced-motion:no-preference){
+
+  /* ---------- 1. scroll reveal (data-mv set by motion.ts) ---------- */
+  html [data-mv="0"]{opacity:0!important;translate:0 28px;scale:.97}
+  html [data-mv="1"]{
+    transition:opacity .7s var(--yn-ease,cubic-bezier(.22,1,.36,1)),translate .8s var(--yn-ease,cubic-bezier(.22,1,.36,1)),scale .8s var(--yn-ease,cubic-bezier(.22,1,.36,1))!important;
+    transition-delay:var(--mv-d,0ms)!important}
+
+  /* ---------- 2. tap ripple + scroll progress ---------- */
+  .mvRipple{position:fixed;z-index:10001;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,rgba(168,85,247,.34) 0%,rgba(168,85,247,.16) 45%,rgba(168,85,247,0) 70%);
+    scale:.15;opacity:1;animation:mvRipple .6s cubic-bezier(.2,.7,.3,1) forwards}
+  @keyframes mvRipple{to{scale:1;opacity:0}}
+
+  .mvProgress{position:fixed;left:0;right:0;top:0;height:3px;z-index:10000;pointer-events:none;
+    transform:scaleX(0);transform-origin:0 50%;opacity:0;
+    background:var(--yn-grad,linear-gradient(90deg,#9d6bff,#c026d3,#ff7ab6));
+    box-shadow:0 0 10px rgba(168,85,247,.55);transition:transform .12s linear,opacity .3s ease}
+
+  /* ---------- 3. toast + notices ---------- */
+  .toast{animation:mvToastIn .5s var(--yn-spring,cubic-bezier(.3,1.5,.5,1)) backwards}
+  @keyframes mvToastIn{from{opacity:0;translate:0 22px;scale:.9}}
+
+  .notice:not(.admin *){animation:mvNotice .55s var(--yn-ease,cubic-bezier(.22,1,.36,1)) backwards}
+  @keyframes mvNotice{from{opacity:0;translate:0 -10px;scale:.97}}
+
+  /* ---------- 4. selection pop (size/colour chips, category rail, method tabs) ---------- */
+  .chips button.on,.categoryRail button.on,.debtMethodTabs .on,.debtMethodTabs .active,
+  [role="tab"][aria-selected="true"],button[aria-pressed="true"]{
+    animation:mvPick .42s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes mvPick{0%{scale:.92}55%{scale:1.07}100%{scale:1}}
+
+  /* ---------- 5. form fields: smooth focus + gentle shake on a wrong entry ---------- */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select{
+    transition:border-color .25s ease,box-shadow .35s var(--yn-ease,cubic-bezier(.22,1,.36,1)),background-color .25s ease}
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus,textarea:focus,select:focus{
+    box-shadow:0 0 0 4px rgba(168,85,247,.18)}
+  .wlField{transition:border-color .25s ease,translate .3s var(--yn-ease,cubic-bezier(.22,1,.36,1)),box-shadow .35s ease}
+  .wlField:focus-within{translate:0 -2px;box-shadow:0 12px 26px rgba(124,58,237,.16)}
+  input:user-invalid,textarea:user-invalid{animation:mvShake .45s ease}
+  @keyframes mvShake{0%,100%{translate:0}20%{translate:-7px}40%{translate:6px}60%{translate:-4px}80%{translate:3px}}
+
+  /* ---------- 6. header icon micro-interactions ---------- */
+  @media (hover:hover){
+    .top .icon:not(.cartTopButton):hover svg,.top button:hover svg{animation:mvIconNudge .55s cubic-bezier(.3,1.5,.5,1)}
+    .notificationButton:hover svg{animation:mvBell .7s ease}
+  }
+  @keyframes mvIconNudge{0%{rotate:0;scale:1}40%{rotate:-14deg;scale:1.18}70%{rotate:8deg;scale:1.05}100%{rotate:0;scale:1}}
+  @keyframes mvBell{0%,100%{rotate:0}15%{rotate:16deg}30%{rotate:-14deg}45%{rotate:10deg}60%{rotate:-7deg}75%{rotate:3deg}}
+
+  /* ---------- 7. list rows: soft lift on hover ---------- */
+  @media (hover:hover){
+    .cartItem,.ordercard,.transaction,.notificationCard,.cartrow{transition:translate .3s var(--yn-ease,cubic-bezier(.22,1,.36,1)),box-shadow .3s ease,border-color .25s ease}
+    .cartItem:hover,.ordercard:hover,.transaction:hover,.notificationCard:hover,.cartrow:hover{translate:0 -3px;box-shadow:0 16px 32px rgba(76,29,149,.12)}
+  }
+}

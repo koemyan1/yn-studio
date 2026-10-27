@@ -2,6 +2,23 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: action feedback animations
+
+- New `src/actionFx.tsx` + `src/actionFx.css` (free, no libraries). After something is done, a badge pops with a ring, a drawn icon, sparkles and a label, plus a light vibration on phones.
+- **Hooked in directly:** remove from cart (the tapped row slides out, then a "Removed" badge), wishlist heart (small badge on the heart: saved / removed), coupon applied, reward received, support message sent (paper plane flies off the Send button).
+- **Automatic for everything else:** when a toast or notice appears within a few seconds of a tap and says saved / added / sent / applied / removed / copied / created / success (English or Khmer), the matching badge plays. Error messages shake instead. Skipped on page open, while a payment / admin / cart scene is on screen, and for "Added to cart" (fly-to-cart already covers it).
+- Fully off for "reduce motion". Files: `src/actionFx.tsx`, `src/actionFx.css`, `src/main.tsx` (import, `initActionFx()`, `<ActionFxHost/>`, and one-line calls in cart delete, wishlist toggle, coupon apply, reward claim, support send).
+
+## Unreleased: site-wide motion layer
+
+- New dependency-free layer (`src/motion.ts` + `src/motion.css`), $0, nothing to install or run in Supabase. Existing animations (page-in, product pop-in, fly-to-cart, rolling numbers, wallet scenes) are untouched.
+- **Scroll reveal:** cart rows, order cards, transactions, notifications, reward cards, profile panels and section headings fade/slide in (staggered) the first time they scroll into view. Only items below the fold are hidden, and a 9 s safety net reveals anything that never intersects.
+- **Tap ripple** on buttons, header icons, bottom-nav items and cards; **scroll-progress bar** at the top edge.
+- Toast spring-in, notice slide-in, selection pop on size/colour chips, category rail and tabs, smooth focus glow on inputs (Wallet amount field lifts), gentle shake on an invalid field, header icon nudge + bell ring on hover, soft hover lift on list rows.
+- Uses the independent CSS properties `translate` / `scale`, so Coraline / Spidey / Chiikawa themes keep their own `transform`. Admin pages are excluded from reveal and ripple.
+- Fully off when the device asks for "reduce motion". Reveal uses `data-mv` (the Services page keeps its own `data-rv`).
+- Files: `src/motion.ts`, `src/motion.css`, `src/main.tsx` (3 small edits: import, import, `initMotion()`).
+
 ## Unreleased: live Wallet page + "money received" animation
 
 - The customer Wallet page now updates **by itself** (Supabase Realtime): balance and history refresh the moment money moves, and again when the customer returns to the tab. No manual reload.
