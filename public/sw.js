@@ -1,8 +1,28 @@
-const CACHE='yn-studio-v3';
+const CACHE='yn-studio-v4';
 const APP_SHELL=['/','/index.html','/manifest.webmanifest','/yn-logo.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin||new URL(e.request.url).pathname.startsWith('/api/'))return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('/index.html'))))});
+/* Speed: built files in /assets/ never change (their names contain a hash) -> serve from cache instantly.
+   Pictures / icons / fonts -> show the cached copy right away and refresh it in the background.
+   Page loads (HTML) -> network first so a new deploy shows up, with the cached copy as the offline fallback. */
+self.addEventListener('fetch',e=>{
+  const req=e.request;
+  if(req.method!=='GET')return;
+  const url=new URL(req.url);
+  if(url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return;
+  if(url.pathname.startsWith('/assets/')){
+    e.respondWith(caches.match(req).then(hit=>hit||fetch(req).then(r=>{if(r.ok){const c=r.clone();caches.open(CACHE).then(x=>x.put(req,c))}return r})));
+    return;
+  }
+  if(req.mode==='navigate'||req.destination==='document'){
+    e.respondWith(fetch(req).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put('/index.html',c));return r}).catch(()=>caches.match('/index.html')));
+    return;
+  }
+  e.respondWith(caches.match(req).then(hit=>{
+    const net=fetch(req).then(r=>{if(r.ok){const c=r.clone();caches.open(CACHE).then(x=>x.put(req,c))}return r}).catch(()=>hit);
+    return hit||net;
+  }));
+});
 /* ---- Phone push notifications (Android + iPhone Home Screen app) ---- */
 self.addEventListener('push',e=>{
   let d={};try{d=e.data?e.data.json():{}}catch{d={title:'YN Studio',body:e.data?e.data.text():''}}

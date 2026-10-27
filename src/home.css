@@ -1,0 +1,20 @@
+/* Home page additions: product skeletons, search clear button, "On sale" row. Light-mode default look only
+   (secret themes keep their own product cards). */
+.shop .search{position:relative}
+.searchClear{position:absolute;right:10px;top:50%;translate:0 -50%;width:30px;height:30px;min-height:0;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(124,58,237,.1);color:#6d28d9;cursor:pointer;box-shadow:none}
+.searchClear svg{width:16px;height:16px}
+.shop .search:has(.searchClear) input{padding-right:46px}
+
+.productSkel{display:grid;gap:10px;padding:0 0 12px;border-radius:22px;background:rgba(255,255,255,.6);overflow:hidden}
+.productSkel span{display:block;aspect-ratio:1/1;border-radius:22px}
+.productSkel i{display:block;height:12px;margin:0 12px;border-radius:8px}.productSkel i:last-child{width:45%}
+.productSkel span,.productSkel i{background:linear-gradient(100deg,#efe7fb 30%,#f9f5ff 50%,#efe7fb 70%);background-size:200% 100%;animation:homeShimmer 1.2s linear infinite}
+@keyframes homeShimmer{to{background-position:-200% 0}}
+
+.saleRail{margin:4px 0 8px}
+.saleTrack{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 14px;margin:0 -14px;padding-left:14px;padding-right:14px;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.saleTrack::-webkit-scrollbar{display:none}
+.saleItem{flex:0 0 clamp(150px,42vw,210px);scroll-snap-align:start}
+.saleItem .product{width:100%}
+@media(min-width:900px){.saleTrack{margin:0;padding-left:2px;padding-right:2px}}
+@media(prefers-reduced-motion:reduce){.productSkel span,.productSkel i{animation:none}}

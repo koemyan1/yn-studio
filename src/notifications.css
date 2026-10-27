@@ -1,0 +1,53 @@
+/* Customer notifications page (restyle). Only touches the new .notif* pieces and light polish on .notificationCard;
+   the Coraline / Spidey / Chiikawa themes keep their own card look. */
+.notifPage{padding-bottom:110px}
+.notifIntro{margin-bottom:14px}
+
+/* filter row */
+.notifBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px;flex-wrap:wrap}
+.notifTabs{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:rgba(124,58,237,.08)}
+.notifTabs button{border:0;background:transparent;color:inherit;font:inherit;font-weight:800;font-size:13.5px;padding:8px 16px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;min-height:0;box-shadow:none}
+.notifTabs button.on{background:#fff;color:#6d28d9;box-shadow:0 4px 14px rgba(76,29,149,.14)}
+.notifTabs em{font-style:normal;font-size:11px;font-weight:900;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff}
+.notifReadAll{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:#7c3aed;font:inherit;font-weight:800;font-size:13px;padding:8px 10px;border-radius:12px;cursor:pointer;min-height:0;box-shadow:none}
+.notifReadAll svg{width:17px;height:17px}
+.notifReadAll:hover{background:rgba(124,58,237,.08)}
+
+/* day groups */
+.notifGroup{margin-top:10px}
+.notifGroupTitle{margin:16px 4px 4px;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#8b80a0}
+
+/* cards */
+.notifPage .notificationCard{position:relative;align-items:flex-start;gap:14px;padding:14px 16px;margin:8px 0}
+.notifPage .notificationCard .grow{min-width:0;flex:1}
+.notifPage .notificationCard b{display:block;font-size:15px;line-height:1.3;letter-spacing:-.01em}
+.notifPage .notificationCard .notifMsg{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px}
+.notifPage .notificationCard .notifTime{font-size:12px;font-weight:700;opacity:.62;margin-top:6px}
+.notifPage .notificationCard:not(.unread) b{font-weight:700}
+.notifPage .notificationCard:not(.unread) .notificationIcon{filter:saturate(.55);opacity:.85}
+.notifPage .notificationCard>i{margin-top:7px;box-shadow:0 0 0 4px rgba(124,58,237,.16)}
+.notifPage .notificationCard .notifGo{width:18px;height:18px;opacity:.4;flex:none;margin-top:3px}
+.notifPage .notificationCard:focus-visible{outline:3px solid rgba(168,85,247,.45);outline-offset:2px}
+.notificationIcon.coupon{background:#fff4e5;color:#c2410c}
+html:not([data-secret-theme="on"]) .notifPage .notificationCard.unread{border-left:4px solid #a855f7}
+
+/* loading skeleton, error + empty */
+.notifSkel{display:flex;gap:14px;align-items:center;padding:16px;margin:8px 0;border-radius:24px;border:1px solid rgba(124,58,237,.1);background:rgba(255,255,255,.7)}
+.notifSkel span{width:42px;height:42px;border-radius:16px;flex:none}
+.notifSkel div{flex:1;display:grid;gap:9px}
+.notifSkel i{display:block;height:12px;border-radius:8px}.notifSkel i:last-child{width:62%}
+.notifSkel span,.notifSkel i{background:linear-gradient(100deg,#efe7fb 30%,#f9f5ff 50%,#efe7fb 70%);background-size:200% 100%;animation:notifShimmer 1.2s linear infinite}
+@keyframes notifShimmer{to{background-position:-200% 0}}
+.notifState{display:grid;justify-items:center;gap:12px;text-align:center;padding:40px 16px}
+.notifState svg{width:34px;height:34px;color:#a78bd6}
+.notifState h3{margin:0;font-size:16px}
+
+@media(max-width:650px){
+  .notifPage .notificationCard{padding:13px 14px;gap:12px}
+  .notifBar{margin-top:10px}
+}
+@media(prefers-reduced-motion:reduce){.notifSkel span,.notifSkel i{animation:none}}
+
+/* ---------- bell: dot / count only when there is something unread ---------- */
+.notificationButton:not([data-unread])::after{display:none!important}
+.notificationButton[data-unread]::after{content:attr(data-unread)!important;width:auto!important;min-width:16px;height:16px!important;padding:0 4px;border-radius:999px!important;display:grid!important;place-items:center;top:2px!important;right:2px!important;font-size:10px;font-weight:900;line-height:1;color:#fff;background:linear-gradient(135deg,#a855f7,#ec4899)!important;border:2px solid #fff!important;box-sizing:border-box!important}

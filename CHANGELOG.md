@@ -2,6 +2,23 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: Home page first pass
+
+- Bell dot now shows only when there are unread notifications (with a count, 9+ max), live, on Home and every page header (`useUnreadCount`).
+- Grey product skeleton cards while Home loads (replaces the "Finding something good" card); "No results for ..." message when a search finds nothing; clear (x) button in the search box.
+- New "On sale" row (products with a lower price than the original, up to 10) above the grid; hidden while searching or filtering. Text key `saleTitle` is editable in Theme Studio.
+- First banner loads eagerly / high priority, the rest lazily.
+- Files: `src/main.tsx`, `src/home.css` (new), `src/notifications.css`.
+
+## Unreleased: faster page opening + notifications restyle
+
+- **Pages no longer show the full-screen loader on every navigation.** The login check is remembered for the tab (customer and admin), so moving between pages renders straight away; it still re-verifies in the background and on sign-out.
+- **Smaller first download:** admin screens (Secret Code, Themes, Security, Assistant, Product Mascots), Services, CV Maker and the Leaflet map now load only when opened. `calcFee` moved to `src/deliveryFee.ts` so checkout pricing does not pull in the map. React / Supabase / icons / Leaflet get their own cached chunks (`vite.config.ts`).
+- **Service worker v4:** built `/assets/` files are served from cache instantly; images/fonts show cached copy then refresh; HTML stays network-first so deploys appear.
+- **Server:** gzip (`compression`, run `npm install`), 1-year immutable caching for `/assets/`, no-cache for HTML/sw.
+- **Fonts** no longer block first paint (`index.html`).
+- **Notifications page rewritten:** query fixed (own notifications only), loading skeleton, error + retry, All/Unread tabs, Mark all read, grouped Today/Yesterday/Earlier, relative times, type icons, tap opens the linked page, live updates. Styles in `src/notifications.css`.
+
 ## Unreleased: action feedback animations
 
 - New `src/actionFx.tsx` + `src/actionFx.css` (free, no libraries). After something is done, a badge pops with a ring, a drawn icon, sparkles and a label, plus a light vibration on phones.

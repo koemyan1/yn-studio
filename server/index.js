@@ -21,6 +21,9 @@ const env = process.env;
 app.set('trust proxy', 1); // Render / most hosts terminate HTTPS in front of Node
 
 app.disable('x-powered-by');
+// Compress text responses (JS / CSS / HTML / JSON) - usually 3-4x smaller downloads. Uses the "compression" package; if it is
+// not installed yet the server simply runs without it.
+try { const { default: compression } = await import('compression'); app.use(compression()); } catch { console.warn('[speed] "compression" is not installed; run npm install to enable gzip.'); }
 // Security shield (headers incl. the camera permission for the package scanner, honeypots, WAF-lite, rate limits,
 // auto IP blocking). It is created further down once the database helpers exist; until then requests just pass through.
 let shield = null;
@@ -740,9 +743,19 @@ app.get('/api/bakong/health', shield.limiter('bakong-health', 6), async (_req, r
   }
 });
 
-app.use(express.static(distPath));
+// Speed: files in /assets/ have a content hash in their name, so browsers may keep them for a year; the HTML page itself
+// is always re-checked so a new deploy shows up at once.
+app.use(express.static(distPath, {
+  index: false,
+  setHeaders(res, file) {
+    if (/[\\/]assets[\\/]/.test(file)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    else if (/\.html$/.test(file) || /sw\.js$/.test(file) || /manifest\.webmanifest$/.test(file)) res.setHeader('Cache-Control', 'no-cache');
+    else res.setHeader('Cache-Control', 'public, max-age=86400');
+  },
+}));
 app.get('/{*splat}', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(distPath, 'index.html'));
 });
 

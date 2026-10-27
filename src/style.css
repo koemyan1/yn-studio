@@ -587,3 +587,7 @@ html.yn-admin-dark-page,body.yn-admin-dark-page{background:#0b0810!important;col
 .walletPayButton:disabled{opacity:.6}
 .walletPaySummary{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;background:#7c3aed}
 .walletPaySummary:disabled{opacity:.55}
+
+/* placeholder while a lazily loaded map/panel downloads (keeps the page from jumping) */
+.mapLazyHold{min-height:220px;border-radius:22px;background:linear-gradient(100deg,#f4eefb 30%,#fbf8ff 50%,#f4eefb 70%);background-size:200% 100%;animation:ynShimmerHold 1.2s linear infinite}
+@keyframes ynShimmerHold{to{background-position:-200% 0}}
