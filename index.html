@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800&family=Gaegu:wght@400;700&display=swap" media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800&family=Gaegu:wght@400;700&display=swap" /></noscript>
     <link rel="preload" as="image" href="/yn-logo.png" />
+    <!-- starts downloading the last-seen first banner before React even loads (same-origin file: the CSP blocks inline scripts) -->
+    <script src="/preload.js"></script>
     <style>
       /* first-paint splash: shown until React mounts, then replaced automatically */
       .ynSplash{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,#fdfbff,#f5eeff 60%,#fdf1f8)}

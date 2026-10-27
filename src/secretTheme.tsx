@@ -552,11 +552,11 @@ export function ThemedImg({ src, alt = '', productId = '', className, style, loa
     processedImageUrl(src, { tolerance: pi?.tolerance, fillHoles: pi?.fillHoles }).then(u => { if (alive) setUrl(u); });
     return () => { alive = false; };
   }, [src, mode, pi?.tolerance, pi?.fillHoles, near]);
-  if (mode === 'original') return <img src={src} alt={alt} className={className} style={style} loading={loading} />;
+  if (mode === 'original') return <img src={src} alt={alt} className={className} style={style} loading={loading} decoding="async" />;
   const seed = Number(pi.seed || 0) + getSeedOffset();
   const id = productId || src;
   const bg = mode === 'color' ? pi.color : mode === 'random' ? colorForProduct(id, seed, pi.palette, pi.customColors) : mode === 'gradient' ? gradientForProduct(id, seed, pi.palette, pi.customColors) : undefined;
-  return <img ref={imgRef} src={url || TRANSPARENT_GIF} alt={alt} className={className} loading={loading}
+  return <img ref={imgRef} src={url || TRANSPARENT_GIF} alt={alt} className={className} loading={loading} decoding="async"
     style={{ ...style, background: bg || style?.background, objectFit: pi.fit === 'contain' ? 'contain' : undefined, padding: pi.fit === 'contain' ? (pi.padding || 0) : undefined, boxSizing: 'border-box', transition: 'background .35s' }} />;
 }
 
