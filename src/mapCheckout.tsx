@@ -18,7 +18,7 @@ const ATTR = '© OpenStreetMap · © CARTO';
 const DEFAULT_CENTER: Pt = { lat: 11.5564, lng: 104.9282 }; // Phnom Penh
 
 export { distanceKm, calcFee } from './deliveryFee';
-import { distanceKm } from './deliveryFee';
+import { distanceKm, calcFee } from './deliveryFee';
 
 const shortLabel = (name: string) => name.split(',').slice(0, 3).join(',').trim();
 async function reverseGeocode(p: Pt): Promise<string> {
