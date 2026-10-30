@@ -2,6 +2,12 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: reviews, share links, more sales per visit
+
+- **Run `supabase/sql/supabase-product-reviews.sql` once.** Star ratings + reviews on products (only customers who bought can review; photos; Admin > Reviews to hide/delete), a Share button, real link previews for shared product links (server writes name/price/rating/photo into the page), shared links now survive the login screen, plus "You may also like", "Recently viewed" and "Buy again" on past orders. Full notes: [docs/changelog/CHANGELOG-REVIEWS-SHARE-AND-REBUY.md](docs/changelog/CHANGELOG-REVIEWS-SHARE-AND-REBUY.md).
+- **Animated loading screen** (YN logo) for first open, no more flash when the app starts: [docs/changelog/CHANGELOG-ANIMATED-LOADING-SCREEN.md](docs/changelog/CHANGELOG-ANIMATED-LOADING-SCREEN.md).
+- Files: `src/Reviews.tsx`, `src/Growth.tsx`, `src/growth.css`, `server/ogPreview.js`, `src/main.tsx`, `server/index.js`, `index.html`, `public/preload.js`.
+
 ## Unreleased: Home page first pass
 
 - Bell dot now shows only when there are unread notifications (with a count, 9+ max), live, on Home and every page header (`useUnreadCount`).
@@ -543,6 +549,7 @@ New server endpoints (`/api/aba/*`) + a **Pay now with ABA PayWay** button in ch
 | [Admin Theme Editor Enhancements](docs/changelog/CHANGELOG-ADMIN-THEME-EDITOR-ENHANCEMENTS.md) | Added page-specific design settings to the Secret Code / theme editor, keyed independently for Home, Products, Cart, Wishlist, Orders, Walle... |
 | [Admin theme editor follow-up](docs/changelog/CHANGELOG-ADMIN-THEME-EDITOR-REMAINING.md) | Added saved per-element button label, icon-name and action configuration controls. |
 | [Admin v2](docs/changelog/CHANGELOG-ADMIN-V2.md) | Removed the Alfie voice assistant from the admin side. |
+| [Animated loading screen (first open)](docs/changelog/CHANGELOG-ANIMATED-LOADING-SCREEN.md) | The YN logo splash lives outside #root, so starting the app no longer restarts it; same look for the busy overlay. |
 | [Authentication restore](docs/changelog/CHANGELOG-AUTH-RESTORE.md) | Restored direct Supabase auth.signUp and auth.signInWithPassword from the Vite frontend. |
 | [Back button on every inner page](docs/changelog/CHANGELOG-BACK-BUTTON.md) | Added the back button to **Cart, Orders, Wallet and Profile** (they were the only customer pages whose header had none). Home is the root pa... |
 | [Shopping-cart animations (customer paid + admin new paid order)](docs/changelog/CHANGELOG-CART-SCENES.md) | New: src/CartScenes.tsx, src/cartScenes.css, supabase-realtime-orders-cart.sql. Edited: src/main.tsx. |
@@ -567,6 +574,7 @@ New server endpoints (`/api/aba/*`) + a **Pay now with ABA PayWay** button in ch
 | [Phone push notifications](docs/changelog/CHANGELOG-PHONE-PUSH.md) | New: supabase-push.sql, supabase/functions/send-push, src/push.ts, src/PushToggle.tsx, src/push.css, tools/generate-vapid.mjs, PUSH-SETUP.md... |
 | [Pictures everywhere, parts that stay on screen, loading page, default look](docs/changelog/CHANGELOG-PICTURES-STICKY-LOADING.md) | Run in Supabase -> SQL Editor once: supabase-default-look.sql and supabase-loading-screen.sql. |
 | [Products appear in a random order](docs/changelog/CHANGELOG-RANDOM-PRODUCT-ORDER.md) | No SQL. Home and the Snacks page now shuffle the product cards every time the page is opened, so products do not stay in the same place. |
+| [Product reviews, share links and more sales per visit](docs/changelog/CHANGELOG-REVIEWS-SHARE-AND-REBUY.md) | 1. Run supabase-product-reviews.sql once. Reviews + stars, Share button, link previews, You may also like, Recently viewed, Buy again. |
 | [Secret Theme Editor Update](docs/changelog/CHANGELOG-SECRET-THEME-EDITOR-UPDATE.md) | Moved theme configuration and editing controls below the live storefront preview. |
 | [Secret Theme Preview Accuracy Update](docs/changelog/CHANGELOG-SECRET-THEME-PREVIEW-ACCURACY.md) | Reworked the admin storefront preview to follow the customer home page's structure more closely: marketplace heading, notification/profile a... |
 | [Secret Theme Activation Route Fix](docs/changelog/CHANGELOG-SECRET-THEME-ROUTE-FIX.md) | Secret-code activation no longer forces a full browser reload. |

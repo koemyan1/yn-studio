@@ -10,6 +10,8 @@ import { createAdminApi } from './security/adminApi.js';
 import { createIntegrity } from './security/integrity.js';
 import { createIntel } from './security/intel.js';
 import { createGeoLookup } from './security/geo.js';
+import fsp from 'node:fs/promises';
+import { createPreviewPages } from './ogPreview.js';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -753,10 +755,29 @@ app.use(express.static(distPath, {
     else res.setHeader('Cache-Control', 'public, max-age=86400');
   },
 }));
-app.get('/{*splat}', (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+// ---- Link previews -------------------------------------------------------------------------------------------------------
+// index.html is read once (and again only when a new build replaces the file). Every HTML page gets absolute Open Graph tags;
+// /product/:id also gets that product's name, price, rating and photo, so a pasted link looks right in Telegram / Facebook / WhatsApp.
+// The logic lives in ogPreview.js (tested in tests/og-preview.test.mjs); this is only the Express glue.
+const indexFile = path.join(distPath, 'index.html');
+let indexCache = { mtime: 0, html: '' };
+async function readIndexHtml() {
+  const st = await fsp.stat(indexFile);
+  if (st.mtimeMs !== indexCache.mtime) indexCache = { mtime: st.mtimeMs, html: await fsp.readFile(indexFile, 'utf8') };
+  return indexCache.html;
+}
+const previews = createPreviewPages({ readIndexHtml, publicUrl, sb, hasDb: () => !!(SB.url && SB.service) });
+function sendHtml(res, html) {
   res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(path.join(distPath, 'index.html'));
+  res.type('html').send(html);
+}
+app.get('/product/:id', async (req, res, next) => {
+  try { sendHtml(res, await previews.product(req)); } catch { next(); } // anything unexpected: fall through to the plain page below
+});
+app.get('/{*splat}', async (req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  try { sendHtml(res, await previews.page(req)); }
+  catch { res.setHeader('Cache-Control', 'no-cache'); res.sendFile(indexFile); } // same as before this feature
 });
 
 // Last-resort error handler: never leak stack traces / internal messages; count malformed payloads as mild abuse.

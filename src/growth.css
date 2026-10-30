@@ -1,0 +1,149 @@
+/* Reviews + stars, share button, "You may also like" / "Recently viewed" rails, "Buy again", admin Reviews.
+   Plain CSS, light default look; colours come from the theme variables with safe fallbacks. */
+
+/* ---------- stars ---------- */
+.ynStars{position:relative;display:inline-flex;vertical-align:middle;line-height:0;width:max-content;max-width:100%;justify-self:start}/* max-content: inside a grid the stars must not stretch, or the % clip (e.g. 4 of 5 stars) is measured against the wrong width */
+.ynStarsBg,.ynStarsFg{display:inline-flex;gap:2px}
+.ynStarsFg{position:absolute;left:0;top:0;overflow:hidden;white-space:nowrap;color:#f5a524}
+.ynStarsBg{color:#e3dbf2}
+.ynStars svg{flex:none;fill:currentColor;stroke:none}
+
+/* product card: "★ 4.8 (12)" (a <small>, because card CSS styles the div/span inside .pcopy) */
+.pcopy .cardRating{display:flex;align-items:center;gap:4px;margin:3px 0 0;font-size:12px;line-height:1;color:var(--muted,#776f86);font-weight:600}
+.pcopy .cardRating svg{width:13px;height:13px;fill:#f5a524;stroke:none;flex:none}
+.pcopy .cardRating b{color:var(--ink,#241b35);font-weight:800}
+.pcopy .cardRating i{font-style:normal;font-weight:600}
+
+/* product page: stars under the title */
+.ratingBadge{display:inline-flex;align-items:center;gap:7px;margin:2px 0 4px;padding:0;border:0;background:none;box-shadow:none;min-height:0;width:auto;cursor:pointer;font-size:14px;color:var(--muted,#776f86);font-weight:600}
+.ratingBadge b{color:var(--ink,#241b35);font-weight:800}
+.ratingBadge:hover span{text-decoration:underline}
+
+/* ---------- share button ---------- */
+.detailEyebrowRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.shareBtn{display:inline-flex;align-items:center;gap:6px;width:auto;min-height:38px;padding:7px 14px;border-radius:999px;border:1px solid #dfd2f4;background:#fff;color:var(--purple,#7c3aed);font-size:13px;font-weight:800;cursor:pointer;box-shadow:none}
+.shareBtn svg{width:16px;height:16px}
+.shareBtn:active{transform:scale(.96)}
+
+/* ---------- reviews section ---------- */
+.reviewsSection,.growRail{grid-column:1/-1}
+.reviewsSection{margin:6px 0 0;padding:22px 18px;background:#fff;border:1px solid var(--line,#e9e2f4);border-radius:26px;display:grid;gap:14px;align-content:start}
+.reviewsHead h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.reviewsSkel{display:grid;gap:10px}
+.reviewsSkel i{display:block;height:16px;border-radius:8px;background:linear-gradient(100deg,#efe7fb 30%,#f9f5ff 50%,#efe7fb 70%);background-size:200% 100%;animation:reviewShimmer 1.2s linear infinite}
+.reviewsSkel i:first-child{width:40%}.reviewsSkel i:last-child{width:70%}
+.reviewsEmpty,.reviewsHint,.reviewsNote{margin:0;color:var(--muted,#776f86);font-size:14px}
+.reviewsNote{padding:10px 12px;border-radius:12px;background:#fff6e5;color:#8a5a00;font-weight:600}
+
+.reviewsSummary{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.reviewsScore{display:grid;justify-items:center;gap:4px;min-width:96px}
+.reviewsScore strong{font-size:44px;line-height:1;font-weight:900;color:var(--ink,#241b35)}
+.reviewsScore small{color:var(--muted,#776f86);font-size:12px}
+.reviewsBars{display:grid;gap:5px}
+.reviewsBar{display:grid;grid-template-columns:30px 1fr 26px;align-items:center;gap:8px;font-size:12px;color:var(--muted,#776f86)}
+.reviewsBar span{display:inline-flex;align-items:center;gap:2px;font-weight:700}
+.reviewsBar span svg{width:11px;height:11px;fill:#f5a524;stroke:none}
+.reviewsBar i{display:block;height:7px;border-radius:99px;background:#efe9f8;overflow:hidden}
+.reviewsBar i b{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#f5a524,#fbbf24)}
+.reviewsBar em{font-style:normal;text-align:right}
+
+.reviewWriteBtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;border-radius:14px;border:0;background:linear-gradient(135deg,#7c3aed,#9b5cff);color:#fff;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 10px 24px rgba(124,58,237,.28)}
+.reviewWriteBtn svg{width:18px;height:18px}
+.reviewDeleteLink{justify-self:start;display:inline-flex;align-items:center;gap:6px;width:auto;min-height:0;padding:4px 0;border:0;background:none;box-shadow:none;color:#bd3552;font-size:13px;font-weight:700;cursor:pointer}
+.reviewDeleteLink svg{width:14px;height:14px}
+
+/* the form */
+.reviewForm{display:grid;gap:12px;padding:14px;border-radius:18px;background:var(--soft,#f4efff);border:1px solid var(--line,#e9e2f4)}
+.reviewStarsInput{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.reviewStarsInput button{width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:12px;background:transparent;box-shadow:none;display:grid;place-items:center;cursor:pointer;color:#d6cce8;transition:transform .15s ease,color .15s ease}
+.reviewStarsInput button svg{width:32px;height:32px;fill:currentColor;stroke:none}
+.reviewStarsInput button.on{color:#f5a524}
+.reviewStarsInput button:active{transform:scale(.88)}
+.reviewStarWord{margin-left:6px;font-weight:800;color:var(--purple,#7c3aed);font-size:14px}
+.reviewForm textarea{resize:vertical;min-height:96px}
+.reviewFormRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.reviewCount{color:var(--muted,#776f86);font-size:12px}
+.reviewPhotoPick{display:inline-flex;align-items:center;gap:8px;width:auto;padding:10px 14px;border-radius:12px;border:1.5px dashed #c9b6ee;background:#fff;color:var(--purple,#7c3aed);font-weight:800;font-size:14px;cursor:pointer}
+.reviewPhotoPick svg{width:18px;height:18px}
+.reviewPhotoPick.busy{opacity:.6;pointer-events:none}
+.reviewPhotoPreview{position:relative;width:84px;height:84px;border-radius:14px;overflow:hidden;border:1px solid var(--line,#e9e2f4)}
+.reviewPhotoPreview img{width:100%;height:100%;object-fit:cover;display:block}
+.reviewPhotoPreview button{position:absolute;top:4px;right:4px;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:none}
+.reviewPhotoPreview button svg{width:14px;height:14px}
+.reviewErr{margin:0;padding:10px 12px;border-radius:12px;background:#ffe9ee;color:#bd3552;font-weight:700;font-size:14px}
+.reviewFormActions{display:flex;gap:10px;justify-content:flex-end}
+.reviewFormActions button{width:auto;min-height:44px;padding:0 20px}
+
+/* review list */
+.reviewsList{display:grid;gap:12px}
+.reviewItem{display:grid;gap:8px;padding:14px;border-radius:18px;border:1px solid var(--line,#e9e2f4);background:#fff}
+.reviewTop{display:flex;align-items:center;gap:10px}
+.reviewAvatar{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#e9ddff,#fbd5ea);color:#6d28d9;font-weight:900}
+.reviewWho{flex:1;min-width:0;display:grid;gap:1px}
+.reviewWho b{display:flex;align-items:center;gap:6px;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reviewYou{font-style:normal;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;background:var(--soft,#f4efff);color:var(--purple,#7c3aed)}
+.reviewVerified{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#16834e}
+.reviewVerified svg{width:12px;height:12px}
+.reviewTop time{flex:none;font-size:12px;color:var(--muted,#776f86)}
+.reviewText{margin:0;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.reviewPhoto{width:88px;height:88px;min-height:0;padding:0;border:1px solid var(--line,#e9e2f4);border-radius:14px;overflow:hidden;background:#fff;cursor:zoom-in;box-shadow:none}
+.reviewPhoto img{width:100%;height:100%;object-fit:cover;display:block}
+.reviewMore{justify-self:center}
+
+.reviewLightbox{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;padding:18px;background:rgba(15,8,30,.86);animation:reviewFade .2s ease both}
+.reviewLightbox img{max-width:100%;max-height:86vh;border-radius:16px;object-fit:contain}
+.reviewLightboxClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:42px;height:42px;min-height:0;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:none}
+
+/* ---------- rails (You may also like / Recently viewed) ---------- */
+.growRail{margin:14px 0 0;min-width:0}
+.growHead h2{margin:0 0 10px;padding:0 2px;font-size:19px;letter-spacing:-.01em}
+.growTrack{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 14px;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.growTrack::-webkit-scrollbar{display:none}
+/* the track carries the "shop" class so product cards get exactly the Home card look; undo what .shop does to a page */
+.growRail .growTrack.shop{width:auto;margin:0;padding:4px 2px 14px;background:none}
+/* secret themes paint a wallpaper on every .shop (some with !important) and Chiikawa adds a tall bottom padding: not on a rail */
+html[data-secret-theme] .growRail .growTrack.shop,
+[data-secret-theme] .growRail .growTrack.shop{position:static;padding:4px 2px 14px!important;background:none!important;box-shadow:none}
+.growItem{flex:0 0 clamp(150px,42vw,200px);scroll-snap-align:start;min-width:0}
+.growItem{display:flex}
+.growItem .product{width:100%;flex:1 1 auto}/* equal-height cards even when only some have a star line */
+/* on Home the rails sit between full-width sections: match the page gutters */
+.shop>.growRail{margin:6px 0 14px}
+
+/* ---------- buy again ---------- */
+.ordBuyAgain{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.ordBuyAgain svg{width:17px;height:17px}
+
+/* ---------- admin > Reviews ---------- */
+.adminReviews{display:grid;gap:14px}
+.adminReviewsStats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.adminReviewsStats div{display:grid;gap:2px;padding:14px;border-radius:16px;background:#fff;border:1px solid var(--line,#e9e2f4);text-align:center}
+.adminReviewsStats b{font-size:24px}
+.adminReviewsStats span{font-size:12px;color:var(--muted,#776f86)}
+.adminReviewsTabs{display:flex;gap:8px;flex-wrap:wrap}
+.adminReviewsTabs button{width:auto;min-height:0;padding:8px 16px;border-radius:99px;border:1px solid var(--line,#e9e2f4);background:#fff;color:var(--ink,#241b35);font-weight:700;cursor:pointer;box-shadow:none}
+.adminReviewsTabs button.on{background:var(--purple,#7c3aed);border-color:transparent;color:#fff}
+.adminReviewsList{display:grid;gap:10px}
+.adminReviewRow{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:start;padding:12px;border-radius:16px;background:#fff;border:1px solid var(--line,#e9e2f4)}
+.adminReviewRow.isHidden{opacity:.6}
+.adminReviewProduct{width:56px;height:56px;border-radius:12px;object-fit:cover}
+.adminReviewBody{min-width:0;display:grid;gap:5px}
+.adminReviewBody p{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.adminReviewMeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted,#776f86)}
+.adminReviewMeta em{font-style:normal;font-weight:800;color:#bd3552}
+.adminReviewActions{display:flex;gap:8px;align-items:center}
+@media(max-width:640px){
+  .adminReviewRow{grid-template-columns:48px 1fr}
+  .adminReviewProduct{width:48px;height:48px}
+  .adminReviewActions{grid-column:1/-1;justify-content:flex-end}
+  .reviewsSummary{grid-template-columns:1fr}
+  .reviewsScore{grid-auto-flow:column;justify-content:start;gap:12px}
+}
+html.yn-admin-dark-page .adminReviewsStats div,
+html.yn-admin-dark-page .adminReviewRow,
+html.yn-admin-dark-page .adminReviewsTabs button:not(.on){background:#1d1830;border-color:#322a4a;color:#efe9fb}
+html.yn-admin-dark-page .adminReviewMeta,html.yn-admin-dark-page .adminReviewsStats span{color:#b9aed3}
+
+@keyframes reviewShimmer{to{background-position:-200% 0}}
+@keyframes reviewFade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.reviewsSkel i,.reviewLightbox{animation:none}.reviewStarsInput button{transition:none}}

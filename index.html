@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#7c3aed" />
+    <!-- default link preview. The server rewrites these (absolute URLs, and per-product details on /product/:id): see server/ogPreview.js -->
+    <meta name="description" content="YN Studio — a little marketplace for little things. Shop, pay with KHQR or your wallet, and track your delivery." />
+    <meta property="og:site_name" content="YN Studio" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="YN Studio" />
+    <meta property="og:description" content="YN Studio — a little marketplace for little things. Shop, pay with KHQR or your wallet, and track your delivery." />
+    <meta property="og:image" content="/yn-logo.png" />
+    <meta name="twitter:card" content="summary" />
     <title>YN Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,10 +22,38 @@
     <!-- starts downloading the last-seen first banner before React even loads (same-origin file: the CSP blocks inline scripts) -->
     <script src="/preload.js"></script>
     <style>
-      /* first-paint splash: shown until React mounts, then replaced automatically */
-      .ynSplash{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,#fdfbff,#f5eeff 60%,#fdf1f8)}
-      .ynSplash i{display:block;width:92px;height:92px;border-radius:30px;background:#fff url(/yn-logo.png) center/72% no-repeat;box-shadow:0 26px 60px rgba(124,58,237,.34);animation:ynSplash 1.6s ease-in-out infinite}
-      @keyframes ynSplash{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.06)}}
+      /* first-paint splash (animated YN logo). Lives OUTSIDE #root so React mounting never restarts the animation;
+         main.tsx fades it out once the app is ready. Same classes are reused for the "busy" overlay. */
+      html.ynCustomLoader #ynBoot{display:none}
+      .ynBoot{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow:hidden;
+        background:linear-gradient(180deg,#fdfbff,#f5eeff 60%,#fdf1f8);transition:opacity .5s ease,transform .5s ease,visibility 0s .5s;animation:ynBootFade .25s ease both}
+      .ynBoot.out{opacity:0;visibility:hidden;transform:scale(1.04);pointer-events:none}
+      .ynBootOrb{position:absolute;width:62vmax;height:62vmax;border-radius:50%;filter:blur(60px);opacity:.55;pointer-events:none}
+      .ynBootOrb.a{left:-22vmax;top:-18vmax;background:radial-gradient(circle,#c4b5fd,transparent 65%);animation:ynDrift 9s ease-in-out infinite alternate}
+      .ynBootOrb.b{right:-24vmax;bottom:-20vmax;background:radial-gradient(circle,#f9a8d4,transparent 65%);animation:ynDrift 11s ease-in-out infinite alternate-reverse}
+      .ynBootMark{position:relative;width:168px;height:168px;display:grid;place-items:center;animation:ynFloat 3.2s ease-in-out 1s infinite}
+      .ynBootMark .glow{position:absolute;inset:-12%;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.30),transparent 68%);animation:ynGlow 2.4s ease-in-out infinite}
+      .ynBootMark .ring{position:absolute;inset:16%;border-radius:50%;border:2px solid rgba(124,58,237,.38);opacity:0;animation:ynRing 2.4s ease-out infinite}
+      .ynBootMark .ring.r2{animation-delay:1.2s}
+      .ynBootMark .logo{position:relative;width:100%;height:100%;animation:ynIn .9s cubic-bezier(.2,.9,.3,1.15) both}
+      .ynBootMark .logo img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 14px 22px rgba(124,58,237,.28))}
+      /* light sweep that only touches the letters (the logo itself is the mask) */
+      .ynBootMark .shine{position:absolute;inset:0;pointer-events:none;
+        background:linear-gradient(115deg,transparent 36%,rgba(255,255,255,.95) 50%,transparent 64%) 0 0/300% 100% no-repeat;
+        -webkit-mask:url(/yn-logo.png) center/contain no-repeat;mask:url(/yn-logo.png) center/contain no-repeat;animation:ynShine 2.4s ease-in-out 1s infinite}
+      .ynBootWord{font:800 13px/1 Outfit,Inter,system-ui,sans-serif;letter-spacing:.42em;padding-left:.42em;color:#6d28d9;animation:ynWord .8s ease .55s both}
+      .ynBootBar{width:116px;height:4px;border-radius:99px;background:rgba(124,58,237,.14);overflow:hidden;animation:ynWord .6s ease .7s both}
+      .ynBootBar i{display:block;width:42%;height:100%;border-radius:99px;background:linear-gradient(90deg,#8b5cf6,#c084fc);animation:ynBar 1.25s cubic-bezier(.65,0,.35,1) infinite}
+      @keyframes ynBootFade{from{opacity:0}to{opacity:1}}
+      @keyframes ynIn{0%{opacity:0;transform:scale(.62) translateY(18px) rotate(-6deg);filter:blur(12px)}100%{opacity:1;transform:none;filter:blur(0)}}
+      @keyframes ynFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+      @keyframes ynGlow{0%,100%{opacity:.55;transform:scale(.92)}50%{opacity:1;transform:scale(1.08)}}
+      @keyframes ynRing{0%{opacity:.75;transform:scale(.7)}100%{opacity:0;transform:scale(1.55)}}
+      @keyframes ynShine{0%{background-position:0 0}65%,100%{background-position:100% 0}}
+      @keyframes ynWord{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+      @keyframes ynBar{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+      @keyframes ynDrift{from{transform:translate(0,0)}to{transform:translate(8vmax,6vmax)}}
+      @media(prefers-reduced-motion:reduce){.ynBootMark,.ynBootMark .glow,.ynBootMark .ring,.ynBootMark .shine,.ynBootOrb{animation:none}.ynBootMark .ring{display:none}.ynBootBar i{animation-duration:2.4s}}
     </style>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
@@ -29,7 +65,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
-    <div id="root"><div class="ynSplash" aria-hidden="true"><i></i></div></div>
+    <div id="ynBoot" class="ynBoot" aria-hidden="true"><div class="ynBootOrb a"></div><div class="ynBootOrb b"></div><div class="ynBootMark"><span class="glow"></span><span class="ring"></span><span class="ring r2"></span><div class="logo"><img src="/yn-logo.png" alt="" width="168" height="168" decoding="async" fetchpriority="high"/><i class="shine"></i></div></div><div class="ynBootWord">YN STUDIO</div><div class="ynBootBar"><i></i></div></div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

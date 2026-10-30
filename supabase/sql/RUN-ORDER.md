@@ -107,6 +107,7 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 45 | `supabase-push.sql` | inferred (no dependency found; grouped by topic) |
 | 46 | `supabase-services.sql` | detected: needs a table the earlier file creates |
 | 47 | `yn-studio-feature-fix.sql` | inferred (no dependency found; grouped by topic) |
+| 47b | `supabase-product-reviews.sql` | NEW: product reviews + star ratings (only customers who bought can review); needs the baseline `products`, `orders`, `order_items`, `profiles` tables; creates the `review-photos` bucket |
 
 ## 8. Security (last; redefines pay_order_with_wallet)
 
