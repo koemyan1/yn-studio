@@ -6,6 +6,7 @@
    The rails get ProductCard from main.tsx as a prop (this file never imports main.tsx). */
 import React, { useEffect, useState } from 'react';
 import { Share2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './supabase';
 import { tr, useLang } from './lang';
@@ -88,7 +89,7 @@ function Rail({ title, rows, Card, className = '' }: { title: string; rows: any[
   );
 }
 
-export function RecentlyViewed({ Card, prep, excludeId }: { Card: CardComp; prep?: Prep; excludeId?: string }) {
+export function RecentlyViewed({ prep, excludeId }: { Card?: CardComp; prep?: Prep; excludeId?: string }) {
   useLang();
   const [ids, setIds] = useState<string[]>(getRecentIds);
   const [rows, setRows] = useState<any[]>([]);
@@ -112,7 +113,32 @@ export function RecentlyViewed({ Card, prep, excludeId }: { Card: CardComp; prep
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-  return <Rail title={tr('Recently viewed', 'បានមើលថ្មីៗ')} rows={rows} Card={Card} className="growRecent" />;
+  if (!rows.length) return null;
+  const title = tr('Recently viewed', 'បានមើលថ្មីៗ');
+  return (
+    <section className="rvTrail" aria-label={title}>
+      <div className="rvHead">
+        <h2>{title}</h2>
+        <button type="button" className="rvClear" onClick={() => { clearRecent(); setIds([]); setRows([]); }}>{tr('Clear', 'សម្អាត')}</button>
+      </div>
+      <ol className="rvList">
+        {rows.map((x, i) => {
+          const price = Number((x.display_price ?? x.price) || 0);
+          return (
+            <li key={x.id} className="rvItem" style={{ ['--age' as any]: Math.min(i, 7) }}>
+              <Link to={'/product/' + x.id} className="rvLink">
+                <span className="rvThumb">
+                  {x.main_image_url ? <img src={x.main_image_url} alt="" loading="lazy" decoding="async" /> : <img className="rvLogo" src="/yn-logo.png" alt="" />}
+                </span>
+                <span className="rvName">{x.name}</span>
+                <span className="rvPrice">${price.toFixed(2)}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
 }
 
 /* ---------- you may also like ---------- */
@@ -151,11 +177,30 @@ const optKey = (o: any) => JSON.stringify(Object.keys(o || {}).sort().map(k => [
 
 /** Adds every item of an old order to the cart again. Items that were removed, unpublished or whose
     options changed are skipped and returned by name. Prices come from today's catalogue, never the old order. */
-export async function buyAgain(items: any[]): Promise<{ added: number; skipped: string[] }> {
+const DIRECT_KEY = 'yn-direct-rows';
+/** Removes rows left over from a "Buy again" checkout that was never finished, so they never show up in the cart. */
+export async function dropDirectRows() {
+  try {
+    const ids: string[] = JSON.parse(localStorage.getItem(DIRECT_KEY) || '[]');
+    localStorage.removeItem(DIRECT_KEY);
+    if (!Array.isArray(ids) || !ids.length) return;
+    await supabase.from('cart_items').delete().in('id', ids);
+    try {
+      const sel = JSON.parse(sessionStorage.getItem('yn-checkout-items') || '[]');
+      if (Array.isArray(sel)) sessionStorage.setItem('yn-checkout-items', JSON.stringify(sel.filter((x: string) => !ids.includes(x))));
+    } catch { /* ignore */ }
+  } catch { /* ignore */ }
+}
+
+/** direct = true: "Buy again" goes straight to payment. The items are kept apart from the customer's real cart
+    (never merged into it) and returned as `ids` for checkout to use; checkout deletes them once the order is placed. */
+export async function buyAgain(items: any[], opts: { direct?: boolean } = {}): Promise<{ added: number; skipped: string[]; ids: string[] }> {
+  const direct = !!opts.direct;
+  if (direct) await dropDirectRows();
   const user = (await supabase.auth.getUser()).data.user?.id;
   if (!user) throw new Error(tr('Please sign in first.', 'សូមចូលគណនីជាមុនសិន។'));
   const lines = (items || []).filter(i => i && i.product_id);
-  if (!lines.length) return { added: 0, skipped: [] };
+  if (!lines.length) return { added: 0, skipped: [], ids: [] };
   const ids = Array.from(new Set(lines.map(i => i.product_id as string)));
 
   const prods = (await supabase.from('products').select('id,name,price,status').in('id', ids)).data || [];
@@ -182,6 +227,7 @@ export async function buyAgain(items: any[]): Promise<{ added: number; skipped: 
 
   let added = 0;
   const skipped: string[] = [];
+  const newIds: string[] = [];
   for (const line of lines) {
     const prod = live.get(line.product_id);
     if (!prod) { skipped.push(line.product_name || tr('A product', 'ផលិតផលមួយ')); continue; }
@@ -199,7 +245,7 @@ export async function buyAgain(items: any[]): Promise<{ added: number; skipped: 
     if (!ok) { skipped.push(line.product_name || prod.name); continue; }
     const price = adj.length ? adj[adj.length - 1] : Number(prod.price || 0); // same rule as the product page
     const qty = Math.max(1, Math.floor(Number(line.quantity) || 1));
-    const same = existing.find(x => x.product_id === prod.id && optKey(x.selected_options) === optKey(clean));
+    const same = direct ? undefined : existing.find(x => x.product_id === prod.id && optKey(x.selected_options) === optKey(clean));
     if (same) {
       const r = await supabase.from('cart_items').update({ quantity: Number(same.quantity || 0) + qty, price }).eq('id', same.id);
       if (r.error) throw r.error;
@@ -208,12 +254,15 @@ export async function buyAgain(items: any[]): Promise<{ added: number; skipped: 
       const r = await supabase.from('cart_items').insert({ cart_id: cart.id, product_id: prod.id, quantity: qty, selected_options: clean, price }).select('id,quantity,selected_options,product_id').single();
       if (r.error) throw r.error;
       existing.push(r.data);
+      newIds.push(r.data.id);
     }
     added++;
   }
-  if (added) {
+  if (direct) {
+    try { localStorage.setItem(DIRECT_KEY, JSON.stringify(newIds)); } catch { /* ignore */ }
+  } else if (added) {
     window.dispatchEvent(new Event('yn-cart-updated'));
     window.dispatchEvent(new Event('yn-cart-badge'));
   }
-  return { added, skipped };
+  return { added, skipped, ids: newIds };
 }

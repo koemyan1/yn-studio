@@ -2,6 +2,12 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: easy-to-find "Write a review" + calmer loading screen
+
+- **"Write a review" is now always visible**: under the product name, in the Customer reviews section, and under every item of a paid order (Orders + order screen). Buyers-only rule unchanged; non-buyers get a clear note instead of a missing button. **Run `supabase/sql/supabase-product-reviews.sql` again** (safe) so buyers with `delivered` / "counts as paid" order statuses can review.
+- **New loading screen**: logo in a slim spinning ring, no floating blobs/glow/shine, shorter minimum time. Details: [docs/changelog/CHANGELOG-REVIEW-BUTTONS-AND-NEW-LOADER.md](docs/changelog/CHANGELOG-REVIEW-BUTTONS-AND-NEW-LOADER.md).
+- Files: `index.html`, `src/main.tsx`, `src/Reviews.tsx`, `src/growth.css`, `supabase/sql/supabase-product-reviews.sql`.
+
 ## Unreleased: reviews, share links, more sales per visit
 
 - **Run `supabase/sql/supabase-product-reviews.sql` once.** Star ratings + reviews on products (only customers who bought can review; photos; Admin > Reviews to hide/delete), a Share button, real link previews for shared product links (server writes name/price/rating/photo into the page), shared links now survive the login screen, plus "You may also like", "Recently viewed" and "Buy again" on past orders. Full notes: [docs/changelog/CHANGELOG-REVIEWS-SHARE-AND-REBUY.md](docs/changelog/CHANGELOG-REVIEWS-SHARE-AND-REBUY.md).

@@ -5,7 +5,9 @@
 -- How it works
 --   * Only customers who BOUGHT the product can review it (checked in the database, not in the browser).
 --     "Bought" = one of their orders contains the product, the order is not cancelled/rejected, and it is paid
---     (payment_status = 'paid') or already in a paid status (paid / processing / shipped / completed).
+--     (payment_status = 'paid') or already in a paid status (paid / processing / shipped / completed / delivered,
+--     or any status marked "counts as paid" in order_statuses).
+--     Already ran this file before? Run it again: it is safe, and it updates this rule.
 --     To change that rule edit yn_has_bought_product() below and run this file again.
 --   * One review per customer per product. Writing it again edits the review.
 --   * Customers can NOT insert/update the table directly; they call submit_product_review(). That is what stops
@@ -71,7 +73,9 @@ as $$
       and i.product_id = p_product
       and coalesce(o.status, '') not in ('cancelled', 'rejected', 'refunded')
       and (coalesce(o.payment_status, '') = 'paid'
-           or coalesce(o.status, '') in ('paid', 'processing', 'shipped', 'completed'))
+           or coalesce(o.status, '') in ('paid', 'processing', 'shipped', 'completed', 'delivered')
+           -- any status the admin set up as "counts as paid" (Admin > Order statuses), e.g. "left china warehouse"
+           or exists (select 1 from public.order_statuses st where st.name = o.status and st.marks_paid))
   );
 $$;
 revoke all on function public.yn_has_bought_product(uuid, uuid) from public, anon, authenticated;

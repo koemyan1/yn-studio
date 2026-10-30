@@ -1,10 +1,12 @@
 /* Product reviews + star ratings.
    - useRatingStats / CardRating / RatingBadge : small star summaries (cards, product title)
    - ProductReviews                            : the full "Customer reviews" section on the product page
+   - ReviewItemButton / ReviewModal            : "Write a review" button on every item of a paid order (Orders page + order view)
    - AdminReviewsList                          : moderation list used by /admin/reviews
    Everything quietly hides itself if supabase-product-reviews.sql has not been run yet. */
-import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { Camera, Eye, EyeOff, Pencil, ShieldCheck, Star, Trash2, X } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
+import { Camera, Eye, EyeOff, Lock, Pencil, ShieldCheck, Star, Trash2, X } from 'lucide-react';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
 import { optimizeImage } from './imageTools';
@@ -26,6 +28,7 @@ type Review = {
 let statMap: Map<string, Stat> = new Map();
 let statLoadedAt = 0;
 let statLoading: Promise<void> | null = null;
+let statsInstalled = false; // true once the ratings view answered (so the SQL file has been run): used to show / hide every review button
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(f => f());
 
@@ -39,6 +42,7 @@ export function refreshRatings(force = false): Promise<void> {
         const m = new Map<string, Stat>();
         for (const r of data as any[]) m.set(r.product_id, { count: Number(r.review_count) || 0, avg: Number(r.avg_rating) || 0 });
         statMap = m; // a new Map object tells subscribers to re-render
+        statsInstalled = true;
         emit();
       }
     } catch { /* SQL not installed yet: simply no stars */ }
@@ -49,6 +53,44 @@ export function refreshRatings(force = false): Promise<void> {
 }
 function subscribe(cb: () => void) { listeners.add(cb); void refreshRatings(); return () => { listeners.delete(cb); }; }
 const getStats = () => statMap;
+const getInstalled = () => statsInstalled;
+/** The product page's "Write a review" shortcut (under the product name) asks the reviews section to open its form. */
+const OPEN_EVT = 'yn-open-review';
+
+/* ---------- "which products have I already reviewed?" (one small request, shared by every button) ---------- */
+let mineMap: Map<string, number> = new Map();
+let mineUser = '';
+let mineLoadedAt = 0;
+let mineLoading: Promise<void> | null = null;
+export function refreshMine(force = false): Promise<void> {
+  if (mineLoading) return mineLoading;
+  mineLoading = (async () => {
+    try {
+      const u = (await supabase.auth.getSession()).data.session?.user?.id || '';
+      if (u !== mineUser) { mineMap = new Map(); mineUser = u; mineLoadedAt = 0; emit(); } // another customer signed in on this device
+      if (!u || (!force && mineLoadedAt && Date.now() - mineLoadedAt < 15000)) return;
+      const { data, error } = await supabase.from('product_reviews').select('product_id,rating').eq('user_id', u);
+      if (!error && data) {
+        const m = new Map<string, number>();
+        for (const r of data as any[]) m.set(r.product_id, Number(r.rating) || 0);
+        mineMap = m;
+        mineLoadedAt = Date.now();
+        emit();
+      }
+    } catch { /* SQL not installed yet: no buttons */ }
+  })().finally(() => { mineLoading = null; });
+  return mineLoading;
+}
+function subscribeMine(cb: () => void) { listeners.add(cb); void refreshMine(); return () => { listeners.delete(cb); }; }
+const getMine = () => mineMap;
+
+/** Can this customer review the items of this order? Same rule the database enforces (a paid order that is not cancelled);
+ *  the database has the last word, this only decides whether to show the button. */
+export function orderCanReview(o: any, meta?: any): boolean {
+  const s = String(o?.status || '').toLowerCase();
+  if (['cancelled', 'rejected', 'refunded'].includes(s)) return false;
+  return o?.payment_status === 'paid' || !!meta?.marks_paid || ['paid', 'processing', 'shipped', 'completed', 'delivered'].includes(s);
+}
 export function useRatingStats(): Map<string, Stat> { return useSyncExternalStore(subscribe, getStats, getStats); }
 
 /* ---------- stars ---------- */
@@ -71,16 +113,29 @@ export function CardRating({ id }: { id: string }) {
   return <small className="cardRating" aria-label={s.avg.toFixed(1) + ' / 5'}><Star /><b>{s.avg.toFixed(1)}</b><i>({s.count})</i></small>;
 }
 
-/** "★★★★★ 4.8 (12 reviews)" under the product name; tap to jump to the reviews. */
+/** Under the product name: "★★★★★ 4.8 (12 reviews)" (tap = jump to the reviews) and a "Write a review" button that is
+ *  always there, so customers can see where to review before they scroll. */
 export function RatingBadge({ productId }: { productId: string }) {
   useLang();
   const s = useRatingStats().get(productId);
-  if (!s || !s.count) return null;
+  const installed = useSyncExternalStore(subscribe, getInstalled, getInstalled);
+  if (!installed) return null;
+  const go = (write: boolean) => {
+    document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (write) window.dispatchEvent(new Event(OPEN_EVT));
+  };
   return (
-    <button type="button" className="ratingBadge" onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-      <StarRow value={s.avg} size={15} /><b>{s.avg.toFixed(1)}</b>
-      <span>({s.count} {s.count === 1 ? tr('review', 'ការវាយតម្លៃ') : tr('reviews', 'ការវាយតម្លៃ')})</span>
-    </button>
+    <div className="ratingRow">
+      {s && s.count > 0 ? (
+        <button type="button" className="ratingBadge" onClick={() => go(false)}>
+          <StarRow value={s.avg} size={15} /><b>{s.avg.toFixed(1)}</b>
+          <span>({s.count} {s.count === 1 ? tr('review', 'ការវាយតម្លៃ') : tr('reviews', 'ការវាយតម្លៃ')})</span>
+        </button>
+      ) : (
+        <span className="ratingNone">{tr('No reviews yet', 'មិនទាន់មានការវាយតម្លៃ')}</span>
+      )}
+      <button type="button" className="ratingWrite" onClick={() => go(true)}><Pencil />{tr('Write a review', 'សរសេរការវាយតម្លៃ')}</button>
+    </div>
   );
 }
 
@@ -197,6 +252,67 @@ function ReviewForm({ productId, initial, onDone, onCancel }: { productId: strin
   );
 }
 
+/* ---------- review from the Orders page: a small window with the same form ---------- */
+export function ReviewModal({ productId, productName, productImage, onClose, onDone }: { productId: string; productName?: string; productImage?: string; onClose: () => void; onDone: () => void }) {
+  useLang();
+  const [initial, setInitial] = useState<Review | null | undefined>(undefined); // undefined = still loading my earlier review
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', k);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', k); document.body.style.overflow = prev; };
+  }, [onClose]);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const u = (await supabase.auth.getSession()).data.session?.user?.id;
+        if (!u) { if (live) setInitial(null); return; }
+        const r: any = await supabase.from('product_reviews').select('*').eq('product_id', productId).eq('user_id', u).maybeSingle();
+        if (live) setInitial((r.data as Review) || null);
+      } catch { if (live) setInitial(null); }
+    })();
+    return () => { live = false; };
+  }, [productId]);
+  return createPortal(
+    <div className="reviewModal" role="dialog" aria-modal="true" aria-label={tr('Write a review', 'សរសេរការវាយតម្លៃ')} onClick={onClose}>
+      <div className="reviewModalCard" onClick={e => e.stopPropagation()}>
+        <div className="reviewModalHead">
+          {productImage ? <img src={productImage} alt="" /> : null}
+          <div><small>{initial ? tr('Edit your review', 'កែការវាយតម្លៃរបស់អ្នក') : tr('Your review', 'ការវាយតម្លៃរបស់អ្នក')}</small><b>{productName || tr('Product', 'ផលិតផល')}</b></div>
+          <button type="button" className="reviewModalClose" aria-label={tr('Close', 'បិទ')} onClick={onClose}><X /></button>
+        </div>
+        {initial === undefined
+          ? <div className="reviewsSkel"><i /><i /><i /></div>
+          : <>
+              {initial?.status === 'hidden' && <p className="reviewsNote">{tr('Your review is hidden by YN Studio.', 'ការវាយតម្លៃរបស់អ្នកត្រូវបានលាក់ដោយ YN Studio។')}</p>}
+              <ReviewForm productId={productId} initial={initial} onCancel={onClose} onDone={onDone} />
+            </>}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** "★ Write a review" under an item of a paid order (or "★★★★ Edit your review" once rated). Renders nothing until the SQL is installed. */
+export function ReviewItemButton({ productId, productName, productImage }: { productId: string; productName?: string; productImage?: string }) {
+  useLang();
+  const installed = useSyncExternalStore(subscribe, getInstalled, getInstalled);
+  const mine = useSyncExternalStore(subscribeMine, getMine, getMine);
+  const [open, setOpen] = useState(false);
+  if (!installed || !productId) return null;
+  const rated = mine.get(productId) || 0;
+  return (
+    <>
+      <button type="button" className={'reviewItemBtn' + (rated ? ' done' : '')} onClick={() => setOpen(true)}>
+        {rated ? <><StarRow value={rated} size={13} /> {tr('Edit your review', 'កែការវាយតម្លៃរបស់អ្នក')}</> : <><Star /> {tr('Write a review', 'សរសេរការវាយតម្លៃ')}</>}
+      </button>
+      {open && <ReviewModal productId={productId} productName={productName} productImage={productImage} onClose={() => setOpen(false)} onDone={() => { setOpen(false); void refreshMine(true); }} />}
+    </>
+  );
+}
+
 /* ---------- the section on the product page ---------- */
 export function ProductReviews({ productId }: { productId: string }) {
   useLang();
@@ -209,6 +325,9 @@ export function ProductReviews({ productId }: { productId: string }) {
   const [shown, setShown] = useState(5);
   const [light, setLight] = useState('');
   const [me, setMe] = useState('');
+  const [why, setWhy] = useState(false);   // the "only buyers can review" note (shown when a non-buyer taps Write a review)
+  const [want, setWant] = useState(false); // the shortcut under the product name was tapped before the section finished loading
+  const formRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -231,7 +350,19 @@ export function ProductReviews({ productId }: { productId: string }) {
     } catch { setState('off'); }
   }, [productId]);
 
-  useEffect(() => { setState('loading'); setForm(false); setShown(5); void load(); }, [load]);
+  useEffect(() => { setState('loading'); setForm(false); setWhy(false); setShown(5); void load(); }, [load]);
+
+  /** What "Write a review" does: buyers get the form, everyone else gets a clear reason (never a dead button). */
+  const tapWrite = useCallback(() => {
+    if (can) { setWhy(false); setForm(true); } else setWhy(true);
+  }, [can]);
+  useEffect(() => {
+    const f = () => setWant(true);
+    window.addEventListener(OPEN_EVT, f);
+    return () => window.removeEventListener(OPEN_EVT, f);
+  }, []);
+  useEffect(() => { if (want && state === 'ok') { setWant(false); tapWrite(); } }, [want, state, tapWrite]);
+  useEffect(() => { if (form) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, [form]);
 
   async function remove() {
     if (!mine || !window.confirm(tr('Delete your review?', 'លុបការវាយតម្លៃរបស់អ្នក?'))) return;
@@ -239,6 +370,7 @@ export function ProductReviews({ productId }: { productId: string }) {
     if (r.error) { window.alert(r.error.message); return; }
     void dropPhoto(mine.photo_url);
     void refreshRatings(true);
+    void refreshMine(true);
     setForm(false);
     void load();
   }
@@ -260,19 +392,30 @@ export function ProductReviews({ productId }: { productId: string }) {
           </div>
         </div>
       ) : (
-        <p className="reviewsEmpty">{tr('No reviews yet.', 'មិនទាន់មានការវាយតម្លៃនៅឡើយទេ។')}</p>
+        <p className="reviewsEmpty">{tr('No reviews yet. Be the first to review this product.', 'មិនទាន់មានការវាយតម្លៃនៅឡើយទេ។ ក្លាយជាអ្នកទីមួយដែលវាយតម្លៃផលិតផលនេះ។')}</p>
       )}
 
       {mine?.status === 'hidden' && <p className="reviewsNote">{tr('Your review is hidden by YN Studio.', 'ការវាយតម្លៃរបស់អ្នកត្រូវបានលាក់ដោយ YN Studio។')}</p>}
 
-      {!form && can && (
-        <button type="button" className="reviewWriteBtn" onClick={() => setForm(true)}>
+      {!form && (can || !mine) && (
+        <button type="button" className="reviewWriteBtn" onClick={tapWrite}>
           {mine ? <><Pencil /> {tr('Edit your review', 'កែការវាយតម្លៃរបស់អ្នក')}</> : <><Star /> {tr('Write a review', 'សរសេរការវាយតម្លៃ')}</>}
         </button>
       )}
-      {!can && !mine && <p className="reviewsHint">{tr('Only customers who bought this product can write a review.', 'មានតែអតិថិជនដែលបានទិញផលិតផលនេះប៉ុណ្ណោះដែលអាចសរសេរការវាយតម្លៃបាន។')}</p>}
+      {why && !can && !mine && !form && (
+        <div className="reviewsWhy" role="status">
+          <Lock />
+          <div>
+            <b>{me ? tr('Only buyers can review', 'មានតែអ្នកទិញប៉ុណ្ណោះដែលអាចវាយតម្លៃបាន') : tr('Please sign in first', 'សូមចូលគណនីជាមុនសិន')}</b>
+            <p>{me
+              ? tr('Only customers who bought this product can write a review. Once your order is paid, you can rate it here or from your Orders page.', 'មានតែអតិថិជនដែលបានទិញផលិតផលនេះប៉ុណ្ណោះដែលអាចសរសេរការវាយតម្លៃបាន។ នៅពេលការបញ្ជាទិញរបស់អ្នកត្រូវបានទូទាត់ហើយ អ្នកអាចវាយតម្លៃនៅទីនេះ ឬនៅទំព័រការបញ្ជាទិញ។')
+              : tr('Sign in to write a review.', 'ចូលគណនីដើម្បីសរសេរការវាយតម្លៃ។')}</p>
+          </div>
+          <button type="button" className="reviewsWhyClose" aria-label={tr('Close', 'បិទ')} onClick={() => setWhy(false)}><X /></button>
+        </div>
+      )}
 
-      {form && can && <ReviewForm productId={productId} initial={mine} onCancel={() => setForm(false)} onDone={() => { setForm(false); void load(); }} />}
+      {form && can && <div ref={formRef}><ReviewForm productId={productId} initial={mine} onCancel={() => setForm(false)} onDone={() => { setForm(false); void refreshMine(true); void load(); }} /></div>}
       {!form && mine && can && <button type="button" className="reviewDeleteLink" onClick={remove}><Trash2 /> {tr('Delete my review', 'លុបការវាយតម្លៃរបស់ខ្ញុំ')}</button>}
 
       <div className="reviewsList">
