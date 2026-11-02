@@ -32,8 +32,9 @@ Set on Render (see `render.yaml`). Secrets must never use a `VITE_` prefix.
 
 | Folder | Contents |
 |---|---|
+| `shared/` | Plain JS used by both server and browser (`serviceMath.js`: service price + delivery-fee maths). |
 | `src/` | Frontend. `main.tsx` is the app shell and most pages; separate files for admin themes, CV maker, services, map checkout, assistant. |
-| `server/` | `index.js` (API, payments) and `security/` (rate limits, blocking, order-integrity, alerts). |
+| `server/` | `index.js` (API, payments), `serviceShop.js` (pay-first services) and `security/` (rate limits, blocking, order-integrity, alerts). |
 | `supabase/sql/` | The SQL scripts you run in the Supabase SQL Editor. **Order: [`supabase/sql/RUN-ORDER.md`](supabase/sql/RUN-ORDER.md).** |
 | `supabase/` | See [`supabase/README.md`](supabase/README.md) (baseline export, migrations, edge functions). |
 | `docs/setup/` | Step-by-step setup guides (below). |
@@ -48,6 +49,7 @@ Set on Render (see `render.yaml`). Secrets must never use a `VITE_` prefix.
 |---|---|
 | Sign-up / login | [AUTH-SETUP](docs/setup/AUTH-SETUP.md) |
 | KHQR payments (Bakong) | [BAKONG-SETUP](docs/setup/BAKONG-SETUP.md) |
+| Pay-first services (print, copy, design) | [SERVICE-SHOP-SETUP](docs/setup/SERVICE-SHOP-SETUP.md) |
 | ABA PayWay | [ABA-PAYWAY-SETUP](docs/setup/ABA-PAYWAY-SETUP.md) |
 | Paying orders from the wallet | [WALLET-ORDER-PAYMENT-SETUP](docs/setup/WALLET-ORDER-PAYMENT-SETUP.md) |
 | Map checkout and delivery pricing | [MAP-CHECKOUT-SETUP](docs/setup/MAP-CHECKOUT-SETUP.md), [CATEGORY-DELIVERY-FEE-SETUP](docs/setup/CATEGORY-DELIVERY-FEE-SETUP.md), [CITY-PROVINCE-LOCATION-SQL-SETUP](docs/setup/CITY-PROVINCE-LOCATION-SQL-SETUP.md) |

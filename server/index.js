@@ -7,7 +7,9 @@ import { createStore } from './security/store.js';
 import { createAlerts } from './security/alerts.js';
 import { createShield } from './security/shield.js';
 import { createAdminApi } from './security/adminApi.js';
+import { auditEnv, logEnvAudit } from './security/env.js';
 import { createIntegrity } from './security/integrity.js';
+import { createServiceShop } from './serviceShop.js';
 import { createIntel } from './security/intel.js';
 import { createGeoLookup } from './security/geo.js';
 import fsp from 'node:fs/promises';
@@ -112,7 +114,12 @@ const secAlerts = createAlerts({ notify: (title, message, link) => notifyAdmin(t
 shield = createShield({ store: secStore, alerts: secAlerts, intel: secIntel });
 const integrity = createIntegrity({ sb, store: secStore, alerts: secAlerts });
 const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
+// Default-deny: EVERYTHING under /api/admin needs a signed-in user whose profiles.role is 'admin' (checked in the database,
+// cached 60 s). A route added here later is protected automatically; it cannot be forgotten.
+app.use('/api/admin', async (req, res, next) => { if (req.method === 'OPTIONS') return next(); const admin = await adminApi.requireAdmin(req, res); if (admin) { req.admin = admin; next(); } });
+app.get('/api/admin/env-check', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(auditEnv()); }); // set/missing only - never values
 app.use('/api/admin/security', adminApi.handler);
+logEnvAudit(console);
 app.post('/api/security/csp-report', shield.limiter('csp-report', 30), express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '20kb' }), adminApi.cspReport);
 const ORDER_CHECK_MSG = 'We could not verify this order\'s price. Please go back to your cart and place the order again.';
 
@@ -558,6 +565,7 @@ app.post('/api/bakong/sync', jsonBody, async (req, res) => {
     for (const p of pays || []) if (await verifyBakongPayment(p)) updated++;
     const cvs = await sb(`cv_orders?user_id=eq.${user.id}&status=eq.pending&created_at=gte.${since}&select=${CV_FIELDS}&order=created_at.desc&limit=5`).catch(() => []);
     for (const c of cvs || []) if (await verifyBakongCv(c)) updated++;
+    updated += await serviceShop.syncForUser(user.id, since);   // pay-first services (supabase-service-shop.sql)
     res.json({ updated });
   } catch (e) {
     console.error('bakong sync', e);
@@ -718,15 +726,26 @@ app.post('/api/bakong/cv/status', jsonBody, async (req, res) => {
   }
 });
 
+/* ------------------------------------------------------------------ *
+ *  Pay-first services: Printing, Copy, Social post, Poster, Logo (server/serviceShop.js, supabase-service-shop.sql)
+ *  Quote -> order (awaiting_payment + KHQR) -> status. Prices are always recomputed here from the admin's catalog.
+ * ------------------------------------------------------------------ */
+const serviceShop = createServiceShop({
+  app, sb, SB, BK, userFromToken, shield, limited, bakongEnabled, makeBakongQr, findBakongPayment, bakongDelayed, notifyAdmin, jsonBody,
+});
+
 /* Diagnose "the QR shows but never gets approved": open /api/bakong/health in the browser.
    It asks Bakong about a made-up MD5 and tells you whether the token, the IP or the network is the problem. */
-const healthCache = { t: 0, body: null };
-app.get('/api/bakong/health', shield.limiter('bakong-health', 6), async (_req, res) => {
+const healthCache = { pub: { t: 0, body: null }, admin: { t: 0, body: null } };
+app.get('/api/bakong/health', shield.limiter('bakong-health', 6), async (req, res) => {
   // Each call asks Bakong a live question, so answers are cached for 30s (stops this public page being used to burn your Bakong API quota).
-  if (healthCache.body && Date.now() - healthCache.t < 30000) return res.json(healthCache.body);
+  const isAdmin = await adminApi.isAdmin(req);
+  const cache = isAdmin ? healthCache.admin : healthCache.pub; // admin detail is cached apart, so it can never reach the public
+  if (cache.body && Date.now() - cache.t < 30000) return res.json(cache.body);
   const send = res.json.bind(res);
-  res.json = body => { healthCache.t = Date.now(); healthCache.body = body; return send(body); };
-  const out = { tokenSet: !!BK.token, account: BK.account, base: BK.base, currency: BK.currency };
+  res.json = body => { cache.t = Date.now(); cache.body = body; return send(body); };
+  // Public page: no account id, host name or token state. Signed-in admins get the full details.
+  const out = isAdmin ? { tokenSet: !!BK.token, account: BK.account, base: BK.base, currency: BK.currency } : { currency: BK.currency };
   if (!BK.token) return res.json({ ...out, ok: false, verdict: 'BAKONG_API_TOKEN is not set on the server.' });
   try {
     const r = await fetch(`${BK.base}/v1/check_transaction_by_md5`, {
@@ -741,7 +760,7 @@ app.get('/api/bakong/health', shield.limiter('bakong-health', 6), async (_req, r
     if (j.responseCode === 1 && notFound) return res.json({ ...out, ok: true, verdict: 'OK', hint: 'Token and network are fine. If payments still stay pending, check the server log for "Bakong mismatch".' });
     return res.json({ ...out, ok: false, verdict: 'UNEXPECTED', responseCode: j.responseCode, errorCode: j.errorCode, message: j.responseMessage || null, hint: 'Bakong answered, but not with "transaction not found". Usually a token problem.' });
   } catch (e) {
-    return res.json({ ...out, ok: false, verdict: 'UNREACHABLE', hint: 'This server cannot reach Bakong (' + (e?.message || e) + '). Usually the IP is blocked outside Cambodia.' });
+    return res.json({ ...out, ok: false, verdict: 'UNREACHABLE', hint: 'This server cannot reach Bakong' + (isAdmin ? ' (' + (e?.message || e) + ')' : '') + '. Usually the IP is blocked outside Cambodia.' });
   }
 });
 

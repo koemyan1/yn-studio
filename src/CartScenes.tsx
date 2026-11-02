@@ -2,16 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import './cartScenes.css';
 
 /* ---------------------------------------------------------------------------------------------
-   Two full-screen "shopping cart" animations (mounted once in <App/>, so they survive page changes):
+   Two full-screen "packing" animations (mounted once in <App/>, so they survive page changes):
 
-   1. customer : after an order is PAID (wallet or KHQR) the cart rolls in from the left, every item of the
-                 order drops into it (any number of items), then the cart drives off to the right.
+   1. customer : after an order is PAID (wallet or KHQR) a box slides onto a conveyor belt, every item of the
+                 order drops in (any number of items), the flaps close, tape goes on, a "PAID" stamp lands and
+                 the box slides off to the right.
                  cartScene({ mode:'customer', items:[{ image, name }] })
-   2. admin    : when a customer's order becomes paid while the admin panel is open, a cart comes in from the
-                 left, stops in the middle for a moment (with the order number), then leaves to the right.
+   2. admin    : when a customer's order becomes paid while the admin panel is open, a taped box slides in,
+                 stops in the middle for a moment with a label (order number + amount), then leaves to the right.
                  cartScene({ mode:'admin', label:'Order #YN-123', sub:'$12.00' })
 
-   Played with the Web Animations API; switched off by prefers-reduced-motion.
+   Played with the Web Animations API; switched off by prefers-reduced-motion. Never blocks taps.
    --------------------------------------------------------------------------------------------- */
 
 export type CartSceneItem = { image?: string | null; name?: string | null };
@@ -25,144 +26,161 @@ export function cartScene(detail: CartSceneDetail) {
   window.dispatchEvent(new CustomEvent('yn-cart-scene', { detail }));
 }
 
-/* Supermarket trolley, side view, 220 x 170 units. Drawn in two layers so the products sit INSIDE the basket:
-   back wall (behind the products) -> products -> front wire wall, rim, handle and wheels (in front). */
-const BX = (y: number, side: 'l' | 'r') => (side === 'l' ? 40 + ((y - 30) / 70) * 16 : 200 - ((y - 30) / 70) * 16);
-
-function CartBack() {
+/* Cardboard box, 220 x 170 units, front view with the top slightly visible (back edge y46, front edge y70).
+   Two layers so the products drop INSIDE: back (interior + open back flap) -> products -> front (front wall, flaps, tape, stamp). */
+function BoxBack() {
   return (
     <svg className="csLayer" viewBox="0 0 220 170" aria-hidden="true">
       <defs>
-        <linearGradient id="csIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ddd3f3" /><stop offset="1" stopColor="#b9a9e0" /></linearGradient>
+        <linearGradient id="csInner" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7d522b" /><stop offset="1" stopColor="#9a6a3a" /></linearGradient>
       </defs>
-      <ellipse cx="112" cy="164" rx="86" ry="5" fill="rgba(36,27,53,.25)" />
-      <polygon points="40,30 200,30 184,100 56,100" fill="url(#csIn)" />
-      {[48, 62, 76, 90].map(y => <line key={y} x1={BX(y, 'l')} y1={y} x2={BX(y, 'r')} y2={y} stroke="#fff" strokeOpacity=".55" strokeWidth="1.2" />)}
-      {[0.12, 0.3, 0.5, 0.7, 0.88].map(t => <line key={t} x1={40 + 160 * t} y1="30" x2={56 + 128 * t} y2="100" stroke="#fff" strokeOpacity=".45" strokeWidth="1.2" />)}
+      <ellipse cx="110" cy="152" rx="86" ry="4.5" fill="rgba(36,27,53,.3)" />
+      <polygon points="38,46 182,46 190,70 30,70" fill="url(#csInner)" />
+      {/* back flap, standing open (flips shut and hands over to the copy in the front layer) */}
+      <polygon className="csFlapBa" points="38,46 182,46 186,58 34,58" fill="#e0a868" stroke="#b9783c" strokeWidth="1.2" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function CartFront() {
-  const wire = '#9aa3b5';
+function BoxFront() {
   return (
     <svg className="csLayer" viewBox="0 0 220 170" aria-hidden="true">
       <defs>
-        <linearGradient id="csGrip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a78bfa" /><stop offset="1" stopColor="#6d28d9" /></linearGradient>
+        <linearGradient id="csFace" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d29555" /><stop offset="1" stopColor="#bf8040" /></linearGradient>
       </defs>
-      {/* frame: rear leg from the handle, front leg, lower tray */}
-      <path d="M34 20L64 136" stroke={wire} strokeWidth="5" strokeLinecap="round" fill="none" />
-      <path d="M184 100L172 136" stroke={wire} strokeWidth="5" strokeLinecap="round" fill="none" />
-      <path d="M60 100L66 122M180 100L174 122" stroke={wire} strokeWidth="4" strokeLinecap="round" />
-      <rect x="54" y="120" width="130" height="8" rx="4" fill="#b7bfce" stroke={wire} strokeWidth="1.5" />
-      {[66, 82, 98, 114, 130, 146, 162, 176].map(x => <line key={x} x1={x} y1="121" x2={x} y2="127" stroke={wire} strokeWidth="1.5" />)}
-      <rect x="62" y="134" width="116" height="5" rx="2.5" fill={wire} />
-      {/* front wire wall (thin, so the products show through) */}
-      {[44, 58, 72, 86].map(y => <line key={y} x1={BX(y, 'l')} y1={y} x2={BX(y, 'r')} y2={y} stroke="#8c95a8" strokeWidth="1.8" />)}
-      {[0.08, 0.2, 0.32, 0.44, 0.56, 0.68, 0.8, 0.92].map(t => <line key={t} x1={40 + 160 * t} y1="30" x2={56 + 128 * t} y2="100" stroke="#8c95a8" strokeWidth="1.8" />)}
-      {/* basket edges */}
-      <path d="M40 30L56 100M200 30L184 100" stroke="#7d8699" strokeWidth="4.5" strokeLinecap="round" />
-      <path d="M56 100H184" stroke="#7d8699" strokeWidth="5" strokeLinecap="round" />
-      <path d="M38 30H202" stroke="#aeb6c6" strokeWidth="6" strokeLinecap="round" />
-      <path d="M40 28H200" stroke="#fff" strokeOpacity=".7" strokeWidth="1.6" strokeLinecap="round" />
-      {/* purple handle */}
-      <path d="M40 30L26 10" stroke={wire} strokeWidth="5" strokeLinecap="round" />
-      <rect x="2" y="3" width="40" height="11" rx="5.5" fill="url(#csGrip)" />
-      <rect x="6" y="5" width="30" height="2.6" rx="1.3" fill="#fff" fillOpacity=".4" />
-      {/* name plate */}
-      <rect x="150" y="18" width="40" height="11" rx="5.5" fill="#7c3aed" />
-      <text x="170" y="26.4" textAnchor="middle" fontSize="7.5" fontWeight="900" fill="#fff" letterSpacing=".5">YN SHOP</text>
-      {/* wheels */}
-      {[66, 172].map(cx => (
-        <g key={cx}>
-          <path d={`M${cx} 136V142`} stroke="#4b5563" strokeWidth="5" strokeLinecap="round" />
-          <circle cx={cx} cy="150" r="11" fill="#1f2937" />
-          <g className="csWheel"><circle cx={cx} cy="150" r="6.5" fill="#cbd5e1" /><path d={`M${cx - 6} 150H${cx + 6}M${cx} 144V156`} stroke="#64748b" strokeWidth="1.6" /></g>
-          <circle cx={cx} cy="150" r="2" fill="#475569" />
+      <rect x="30" y="70" width="160" height="80" rx="5" fill="url(#csFace)" />
+      <path d="M30 138H190V145a5 5 0 0 1-5 5H35a5 5 0 0 1-5-5Z" fill="#b9783c" />
+      <rect x="30" y="70" width="160" height="3" fill="#fff" fillOpacity=".28" />
+      <rect x="38" y="134" width="40" height="11" rx="5.5" fill="#7c3aed" />
+      <text x="58" y="142" textAnchor="middle" fontSize="6.6" fontWeight="900" fill="#fff" letterSpacing=".4">YN SHOP</text>
+      {/* closed back half of the lid (starts hidden; takes over from the open flap) */}
+      <polygon className="csFlapBb" points="38,46 182,46 186,58 34,58" fill="#e0a868" stroke="#b9783c" strokeWidth="1.2" strokeLinejoin="round" />
+      {/* front flap: hangs open over the front face, then swings up to close the lid */}
+      <polygon className="csFlapF" points="34,58 186,58 190,70 30,70" fill="#e8b777" stroke="#b9783c" strokeWidth="1.2" strokeLinejoin="round" />
+      {/* tape along the seam + a tab down the front */}
+      <g className="csTape">
+        <path d="M34 55H186V61H34Z" fill="#7c3aed" /><path d="M34 56.4H186" stroke="#fff" strokeOpacity=".45" strokeWidth="1.2" />
+        <path d="M101 61H119V84H101Z" fill="#6d28d9" />
+      </g>
+      {/* PAID stamp */}
+      <g transform="rotate(-9 110 114)">
+        <g className="csStamp">
+          <rect x="68" y="98" width="84" height="34" rx="7" fill="rgba(255,255,255,.2)" stroke="#c026d3" strokeWidth="3.4" />
+          <rect x="73" y="103" width="74" height="24" rx="4" fill="none" stroke="#c026d3" strokeWidth="1.2" />
+          <text x="110" y="124" textAnchor="middle" fontSize="23" fontWeight="900" fill="#c026d3" letterSpacing="3">PAID</text>
         </g>
-      ))}
+      </g>
     </svg>
   );
 }
 
-/* where each product rests inside the basket (col, row); row 0 is on the floor */
-const SLOTS: [number, number][] = [[0, 0], [1, 0], [2, 0], [3, 0], [0.5, 1], [1.5, 1], [2.5, 1], [1, 2], [2, 2], [1.5, 2]];
-const ITEM = 32;
+/* where each product rests inside the box (it sinks behind the front wall; only the top peeks out). 2 rows x 5 */
+const ITEM = 28;
 function slotStyle(i: number): React.CSSProperties {
-  const [c, r] = SLOTS[i % SLOTS.length];
-  const cx = 76 + c * 30.5, top = 98 - ITEM - r * 27;
-  return { left: `${((cx - ITEM / 2) / 220) * 100}%`, bottom: `${((170 - (top + ITEM)) / 170) * 100}%`, width: `${(ITEM / 220) * 100}%`, zIndex: i };
+  const col = i % 5, row = Math.floor(i / 5);
+  const cx = 54 + col * 28, top = row ? 46 : 58;
+  return { left: `${((cx - ITEM / 2) / 220) * 100}%`, top: `${(top / 170) * 100}%`, width: `${(ITEM / 220) * 100}%` };
 }
 
 function Scene({ d, done }: { d: CartSceneDetail; done: () => void }) {
-  const cartRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const beltRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const items = (d.items && d.items.length ? d.items : [{}, {}, {}]).slice(0, 10);
   const admin = d.mode === 'admin';
 
   useEffect(() => {
     let alive = true;
-    const cart = cartRef.current;
-    if (!cart) { done(); return; }
-    const W = window.innerWidth, cw = cart.offsetWidth || 260;
-    const off = -cw - 40, out = W + 40;
-    const stop = admin ? (W - cw) / 2 : Math.max(16, Math.min(W * 0.32, W - cw - 16));
-    const at = (x: number, y = 0, r = 0) => `translate(${x}px,${y}px) rotate(${r}deg)`;
+    const box = boxRef.current, belt = beltRef.current;
+    if (!box || !belt) { done(); return; }
+    const q = (s: string) => box.querySelector<SVGElement | HTMLElement>(s);
+    const bob = q('.csBob');
+    const W = window.innerWidth, H = window.innerHeight, cw = box.offsetWidth || 260;
+    const off = -cw - 40, out = W + 40, stop = (W - cw) / 2;
+    const at = (x: number, y = 0) => `translate(${x}px,${y}px)`;
+    // play an animation and wait for it; if the scene was removed meanwhile, stop the whole run quietly
+    const play = async (el: Element | null | undefined, kf: Keyframe[], o: KeyframeAnimationOptions) => {
+      if (!el) return;
+      await el.animate(kf, { fill: 'forwards', ...o }).finished.catch(() => undefined);
+      if (!alive) throw new Error('gone');
+    };
+    const wait = async (ms: number) => { await sleep(ms); if (!alive) throw new Error('gone'); };
+    const thump = (px = 4, ms = 160) => { bob?.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${px}px)` }, { transform: 'translateY(0)' }], { duration: ms }); };
+
     const run = async () => {
-      cart.style.transform = at(off);
-      await cart.animate([{ transform: at(off) }, { transform: at(stop + 10, 0, 2), offset: .85 }, { transform: at(stop) }],
-        { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).finished;
-      if (!alive) return;
+      play(belt, [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'ease-out' });
+      box.style.transform = at(off);
+      // 1. the box slides onto the conveyor
+      await play(box, [{ transform: at(off) }, { transform: at(stop + 10), offset: .85 }, { transform: at(stop) }], { duration: 720, easing: 'cubic-bezier(.2,.8,.3,1)' });
+
       if (admin) {
-        itemRefs.current.forEach((el, i) => el?.animate([{ transform: 'scale(.2)', opacity: 0 }, { transform: 'scale(1.15)', opacity: 1, offset: .7 }, { transform: 'scale(1)', opacity: 1 }],
-          { duration: 420, delay: 250 + i * 70, easing: 'ease-out', fill: 'backwards' }));
-        cart.animate([{ transform: at(stop) }, { transform: at(stop, -12) }, { transform: at(stop) }], { duration: 520, delay: 150, easing: 'ease-in-out' });
-        await sleep(2300);
+        // label pops onto the box, box stays for a moment
+        q('.csLabel')?.animate([{ opacity: 0, transform: 'scale(.4) rotate(-6deg)' }, { opacity: 1, transform: 'scale(1.08) rotate(-2deg)', offset: .7 }, { opacity: 1, transform: 'scale(1) rotate(-2deg)' }],
+          { duration: 480, delay: 200, easing: 'ease-out', fill: 'forwards' });
+        thump(-8, 520);
+        await wait(2680);
       } else {
-        const H = window.innerHeight, gap = Math.max(110, Math.min(330, 2000 / items.length));
+        // 2. the order's items drop in
+        const gap = Math.max(90, Math.min(300, 1000 / items.length));
         await Promise.all(items.map(async (_, i) => {
           const el = itemRefs.current[i];
           if (!el) return;
-          await sleep(i * gap);
-          if (!alive) return;
+          await wait(i * gap);
           const a = Math.random() * 90 - 45;
-          el.style.opacity = '1';
-          await el.animate([
+          await play(el, [
             { transform: `translate(0,${-H * 0.55}px) rotate(${a}deg) scale(1.1)`, opacity: 0 },
             { opacity: 1, offset: .12 },
-            { transform: 'translate(0,6px) rotate(0) scale(.95)', offset: .85, opacity: 1 },
+            { transform: 'translate(0,5px) rotate(0) scale(.95)', offset: .85, opacity: 1 },
             { transform: 'translate(0,0) rotate(0) scale(1)', opacity: 1 },
-          ], { duration: 620, easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'forwards' }).finished;
-          cart.animate([{ transform: at(stop) }, { transform: at(stop, 5) }, { transform: at(stop) }], { duration: 160 });
+          ], { duration: 560, easing: 'cubic-bezier(.5,0,.9,.6)' });
+          thump(4, 150);
         }));
-        await sleep(300);
+        await wait(120);
+        // 3. flaps close (front flap swings up, back flap flips over and hands over to the front-layer copy)
+        const ease = 'cubic-bezier(.4,0,.2,1)';
+        await Promise.all([
+          play(q('.csFlapF'), [{ transform: 'scaleY(-1.25)' }, { transform: 'scaleY(1)' }], { duration: 300, easing: ease }),
+          play(q('.csFlapBa'), [{ transform: 'scaleY(-1.5)', opacity: 1 }, { transform: 'scaleY(0)', opacity: 1, offset: .98 }, { transform: 'scaleY(0)', opacity: 0 }], { duration: 170, delay: 100, easing: 'ease-in' }),
+          play(q('.csFlapBb'), [{ transform: 'scaleY(0)', opacity: 1 }, { transform: 'scaleY(1)', opacity: 1 }], { duration: 170, delay: 270, easing: 'ease-out' }),
+        ]);
+        itemRefs.current.forEach(el => { if (el) el.style.visibility = 'hidden'; });
+        // 4. tape goes on
+        await play(q('.csTape'), [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 300, easing: 'ease-in-out' });
+        // 5. PAID stamp lands
+        play(q('.csStamp'), [{ transform: 'scale(2.6)', opacity: 0 }, { transform: 'scale(.92)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: .95 }], { duration: 360, easing: 'cubic-bezier(.2,.9,.3,1)' });
+        await wait(150);
+        thump(6, 200);
+        await wait(300);
       }
-      if (!alive) return;
-      await cart.animate([{ transform: at(stop) }, { transform: at(stop - 24, 0, -3), offset: .15 }, { transform: at(out) }],
-        { duration: 1300, easing: 'cubic-bezier(.5,0,.9,.5)', fill: 'forwards' }).finished;
+
+      // 6. the box slides off to the right
+      play(belt, [{ opacity: 1 }, { opacity: 0 }], { duration: 350, delay: 650, easing: 'ease-in' });
+      await play(box, [{ transform: at(stop) }, { transform: at(stop - 10), offset: .12 }, { transform: at(out) }], { duration: 1000, easing: 'cubic-bezier(.5,0,.9,.5)' });
       if (alive) done();
     };
-    run().catch(() => done());
+    run().catch(() => { if (alive) done(); });
     return () => { alive = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={'csOverlay ' + (admin ? 'admin' : 'customer')} aria-hidden="true">
-      <div className="csTrack" />
-      <div className="csCart" ref={cartRef}>
-        {admin && (d.label || d.sub) && (
-          <div className="csTag"><b>{d.label}</b>{d.sub && <small>{d.sub}</small>}</div>
-        )}
+      <div className="csBelt" ref={beltRef}><i /></div>
+      <div className="csPack" ref={boxRef}>
         <div className="csBob">
-          <CartBack />
-          <div className="csItems">
-            {items.map((it, i) => (
-              <div key={i} className={'csItem' + (admin ? ' shown' : '')} ref={el => { itemRefs.current[i] = el; }} style={slotStyle(i)}>
-                {it.image ? <img src={it.image} alt="" /> : <span>{['🛍️', '🍎', '🥛', '🍞', '🧃'][i % 5]}</span>}
-              </div>
-            ))}
-          </div>
-          <CartFront />
+          <BoxBack />
+          {!admin && (
+            <div className="csItems">
+              {items.map((it, i) => (
+                <div key={i} className="csItem" ref={el => { itemRefs.current[i] = el; }} style={slotStyle(i)}>
+                  {it.image ? <img src={it.image} alt="" /> : <span>{['🛍️', '🍎', '🥛', '🍞', '🧃'][i % 5]}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          <BoxFront />
+          {admin && (d.label || d.sub) && (
+            <div className="csLabel"><b>{d.label}</b>{d.sub && <small>{d.sub}</small>}</div>
+          )}
         </div>
       </div>
     </div>

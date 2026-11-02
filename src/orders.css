@@ -39,11 +39,18 @@
 @keyframes osFlapR{0%,48%{transform:rotate(80deg)}62%,100%{transform:rotate(0)}}
 @keyframes osHop{0%,66%{transform:none}74%{transform:translateY(-16px)}82%,100%{transform:none}}
 @keyframes osSpark{0%,70%{opacity:0}78%{opacity:1}100%{opacity:0}}
-/* warehouse: door rolls up, crate rolls in, door closes */
-.osDoor{transform-origin:128px 108px;animation:osDoor 4.6s ease-in-out infinite}
-.osCrate{animation:osCrate 4.6s ease-in-out infinite}
-@keyframes osDoor{0%,10%{transform:scaleY(1)}24%,66%{transform:scaleY(.12)}80%,100%{transform:scaleY(1)}}
-@keyframes osCrate{0%,16%{transform:translateX(0);opacity:1}58%{transform:translateX(120px);opacity:1}62%,100%{transform:translateX(130px);opacity:0}}
+/* warehouse: door rolls up, a forklift carries 3 boxes onto a stack by the door, door closes, stack fades out (13.5s loop) */
+.osDoor{transform-origin:128px 108px;animation:osDoor 13.5s ease-in-out infinite}
+.osFk,.osLift,.osCarry,.osSt{animation-duration:13.5s;animation-iteration-count:infinite;animation-timing-function:ease-in-out}
+.osFk{animation-name:osFk}.osLift{transform:translateY(-4px);animation-name:osLift}.osCarry{animation-name:osCarry}
+.osSt0{animation-name:osSt0}.osSt1{animation-name:osSt1}.osSt2{animation-name:osSt2}
+@keyframes osDoor{0%{transform:scaleY(1)}1.48%{transform:scaleY(1)}6.67%{transform:scaleY(.12)}83.7%{transform:scaleY(.12)}88.89%{transform:scaleY(1)}100%{transform:scaleY(1)}}
+@keyframes osFk{0%{transform:translateX(0)}6.67%{transform:translateX(0)}8.89%{transform:translateX(0)}17.78%{transform:translateX(63px)}25.19%{transform:translateX(63px)}31.85%{transform:translateX(0)}34.07%{transform:translateX(0)}42.96%{transform:translateX(63px)}50.37%{transform:translateX(63px)}57.04%{transform:translateX(0)}59.26%{transform:translateX(0)}68.15%{transform:translateX(63px)}75.56%{transform:translateX(63px)}82.22%{transform:translateX(0)}100%{transform:translateX(0)}}
+@keyframes osLift{0%{transform:translateY(-4px)}17.78%{transform:translateY(-4px)}21.48%{transform:translateY(10px)}22.22%{transform:translateY(10px)}25.19%{transform:translateY(-4px)}42.96%{transform:translateY(-4px)}46.67%{transform:translateY(-2px)}47.41%{transform:translateY(-2px)}50.37%{transform:translateY(-4px)}68.15%{transform:translateY(-4px)}71.85%{transform:translateY(-14px)}72.59%{transform:translateY(-14px)}75.56%{transform:translateY(-4px)}100%{transform:translateY(-4px)}}
+@keyframes osCarry{0%{opacity:0}6.67%{opacity:0}8.89%{opacity:1}22.22%{opacity:1}22.37%{opacity:0}31.85%{opacity:0}34.07%{opacity:1}47.41%{opacity:1}47.56%{opacity:0}57.04%{opacity:0}59.26%{opacity:1}72.59%{opacity:1}72.74%{opacity:0}100%{opacity:0}}
+@keyframes osSt0{0%{opacity:0}22.22%{opacity:0}22.37%{opacity:1}89.63%{opacity:1}95.56%{opacity:0}100%{opacity:0}}
+@keyframes osSt1{0%{opacity:0}47.41%{opacity:0}47.56%{opacity:1}89.63%{opacity:1}95.56%{opacity:0}100%{opacity:0}}
+@keyframes osSt2{0%{opacity:0}72.59%{opacity:0}72.74%{opacity:1}89.63%{opacity:1}95.56%{opacity:0}100%{opacity:0}}
 /* truck: road scrolls, wheels spin, body bobs */
 .osRoad{animation:osRoad .5s linear infinite}
 .osWheel{transform-box:fill-box;transform-origin:center;animation:osSpin .5s linear infinite}
@@ -58,7 +65,7 @@
 @keyframes osPulse{50%{transform:scale(1.08)}}
 @keyframes ovIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 @keyframes ovPop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.osSweep,.osRing,.osBlip,.osPin,.osDot,.osHouses,.osMoto,.ordView,.osScene,.osItem,.osFlapL,.osFlapR,.osBoxHop,.osSpark,.osDoor,.osCrate,.osRoad,.osWheel,.osTruck,.osClouds,.osSpeed,.osBadge{animation:none!important}.osFlapL,.osFlapR{transform:none}.osDoor{transform:scaleY(.12)}}
+@media(prefers-reduced-motion:reduce){.osSweep,.osRing,.osBlip,.osPin,.osDot,.osHouses,.osMoto,.ordView,.osScene,.osItem,.osFlapL,.osFlapR,.osBoxHop,.osSpark,.osDoor,.osFk,.osLift,.osCarry,.osSt,.osSt0,.osSt1,.osSt2,.osRoad,.osWheel,.osTruck,.osClouds,.osSpeed,.osBadge{animation:none!important}.osFlapL,.osFlapR{transform:none}.osDoor{transform:scaleY(.12)}}
 
 /* snack orders: waiting for a delivery driver (radar search) and out for delivery (motorbike) */
 .osScene.driver{background:linear-gradient(160deg,#dff7f3,#a9e8dc)}

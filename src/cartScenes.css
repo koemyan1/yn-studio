@@ -1,19 +1,35 @@
-/* Shopping-cart scenes (see CartScenes.tsx). Full-screen, never blocks taps. */
-.csOverlay{position:fixed;inset:0;z-index:9000;pointer-events:none;overflow:hidden}
+/* Packing scenes (see CartScenes.tsx). Full-screen, never blocks taps. */
+.csOverlay{--csw:clamp(240px,64vw,380px);--csb:calc(16% + env(safe-area-inset-bottom,0px));--csh:clamp(22px,6vw,30px);position:fixed;inset:0;z-index:9000;pointer-events:none;overflow:hidden}
 .csOverlay.admin{animation:csDim 4.4s ease-in-out both}
 @keyframes csDim{0%,100%{background:rgba(30,10,60,0)}25%,72%{background:rgba(30,10,60,.34)}}
-.csCart{position:absolute;left:0;bottom:calc(16% + env(safe-area-inset-bottom,0px));width:clamp(240px,64vw,380px);aspect-ratio:220/170;will-change:transform;filter:drop-shadow(0 16px 16px rgba(36,27,53,.28))}
-.csBob{position:absolute;inset:0;animation:csBob .55s ease-in-out infinite}
-@keyframes csBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px) rotate(-.4deg)}}
+
+/* conveyor belt: full width, its top edge lines up with the bottom of the box */
+.csBelt{position:absolute;left:0;right:0;height:var(--csh);bottom:calc(var(--csb) + var(--csw)*.0909 - var(--csh));overflow:hidden;opacity:0;background:linear-gradient(#6d28d9,#3b1d7a);border-top:3px solid #a78bfa;box-shadow:0 10px 18px rgba(36,27,53,.3)}
+.csBelt i{position:absolute;top:0;bottom:0;left:-28px;right:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 7px,transparent 7px 28px);animation:csBelt .5s linear infinite;will-change:transform}
+@keyframes csBelt{to{transform:translateX(28px)}}
+
+.csPack{position:absolute;left:0;bottom:var(--csb);width:var(--csw);aspect-ratio:220/170;will-change:transform;filter:drop-shadow(0 8px 8px rgba(36,27,53,.25))}
+.csBob{position:absolute;inset:0}
 .csLayer{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
 .csItems{position:absolute;inset:0}
-.csItem{position:absolute;aspect-ratio:1;border-radius:18%;background:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(36,27,53,.35);display:grid;place-items:center;overflow:hidden;opacity:0;font-size:clamp(16px,4.6vw,26px);box-sizing:border-box}
-.csItem.shown{opacity:1}
+.csItem{position:absolute;aspect-ratio:1;border-radius:18%;background:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(36,27,53,.35);display:grid;place-items:center;overflow:hidden;opacity:0;font-size:clamp(14px,4vw,22px);box-sizing:border-box}
 .csItem img{width:100%;height:100%;object-fit:cover;display:block}
-.csWheel{transform-box:fill-box;transform-origin:center;animation:csSpin .45s linear infinite}
-@keyframes csSpin{to{transform:rotate(360deg)}}
-.csTag{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:5;white-space:nowrap;text-align:center;display:grid;gap:1px;padding:10px 20px;border-radius:18px;background:linear-gradient(120deg,#7c3aed,#c026d3);color:#fff;box-shadow:0 12px 28px rgba(124,58,237,.5);animation:csTag .5s .85s cubic-bezier(.2,1.6,.4,1) both}
-.csTag b{font:800 16px system-ui,sans-serif}.csTag small{font:600 13px system-ui,sans-serif;opacity:.92}
-.csTag::after{content:"";position:absolute;left:50%;top:100%;margin-left:-8px;border:8px solid transparent;border-top-color:#a21caf}
-@keyframes csTag{from{opacity:0;transform:translateX(-50%) scale(.4)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+
+/* start states (SVG origins are in viewBox units): flaps open, tape off, stamp hidden */
+.csFlapF{transform-origin:0 70px;transform:scaleY(-1.25)}
+.csFlapBa{transform-origin:0 46px;transform:scaleY(-1.5)}
+.csFlapBb{transform-origin:0 46px;transform:scaleY(0);opacity:0}
+.csTape{transform-origin:34px 0;transform:scaleX(0)}
+.csStamp{transform-origin:110px 114px;opacity:0}
+/* admin: the box arrives already closed and taped */
+.csOverlay.admin .csFlapF{transform:none}
+.csOverlay.admin .csFlapBa{opacity:0}
+.csOverlay.admin .csFlapBb{transform:none;opacity:1}
+.csOverlay.admin .csTape{transform:none}
+
+/* admin shipping label on the box face */
+.csLabel{position:absolute;left:17%;right:17%;top:49%;bottom:14%;z-index:5;box-sizing:border-box;display:grid;align-content:center;justify-items:center;gap:2px;padding:6px 8px 2px;overflow:hidden;text-align:center;background:#fff;border:2px solid #7c3aed;border-radius:8px;box-shadow:0 6px 14px rgba(36,27,53,.3);opacity:0;transform:rotate(-2deg)}
+.csLabel::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,#7c3aed,#c026d3)}
+.csLabel b{max-width:100%;overflow-wrap:anywhere;font:800 clamp(12px,3.4vw,16px)/1.15 system-ui,sans-serif;color:#2d1b69}
+.csLabel small{font:700 clamp(11px,3vw,14px)/1.1 system-ui,sans-serif;color:#7c3aed}
 @media(prefers-reduced-motion:reduce){.csOverlay{display:none}}

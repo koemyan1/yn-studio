@@ -2,6 +2,13 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: pay-first services (Printing, Copy, Social post, Poster, Logo)
+
+- **Services now work like the CV maker**: a form built from the options you set, a live price, **pay with Bakong KHQR first**, then a status tracker (Paid, In progress, Ready, Done) with push/notification at each step. Print and copy ask for pick-up (store name, address, map, "Open in Maps") or delivery (map pin, fee from your delivery settings); design orders are digital with a Download button.
+- **Admin -> Service prices**: switch services on/off, edit names, several base prices per service, questions and options (fixed, per unit or percent), live preview. **Admin -> Service orders**: filter, see files and map, change status, upload finished files, cancel with a reason, record a refund (no money moves automatically).
+- **Security**: the server recomputes every price from the catalog and ignores browser prices; customers can only read their own orders; files are in private buckets; unpaid orders cancel after 48 hours.
+- **You must run `supabase/sql/supabase-service-shop.sql`**, fill Store name/address in Admin -> Settings, and set your prices. Old request form remains as fallback. Setup: [docs/setup/SERVICE-SHOP-SETUP.md](docs/setup/SERVICE-SHOP-SETUP.md). Notes: [docs/changelog/CHANGELOG-SERVICE-SHOP.md](docs/changelog/CHANGELOG-SERVICE-SHOP.md).
+
 ## Unreleased: easy-to-find "Write a review" + calmer loading screen
 
 - **"Write a review" is now always visible**: under the product name, in the Customer reviews section, and under every item of a paid order (Orders + order screen). Buyers-only rule unchanged; non-buyers get a clear note instead of a missing button. **Run `supabase/sql/supabase-product-reviews.sql` again** (safe) so buyers with `delivered` / "counts as paid" order statuses can review.

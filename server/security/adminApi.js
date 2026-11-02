@@ -43,6 +43,15 @@ export function createAdminApi({ shield, store, sb, userFromToken, now = Date.no
     return user;
   }
 
+  // Quiet check (no response, no strike): true only for a signed-in admin. Used to show extra detail on otherwise public pages.
+  async function isAdmin(req) {
+    if (!req.headers?.authorization) return false;
+    const user = await userFromToken(req).catch(() => null);
+    if (!user) return false;
+    if ((adminCache.get(user.id) || 0) > now()) return true;
+    try { return (await sb(`profiles?user_id=eq.${encodeURIComponent(user.id)}&select=role&limit=1`))?.[0]?.role === 'admin'; } catch { return false; }
+  }
+
   async function summary() {
     const since = new Date(now() - 24 * 3600000).toISOString();
     const rows = await store.queryEvents({ sinceIso: since, limit: 5000 });
@@ -159,5 +168,5 @@ export function createAdminApi({ shield, store, sb, userFromToken, now = Date.no
     res.statusCode = 204; res.end();
   }
 
-  return { handler, cspReport, summary, requireAdmin };
+  return { handler, cspReport, summary, requireAdmin, isAdmin };
 }

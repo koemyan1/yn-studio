@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
 import './services.css';
+import { ServiceOrderCard, ServiceOrderSheet, fetchMyOrders, useOrderLive, useServiceCatalog, waiting } from './ServiceOrder';
+import type { Api, MyOrder, PayProps } from './ServiceOrder';
 
 /* ---------------------------------------------------------------------------------------------
    Services page (customer) + Requests page (admin).
@@ -125,7 +127,11 @@ async function uploadFile(userId: string, file: File): Promise<string> {
 }
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
-type Chrome = { Top: React.ComponentType<{ title?: string; back?: boolean }>; Nav: React.ComponentType };
+type Chrome = {
+  Top: React.ComponentType<{ title?: string; back?: boolean }>; Nav: React.ComponentType;
+  /** Pay-first shop (optional): the Bakong API caller, whether Bakong is on (null = still loading), and the payment popup. */
+  api?: Api; bakongOn?: boolean | null; PayModal?: React.ComponentType<PayProps>;
+};
 
 /* ============================================ CUSTOMER ============================================ */
 
@@ -148,10 +154,19 @@ function useReveal(dep: unknown) {
   }, [dep]);
 }
 
-export default function ServicesPage({ Top, Nav }: Chrome) {
+export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chrome) {
   useLang();
   const nav = useNavigate();
   const [open, setOpen] = useState<Service | null>(null);
+  // pay-first shop: used for a service only when it is switched on, has a price, and Bakong works. Otherwise the old request form stays.
+  const catalog = useServiceCatalog();
+  const [shop, setShop] = useState<Service | null>(null);
+  const [orders, setOrders] = useState<MyOrder[]>([]);
+  const [payOrder, setPayOrder] = useState<string | null>(null);
+  const shopOn = (k: string) => !!(api && PayModal && bakongOn === true && catalog?.[k] && catalog[k].prices.length > 0);
+  const loadOrders = useCallback(() => { fetchMyOrders().then(setOrders).catch(() => {}); }, []);
+  useEffect(() => { loadOrders(); }, [loadOrders]);
+  useOrderLive(loadOrders);
   const [mine, setMine] = useState<Mine[]>([]);
 
   const loadMine = useCallback(async () => {
@@ -173,17 +188,17 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
     setMine(rows.slice(0, 6));
   }, []);
   useEffect(() => { loadMine(); }, [loadMine]);
-  useReveal(mine.length);
+  useReveal(mine.length + orders.length);
 
   const renderCard = (s: Service, i: number) => (
     <article className="svcCard" data-rv key={s.k} style={{ ['--svc' as any]: s.ink, ['--svc-fg' as any]: s.fg || '#fff', ['--i' as any]: i }}>
       <div className="svcInk"><s.Icon /></div>
       <div className="svcBody">
-        <h3>{tr(s.en, s.km)}</h3>
-        <p>{tr(s.dEn, s.dKm)}</p>
+        <h3>{shopOn(s.k) && catalog?.[s.k]?.service.name_en ? (isKm() && catalog[s.k].service.name_km ? catalog[s.k].service.name_km : catalog[s.k].service.name_en) : tr(s.en, s.km)}</h3>
+        <p>{shopOn(s.k) && catalog?.[s.k]?.service.desc_en ? (isKm() && catalog[s.k].service.desc_km ? catalog[s.k].service.desc_km : catalog[s.k].service.desc_en) : tr(s.dEn, s.dKm)}</p>
         <ul className="svcTags">{(isKm() ? s.tagsKm : s.tagsEn).map(t => <li key={t}>{t}</li>)}</ul>
-        <button type="button" className="svcAsk" onClick={() => setOpen(s)}>
-          {tr('Request this', 'ស្នើសុំសេវានេះ')}
+        <button type="button" className="svcAsk" onClick={() => (shopOn(s.k) ? setShop(s) : setOpen(s))}>
+          {shopOn(s.k) ? tr('Order now', 'បញ្ជាទិញឥឡូវនេះ') : tr('Request this', 'ស្នើសុំសេវានេះ')}
         </button>
       </div>
     </article>
@@ -199,7 +214,7 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
           <i className="svcCrop tl" /><i className="svcCrop tr" /><i className="svcCrop bl" /><i className="svcCrop br" />
           <div className="svcDots" aria-hidden="true"><b style={{ background: '#00a3d9' }} /><b style={{ background: '#e5007d' }} /><b style={{ background: '#f2b705' }} /><b style={{ background: '#241b35' }} /></div>
           <h1 id="svcTitle">{tr('Print it. Copy it. Design it.', 'បោះពុម្ព ថតចម្លង រចនា។')}</h1>
-          <p>{tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
+          <p>{ALL.some(s => shopOn(s.k)) ? tr('Choose a service, set your options, see the price and pay. We start once it is paid.', 'ជ្រើសរើសសេវា កំណត់ជម្រើស មើលតម្លៃ ហើយទូទាត់។ យើងចាប់ផ្តើមនៅពេលបានបង់ប្រាក់។') : tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
 
         <article className="svcCard" data-rv style={{ ['--svc' as any]: '#7c3aed', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
@@ -221,9 +236,19 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
 
         <ProductIdea onSent={loadMine} />
 
-        {mine.length > 0 && (
+        {(mine.length > 0 || orders.length > 0) && (
           <section className="svcMine" data-rv aria-label={tr('Your requests', 'សំណើរបស់អ្នក')}>
             <h2 className="svcGroup">{tr('Your requests', 'សំណើរបស់អ្នក')}</h2>
+            {orders.length > 0 && (
+              <ul className="ssOrders">
+                {orders.map(o => {
+                  const s = ALL.find(x => x.k === o.service_key);
+                  const c = catalog?.[o.service_key]?.service;
+                  const title = (isKm() && c?.name_km) || c?.name_en || (s ? tr(s.en, s.km) : o.service_key);
+                  return <ServiceOrderCard key={o.id} o={o} title={title} onPay={setPayOrder} />;
+                })}
+              </ul>
+            )}
             <ul>
               {mine.map(r => (
                 <li key={r.kind + r.id}>
@@ -237,6 +262,10 @@ export default function ServicesPage({ Top, Nav }: Chrome) {
         )}
       </main>
       {open && <RequestSheet service={open} onClose={() => setOpen(null)} onSent={loadMine} />}
+      {shop && api && PayModal && catalog?.[shop.k] && (
+        <ServiceOrderSheet svc={shop} cat={catalog[shop.k]} api={api} PayModal={PayModal} onClose={() => setShop(null)} onChanged={loadOrders} />
+      )}
+      {payOrder && PayModal && <PayModal svc={{ orderId: payOrder }} onClose={() => { setPayOrder(null); loadOrders(); }} onPaid={() => { setPayOrder(null); loadOrders(); }} />}
       <Nav />
     </>
   );

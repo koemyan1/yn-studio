@@ -74,6 +74,11 @@ function applyHeaders(req, res, hdr) {
   const https = req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
   if (https) res.setHeader('Strict-Transport-Security', `max-age=15552000${process.env.HSTS_SUBDOMAINS === '1' ? '; includeSubDomains' : ''}`);
   if (hdr.cspHeader) res.setHeader(hdr.cspHeader, hdr.csp);
+  // Admin pages: never indexed by search engines, never kept in a shared or browser cache.
+  if (/^\/(admin|api\/admin)(\/|$)/.test(String(req.path || req.url || '').split('?')[0])) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    res.setHeader('Cache-Control', 'no-store');
+  }
 }
 
 /* ------------------------------- shield ------------------------------- */

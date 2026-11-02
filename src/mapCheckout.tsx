@@ -55,9 +55,11 @@ type PanelProps = {
   setMsg: (m: string) => void;
   /** Applies the per-category delivery rules (free / fixed amount) to the distance-based fee. */
   adjustFee?: (distanceFee: number) => number;
+  /** Service orders have no live driver map, so they hide the "watch the driver" note. */
+  hideTrackNote?: boolean;
 };
 
-export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefault, setMakeDefault, pin, onConfirm, onEdit, setMsg, adjustFee }: PanelProps) {
+export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefault, setMakeDefault, pin, onConfirm, onEdit, setMsg, adjustFee, hideTrackNote }: PanelProps) {
   const el = useRef<HTMLDivElement | null>(null);
   const map = useRef<L.Map | null>(null);
   const timer = useRef<number>(0);
@@ -134,7 +136,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
           <MapPin />
         </div>
         {store && <p className="ynMapMeta">{calcFee(cfg, store, pin).km.toFixed(1)} km · ${feeOf(calcFee(cfg, store, pin).fee).toFixed(2)} {tr('delivery', 'ដឹកជញ្ជូន')}</p>}
-        <p className="muted ynMapNote">{tr('After you order, you can watch the driver arrive live on the map in Orders.', 'បន្ទាប់ពីបញ្ជាទិញ អ្នកអាចតាមដានអ្នកដឹកផ្ទាល់នៅលើផែនទីក្នុងការបញ្ជាទិញ។')}</p>
+        {!hideTrackNote && <p className="muted ynMapNote">{tr('After you order, you can watch the driver arrive live on the map in Orders.', 'បន្ទាប់ពីបញ្ជាទិញ អ្នកអាចតាមដានអ្នកដឹកផ្ទាល់នៅលើផែនទីក្នុងការបញ្ជាទិញ។')}</p>}
         <button type="button" className="secondary" onClick={onEdit}><Pencil />{tr('Change location', 'ផ្លាស់ប្តូរទីតាំង')}</button>
       </div>
     );
@@ -176,6 +178,20 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
       </div>
     </div>
   );
+}
+
+/* ───────────────────────── Read-only map with one pin (store for pick-up, customer spot for the admin) ───────────────────────── */
+export function PinMap({ at, emoji = '📍', height = 180 }: { at: Pt; emoji?: string; height?: number }) {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!el.current || !Number.isFinite(at.lat) || !Number.isFinite(at.lng)) return;
+    const m = L.map(el.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, keyboard: false, attributionControl: true }).setView([at.lat, at.lng], 16);
+    L.tileLayer(TILES, { attribution: ATTR, subdomains: 'abcd', maxZoom: 20 }).addTo(m);
+    L.marker([at.lat, at.lng], { icon: L.divIcon({ className: 'yn-map-pin-wrap', html: `<div class="ynStoreDot">${emoji}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] }), interactive: false }).addTo(m);
+    const t = window.setTimeout(() => m.invalidateSize(), 120);
+    return () => { window.clearTimeout(t); m.remove(); };
+  }, [at.lat, at.lng, emoji]);
+  return <div ref={el} className="ssMap" style={{ height }} role="img" aria-label={tr('Map', 'ផែនទី')} />;
 }
 
 /* ───────────────────────── Orders: watch the driver live ───────────────────────── */
