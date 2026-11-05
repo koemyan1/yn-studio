@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="km">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>សូមគោរពអញ្ជើញ · Wedding Invitation</title>
+<meta name="description" content="You are invited to our wedding · សូមគោរពអញ្ជើញចូលរួមពិធីមង្គលការ">
+<meta property="og:title" content="សូមគោរពអញ្ជើញ · Wedding Invitation">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0b2527">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=Moul&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="locked">
+<canvas id="petals" aria-hidden="true"></canvas>
+
+<!-- COVER: sealed envelope -->
+<section id="cover" aria-label="Open invitation">
+  <p class="cover-to" id="coverTo"></p>
+  <div class="envelope" id="envelope">
+    <div class="env-back"></div>
+    <div class="env-card">
+      <div class="card-in">
+        <span class="km" id="cardKm"></span>
+        <span class="en" id="cardEn"></span>
+      </div>
+    </div>
+    <div class="flap f-top"></div>
+    <div class="flap f-right"></div>
+    <div class="flap f-bottom"></div>
+    <div class="flap f-left"></div>
+    <button class="seal" id="seal" aria-label="Open the invitation">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <path d="M50 14 C42 30 42 44 50 56 C58 44 58 30 50 14Z"/>
+          <path d="M50 56 C36 50 28 38 30 26 C40 30 46 40 50 56Z"/>
+          <path d="M50 56 C64 50 72 38 70 26 C60 30 54 40 50 56Z"/>
+          <path d="M50 56 C28 58 16 50 12 40 C26 38 40 44 50 56Z"/>
+          <path d="M50 56 C72 58 84 50 88 40 C74 38 60 44 50 56Z"/>
+          <path d="M26 72 H74 M34 80 H66"/>
+        </g>
+      </svg>
+    </button>
+  </div>
+  <p class="cover-hint km">ចុចត្រាដើម្បីបើក<span class="en"> · tap the seal</span></p>
+</section>
+
+<main id="main" hidden>
+  <button id="musicBtn" class="music" aria-label="Toggle music" hidden>♪</button>
+
+  <header class="hero">
+    <p class="km invite">សូមគោរពអញ្ជើញចូលរួមពិធីមង្គលការ</p>
+    <h1>
+      <span class="name km" id="groomKm"></span>
+      <span class="amp" aria-hidden="true">&amp;</span>
+      <span class="name km" id="brideKm"></span>
+    </h1>
+    <p class="latin" id="namesEn"></p>
+    <div class="lotus-rule" aria-hidden="true"><i></i><b></b><i></i></div>
+    <p class="km date" id="dateKm"></p>
+    <p class="latin" id="dateEn"></p>
+    <p class="guest km" id="guestLine" hidden></p>
+  </header>
+
+  <section class="block reveal" aria-label="Countdown">
+    <div class="count" id="count"></div>
+  </section>
+
+  <section class="block reveal" aria-labelledby="hProg">
+    <h2 class="km" id="hProg">កម្មវិធី</h2>
+    <p class="latin sub">Programme</p>
+    <ol class="timeline" id="timeline"></ol>
+  </section>
+
+  <section class="block reveal" aria-labelledby="hVenue">
+    <h2 class="km" id="hVenue">ទីកន្លែង</h2>
+    <p class="latin sub">Venue</p>
+    <p class="km venue" id="venueKm"></p>
+    <p class="latin" id="venueEn"></p>
+    <a class="btn" id="mapBtn" target="_blank" rel="noopener"><span class="km">មើលផែនទី</span> <span class="latin">Open map</span></a>
+  </section>
+
+  <section class="block reveal" id="gallerySec" aria-labelledby="hGal">
+    <h2 class="km" id="hGal">រូបភាពអនុស្សាវរីយ៍</h2>
+    <p class="latin sub">Our moments</p>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section class="block reveal" aria-labelledby="hRsvp">
+    <h2 class="km" id="hRsvp">ការឆ្លើយតប</h2>
+    <p class="latin sub">RSVP</p>
+    <form id="rsvpForm" class="form" autocomplete="off">
+      <label><span class="km">ឈ្មោះ</span><input name="name" required maxlength="60" placeholder="Your name"></label>
+      <div class="choice" role="radiogroup" aria-label="Attendance">
+        <label><input type="radio" name="attending" value="yes" checked><span class="km">ខ្ញុំនឹងចូលរួម</span></label>
+        <label><input type="radio" name="attending" value="no"><span class="km">ខ្ញុំមិនអាចចូលរួម</span></label>
+      </div>
+      <label><span class="km">ចំនួនភ្ញៀវ</span>
+        <select name="guests"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+      </label>
+      <button class="btn solid" type="submit"><span class="km">ផ្ញើការឆ្លើយតប</span></button>
+      <p class="status" id="rsvpStatus" role="status"></p>
+    </form>
+  </section>
+
+  <section class="block reveal" aria-labelledby="hWish">
+    <h2 class="km" id="hWish">ពាក្យជូនពរ</h2>
+    <p class="latin sub">Wishes for the couple</p>
+    <form id="wishForm" class="form" autocomplete="off">
+      <label><span class="km">ឈ្មោះ</span><input name="name" required maxlength="60" placeholder="Your name"></label>
+      <label><span class="km">សារ</span><textarea name="message" required maxlength="300" rows="3" placeholder="Write your wish…"></textarea></label>
+      <button class="btn solid" type="submit"><span class="km">ផ្ញើពាក្យជូនពរ</span></button>
+      <p class="status" id="wishStatus" role="status"></p>
+    </form>
+    <ul class="wishes" id="wishes"></ul>
+  </section>
+
+  <section class="block reveal" id="giftSec" aria-labelledby="hGift">
+    <h2 class="km" id="hGift">កាដូអាពាហ៍ពិពាហ៍</h2>
+    <p class="latin sub">Wedding gift</p>
+    <div class="qr" id="qr">
+      <img id="qrImg" alt="KHQR code for wedding gift" hidden>
+      <p class="latin" id="qrNote"></p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p class="km">សូមអរគុណ · សូមជួបគ្នា</p>
+    <p class="latin">With love, <span id="footNames"></span></p>
+  </footer>
+</main>
+
+<audio id="bgm" loop preload="none"></audio>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

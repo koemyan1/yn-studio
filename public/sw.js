@@ -1,4 +1,4 @@
-const CACHE='yn-studio-v5';
+const CACHE='yn-studio-v6';
 const IMG_CACHE='yn-img-v1',IMG_MAX=150;
 const APP_SHELL=['/','/index.html','/manifest.webmanifest','/yn-logo.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP_SHELL)).then(()=>self.skipWaiting()))});
@@ -17,7 +17,7 @@ self.addEventListener('fetch',e=>{
       try{const r=await fetch(new Request(req.url,{mode:'cors',credentials:'omit'}));if(r.ok){c.put(req.url,r.clone());c.keys().then(k=>{if(k.length>IMG_MAX)for(let i=0;i<k.length-IMG_MAX;i++)c.delete(k[i])})}return r}catch{return fetch(req)}}));
     return;
   }
-  if(url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return;
+  if(url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname==='/wedding'||url.pathname.startsWith('/wedding/'))return; /* the wedding invitation is its own page, not part of the app shell */
   if(url.pathname.startsWith('/assets/')){
     e.respondWith(caches.match(req).then(hit=>hit||fetch(req).then(r=>{if(r.ok){const c=r.clone();caches.open(CACHE).then(x=>x.put(req,c))}return r})));
     return;

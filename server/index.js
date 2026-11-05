@@ -777,9 +777,19 @@ app.use(express.static(distPath, {
   setHeaders(res, file) {
     if (/[\\/]assets[\\/]/.test(file)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     else if (/\.html$/.test(file) || /sw\.js$/.test(file) || /manifest\.webmanifest$/.test(file)) res.setHeader('Cache-Control', 'no-cache');
+    else if (/[\\/]wedding[\\/]/.test(file) && /\.(js|css)$/.test(file)) res.setHeader('Cache-Control', 'no-cache'); // config.js is edited by hand: show changes at once
     else res.setHeader('Cache-Control', 'public, max-age=86400');
   },
 }));
+// ---- Wedding invitation (static page in public/wedding, copied to dist/wedding by the build) ----------------------------------
+// It has its own HTML, so it must not fall through to the React app below. /wedding -> /wedding/ keeps the relative file links and ?to=Name working.
+app.get(['/wedding', '/wedding/'], (req, res) => {
+  if (req.path === '/wedding') return res.redirect(301, '/wedding/' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''));
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(distPath, 'wedding', 'index.html'), (err) => { if (err && !res.headersSent) res.status(404).end(); });
+});
+app.use('/wedding', (_req, res) => res.status(404).type('text/plain').send('Not found')); // a missing file (e.g. music.mp3) is a 404, not the app page
+
 // ---- Link previews -------------------------------------------------------------------------------------------------------
 // index.html is read once (and again only when a new build replaces the file). Every HTML page gets absolute Open Graph tags;
 // /product/:id also gets that product's name, price, rating and photo, so a pasted link looks right in Telegram / Facebook / WhatsApp.

@@ -2,6 +2,14 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: Wedding invitation + admin Wedding page
+
+- **Khmer wedding invitation added to the project** at `/wedding/` (same domain; static page in `public/wedding/`). Edit `public/wedding/config.js`.
+- **New admin page `/admin/wedding`** (sidebar: Overview, Wedding): reply counts, invitation link + QR, personal links for a list of names, RSVP table (search, filter, delete, CSV) and wishes (delete).
+- New SQL `supabase/sql/supabase-wedding.sql` (run once): guests can only add; only admins read RSVPs or delete.
+- Server: `/wedding` route, missing files under it return 404 (not the app page). Service worker no longer treats the invitation as the app shell (cache `yn-studio-v6`).
+- Setup: [`docs/setup/WEDDING-SETUP.md`](docs/setup/WEDDING-SETUP.md). Redeploy the Node server.
+
 ## Unreleased: Live visitors page
 
 - **New admin page `/admin/live`** (sidebar: Overview, Live visitors): a big "on the website right now" number, a 30-minute chart, a world map with a pulsing pin per city, visitors by country, the pages they are on, and a table of everyone online (city, page, device, time on site, Google Maps link).
