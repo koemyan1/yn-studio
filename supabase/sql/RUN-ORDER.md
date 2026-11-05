@@ -109,6 +109,7 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 47 | `yn-studio-feature-fix.sql` | inferred (no dependency found; grouped by topic) |
 | 47b | `supabase-product-reviews.sql` | NEW: product reviews + star ratings (only customers who bought can review); needs the baseline `products`, `orders`, `order_items`, `profiles` tables; creates the `review-photos` bucket |
 | 47c | `supabase-service-shop.sql` | NEW: pay-first services (Printing, Copy, Social post, Poster, Logo): admin-set prices, options, orders, private file buckets. Needs `profiles`, `notifications`, `delivery_settings` (+ `store_map_url`), `supabase-bakong.sql` and `supabase-services.sql` first. Safe to re-run; services start switched OFF |
+| 47d | `supabase-review-photos-gallery.sql` | NEW: up to 3 photos per review + "Customer photos" strip; needs `supabase-product-reviews.sql` first; adds `extra_photo_urls` and `set_review_extra_photos()`, limits the public `review-photos` bucket to images (8 MB) |
 
 ## 8. Security (last; redefines pay_order_with_wallet)
 

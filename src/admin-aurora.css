@@ -1,0 +1,180 @@
+/* ==========================================================================
+   YN Studio admin — "Aurora" layer
+   A new skin + motion for EVERY admin page. Scoped under .admin (the customer side is untouched).
+   Imported right after admin-v3.css in main.tsx. To go back to the old look, remove that one import.
+   Needs adminMotion.tsx (sliding sidebar pill, card tilt, magnetic buttons, cursor glow, theme wipe).
+   ========================================================================== */
+
+@property --am-ang{syntax:"<angle>";inherits:false;initial-value:0deg}
+
+:root{--au-glow:rgba(192,38,211,.55)}
+
+@keyframes amSpin{to{--am-ang:360deg}}
+@keyframes auAurora{
+  0%{transform:translate3d(0,0,0) rotate(0) scale(1)}
+  50%{transform:translate3d(4%,-3%,0) rotate(8deg) scale(1.08)}
+  100%{transform:translate3d(-3%,4%,0) rotate(-6deg) scale(1.02)}
+}
+@keyframes auSheen{0%,62%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
+@keyframes auBlink{0%,100%{opacity:.55;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes auDrift{from{background-position:0% 50%}to{background-position:100% 50%}}
+@keyframes auTitleIn{from{opacity:0;filter:blur(10px);transform:translateY(10px) scale(.985)}}
+@keyframes auLine{from{transform:scaleX(0)}}
+@keyframes auLineRun{from{background-position:0% 0}to{background-position:200% 0}}
+@keyframes auBarGrow{from{transform:scaleX(0)}}
+@keyframes auView{from{opacity:0;transform:translateY(26px) scale(.97)}}
+@keyframes auScrollTop{from{opacity:.35}to{opacity:1}}
+@keyframes auScrollBar{from{box-shadow:var(--a-shadow)}to{box-shadow:0 18px 44px -16px rgba(80,30,150,.45)}}
+@keyframes auWipe{
+  from{clip-path:circle(0 at var(--wipe-x,50%) var(--wipe-y,0))}
+  to{clip-path:circle(var(--wipe-r,150vmax) at var(--wipe-x,50%) var(--wipe-y,0))}
+}
+@keyframes auTick{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+/* ---------- 1. living background ---------- */
+.admin{isolation:isolate}
+.admin::after{
+  content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(36% 32% at 22% 30%,rgba(168,85,247,.34),transparent 70%),
+    radial-gradient(32% 28% at 78% 18%,rgba(217,70,239,.26),transparent 70%),
+    radial-gradient(40% 34% at 66% 84%,rgba(99,102,241,.26),transparent 70%);
+  animation:auAurora 38s ease-in-out infinite alternate;will-change:transform;
+}
+.admin:not(.admin-dark)::after{opacity:.5}
+
+/* soft light that follows the mouse (element is created by adminMotion.tsx, shown only on admin pages) */
+.amCursor{
+  position:fixed;left:0;top:0;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;
+  pointer-events:none;z-index:2;display:none;will-change:transform;
+  background:radial-gradient(circle,rgba(192,132,252,.17),rgba(217,70,239,.07) 42%,transparent 68%);
+  mix-blend-mode:screen;
+}
+body.yn-admin-page .amCursor{display:block}
+html:not(.yn-admin-dark-page) .amCursor{mix-blend-mode:multiply;opacity:.55}
+
+/* ---------- 2. sidebar: sheen, spinning logo ring, sliding pill ---------- */
+.admin>aside::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(112deg,transparent 38%,rgba(255,255,255,.10) 50%,transparent 62%);
+  animation:auSheen 11s 2s ease-in-out infinite;
+}
+.admin .adminBrand .miniLogo{position:relative;overflow:visible}
+.admin .adminBrand .miniLogo img{border-radius:inherit;position:relative}
+.admin .adminBrand .miniLogo::before{
+  content:"";position:absolute;inset:-4px;border-radius:19px;padding:2px;pointer-events:none;
+  background:conic-gradient(from var(--am-ang),#f0abfc,#7c3aed 30%,#22d3ee 55%,#f0abfc);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  animation:amSpin 7s linear infinite;opacity:.9;
+}
+
+.admin .adminNav{position:relative}
+.admin .adminNav::before{
+  content:"";position:absolute;left:2px;right:2px;top:0;height:var(--ind-h,0px);
+  transform:translateY(var(--ind-y,0px));opacity:var(--ind-o,0);pointer-events:none;border-radius:14px;
+  background:linear-gradient(120deg,rgba(255,255,255,.26),rgba(232,121,249,.6));
+  box-shadow:0 12px 28px -8px var(--au-glow),inset 0 0 0 1px rgba(255,255,255,.2);
+  transition:transform var(--ind-t,.6s) var(--am-spring),height var(--ind-t,.45s) var(--am-ease),opacity .3s;
+}
+.admin .adminNav a{z-index:1}
+.admin .adminNav a.active,.admin.admin-dark .adminNav a.active{background:transparent;box-shadow:none;color:#fff}
+.admin .adminNav a.active::after{
+  content:"";margin-left:auto;flex:none;width:7px;height:7px;border-radius:50%;
+  background:#f5d0fe;box-shadow:0 0 12px 3px rgba(232,121,249,.85);animation:auBlink 2.6s ease-in-out infinite;
+}
+
+/* ---------- 3. top bar: glowing hairline that draws itself, deepens on scroll ---------- */
+.admin .adminTop{position:sticky}
+.admin .adminTop::after{
+  content:"";position:absolute;left:22px;right:22px;bottom:-1px;height:2px;border-radius:2px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--a-accent) 25%,var(--a-accent2) 50%,var(--a-accent) 75%,transparent);
+  background-size:200% 100%;transform-origin:left center;opacity:.6;
+  animation:auLine .9s .2s var(--am-ease) backwards,auLineRun 7s linear infinite;
+}
+@supports (animation-timeline:scroll()){
+  .admin .adminTop{animation:auScrollBar linear both;animation-timeline:scroll(root block);animation-range:0px 160px}
+  .admin .adminTop::after{animation:auLine .9s .2s var(--am-ease) backwards,auLineRun 7s linear infinite,auScrollTop linear both;
+    animation-timeline:auto,auto,scroll(root block);animation-range:normal,normal,0px 160px}
+}
+.admin .adminTop h1{
+  background:linear-gradient(100deg,var(--a-text) 0%,var(--a-text) 30%,var(--a-accent) 52%,var(--a-accent2) 64%,var(--a-text) 90%);
+  background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:auTitleIn .7s var(--am-ease) backwards,auDrift 9s ease-in-out infinite alternate;
+}
+
+/* ---------- 4. cards: lit top edge, number gradient, spinning edge + 3D tilt on hover ---------- */
+.admin :is(.panel,.stat,.table,.quickGrid a,.adminOrderCard,.thCard,.pmxTile,.catCard,.adminToolbar){
+  box-shadow:var(--a-shadow),inset 0 1px 0 rgba(255,255,255,.6);
+}
+.admin.admin-dark :is(.panel,.stat,.table,.quickGrid a,.adminOrderCard,.thCard,.pmxTile,.catCard,.adminToolbar){
+  box-shadow:var(--a-shadow),inset 0 1px 0 rgba(255,255,255,.07);
+}
+.admin .stat strong{
+  background:linear-gradient(120deg,var(--a-text) 25%,var(--a-accent));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.admin .panel h2::after{transform-origin:left center;animation:auBarGrow .8s .35s var(--am-ease) backwards}
+
+.admin :is(.stat,.quickGrid a,.adminOrderCard,.thCard,.pmxTile)::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;pointer-events:none;opacity:0;
+  background:conic-gradient(from var(--am-ang),transparent 0 52%,var(--a-accent) 72%,#f0abfc 86%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  transition:opacity .3s;
+}
+.admin :is(.stat,.quickGrid a,.adminOrderCard,.thCard,.pmxTile):hover::before{opacity:1;animation:amSpin 2.6s linear infinite}
+
+@media (hover:hover) and (pointer:fine){
+  html .admin :is(.stat,.quickGrid a,.thCard,.pmxTile):hover{
+    transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px);
+    transition:transform .18s ease-out,box-shadow .3s,border-color .3s,background-color .45s;
+  }
+  html .admin .quickGrid a:hover:active{transform:scale(.97)}
+  /* magnetic pull: uses the separate `translate` property so it never fights the hover transforms */
+  .admin :is(.adminTopActions>*,.welcome .button){translate:var(--tx,0) var(--ty,0);transition:translate .25s var(--am-ease),transform .22s var(--am-spring),box-shadow .25s,background-color .2s,border-color .2s,color .2s,filter .2s}
+}
+
+/* ---------- 5. buttons: gradient that travels, glow, keyboard focus ---------- */
+.admin main :is(.button:not(.secondary),button:not(.secondary):not(.icon):not(.textBtn):not(.thMini):not(.thDarkBtn):not(.asHide):not(.asChip)){
+  background-size:230% 100%;background-position:0 50%;
+  transition:background-position .55s var(--am-ease),transform .22s var(--am-spring),box-shadow .25s,filter .2s;
+}
+.admin main :is(.button:not(.secondary),button:not(.secondary):not(.icon):not(.textBtn):not(.thMini):not(.thDarkBtn):not(.asHide):not(.asChip)):hover:not(:disabled){
+  background-position:100% 50%;
+  box-shadow:0 14px 30px -10px var(--au-glow);
+}
+.admin :is(a,button,summary):focus-visible{outline:2px solid var(--a-accent2);outline-offset:3px}
+.admin input[type=checkbox]:checked,.admin input[type=radio]:checked{animation:auTick .32s var(--am-spring)}
+
+/* ---------- 6. lists: long lists reveal as they scroll into view ---------- */
+@supports (animation-timeline:view()){
+  .admin :is(.tr,.adminOrderCard,.catRow,.statusRow,.supportThread,.adminChatThread,.debtAdminHistoryRow):nth-child(n+15){
+    animation:auView linear both;animation-timeline:view();animation-range:entry 0% entry 45%;
+  }
+}
+.admin .tr:hover{background:linear-gradient(90deg,var(--a-soft),transparent 90%)}
+.admin .status{transition:transform .2s var(--am-spring),box-shadow .25s}
+.admin .status:hover{transform:scale(1.07);box-shadow:0 0 0 1px color-mix(in srgb,currentColor 30%,transparent),0 6px 18px -6px currentColor}
+
+/* ---------- 7. light / dark switch: circle that grows from the button you tapped ---------- */
+html.am-wipe::view-transition-old(root),html.am-wipe::view-transition-new(root){animation:none;mix-blend-mode:normal}
+html.am-wipe::view-transition-old(root){z-index:1}
+html.am-wipe::view-transition-new(root){z-index:2;animation:auWipe .8s var(--am-ease) both}
+
+/* ---------- phones: lighter ---------- */
+@media (max-width:700px){
+  .admin::after{animation:none}
+  .amCursor{display:none!important}
+  .admin>aside::before{display:none}
+}
+
+/* ---------- reduce motion: everything above stops ---------- */
+@media (prefers-reduced-motion:reduce){
+  .admin::after,.admin>aside::before,.admin .adminBrand .miniLogo::before,.admin .adminTop::after,.admin .adminTop h1,
+  .admin .adminNav a.active::after,.admin :is(.stat,.quickGrid a,.adminOrderCard,.thCard,.pmxTile):hover::before{animation:none!important}
+  .admin .adminNav::before{transition:none}
+  .amCursor{display:none!important}
+  html .admin :is(.stat,.quickGrid a,.thCard,.pmxTile):hover{transform:none}
+  .admin :is(.adminTopActions>*,.welcome .button){translate:none}
+}

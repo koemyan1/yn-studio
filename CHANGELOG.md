@@ -2,6 +2,28 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: Live visitors page
+
+- **New admin page `/admin/live`** (sidebar: Overview, Live visitors): a big "on the website right now" number, a 30-minute chart, a world map with a pulsing pin per city, visitors by country, the pages they are on, and a table of everyone online (city, page, device, time on site, Google Maps link).
+- Updates every 5 seconds. Counts live in server memory only (no SQL, no Supabase writes, $0); IP addresses never reach the admin page. Location is approximate (same source as the Security page). Setup note: `docs/setup/LIVE-VISITORS.md`.
+- Files: `server/presence.js` (new), `server/index.js` (2 routes), `src/livePresence.ts`, `src/AdminLive.tsx`, `src/admin-live.css`, `tests/presence.test.mjs`, small edits in `src/main.tsx`.
+- **Redeploy the Node server** for this to work (the page shows a clear message if the server is still the old one).
+
+## Unreleased: admin "Aurora" restyle
+
+- **New look for every admin page**: a slowly drifting aurora background, lit card edges, gradient numbers and a title that fades in, with a glowing line under the top bar that draws itself and deepens as you scroll.
+- **Sidebar**: a glowing pill slides from the old page to the new one when you change page (the sidebar also keeps its scroll position now), a ring spins around the logo, and a soft sheen passes over the panel.
+- **Hover motion**: cards tilt in 3D toward the mouse and get a spinning light edge, main buttons are pulled gently toward the cursor, primary buttons shift their gradient, and a soft light follows the mouse.
+- **Light/dark switch** spreads out as a circle from the button you tapped (browsers without View Transitions just switch).
+- Long lists reveal rows as they scroll into view. All of it stops with "reduce motion", and the phone version skips the heavy parts.
+- Files: `src/admin-aurora.css` (new), `src/adminMotion.tsx`, 3 small edits in `src/main.tsx`. To undo, remove the `admin-aurora.css` import in `main.tsx`.
+
+## Unreleased: real customer photos in reviews
+
+- **Up to 3 photos per review** (it was 1), and a **"Customer photos" strip** on every product page with all the photos from published reviews. Tapping a photo opens a viewer with next/previous and the reviewer's name and stars. Hidden reviews never appear in the strip.
+- **Run `supabase/sql/supabase-review-photos-gallery.sql`** (after `supabase-product-reviews.sql`). Until you run it everything keeps working with one photo per review. It also limits the public `review-photos` bucket to images, 8 MB each.
+- Security: extra photos are saved by a small separate function that accepts only pictures from the customer's own folder and only on their own review; the existing `submit_product_review` is unchanged.
+
 ## Unreleased: pay-first services (Printing, Copy, Social post, Poster, Logo)
 
 - **Services now work like the CV maker**: a form built from the options you set, a live price, **pay with Bakong KHQR first**, then a status tracker (Paid, In progress, Ready, Done) with push/notification at each step. Print and copy ask for pick-up (store name, address, map, "Open in Maps") or delivery (map pin, fee from your delivery settings); design orders are digital with a Download button.

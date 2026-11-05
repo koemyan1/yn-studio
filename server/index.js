@@ -12,6 +12,7 @@ import { createIntegrity } from './security/integrity.js';
 import { createServiceShop } from './serviceShop.js';
 import { createIntel } from './security/intel.js';
 import { createGeoLookup } from './security/geo.js';
+import { createPresence } from './presence.js';
 import fsp from 'node:fs/promises';
 import { createPreviewPages } from './ogPreview.js';
 
@@ -119,6 +120,11 @@ const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
 app.use('/api/admin', async (req, res, next) => { if (req.method === 'OPTIONS') return next(); const admin = await adminApi.requireAdmin(req, res); if (admin) { req.admin = admin; next(); } });
 app.get('/api/admin/env-check', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(auditEnv()); }); // set/missing only - never values
 app.use('/api/admin/security', adminApi.handler);
+// Live visitors (who is on the site right now + approximate location). In memory only, nothing stored; see presence.js.
+// POST /api/presence is public (a tiny heartbeat from every customer page); GET /api/admin/live is admin-only through the default-deny above.
+const presence = createPresence({ intel: secIntel }); presence.start();
+app.post('/api/presence', shield.limiter('presence', 30), express.json({ limit: '2kb' }), (req, res) => { presence.beat(req, req.body); res.status(204).end(); });
+app.get('/api/admin/live', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(presence.snapshot()); });
 logEnvAudit(console);
 app.post('/api/security/csp-report', shield.limiter('csp-report', 30), express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '20kb' }), adminApi.cspReport);
 const ORDER_CHECK_MSG = 'We could not verify this order\'s price. Please go back to your cart and place the order again.';

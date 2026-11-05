@@ -6,7 +6,7 @@
    Everything quietly hides itself if supabase-product-reviews.sql has not been run yet. */
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, Eye, EyeOff, Lock, Pencil, ShieldCheck, Star, Trash2, X } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Pencil, ShieldCheck, Star, Trash2, X } from 'lucide-react';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
 import { optimizeImage } from './imageTools';
@@ -19,6 +19,7 @@ type Review = {
   rating: number;
   comment: string | null;
   photo_url: string | null;
+  extra_photo_urls?: string[] | null;   // up to 2 more photos (supabase-review-photos-gallery.sql)
   reviewer_name: string | null;
   created_at: string;
   status?: string;
@@ -147,6 +148,19 @@ const photoPath = (url: string | null | undefined) => {
   const m = String(url || '').split('/storage/v1/object/public/review-photos/')[1];
   return m ? decodeURIComponent(m.split('?')[0]) : '';
 };
+const MAX_PHOTOS = 3;
+/** Published reviews of a product. Asks for the extra photos too; if the gallery SQL has not been run yet, quietly asks without them. */
+async function listReviews(productId: string): Promise<any> {
+  const base = 'id,user_id,rating,comment,photo_url,reviewer_name,created_at';
+  const q = (cols: string) => supabase.from('product_reviews').select(cols).eq('product_id', productId).eq('status', 'published').order('created_at', { ascending: false }).limit(60);
+  const a: any = await q(base + ',extra_photo_urls');
+  return a.error ? q(base) : a;
+}
+/** Every photo of a review: the first one (photo_url) then the extras. */
+const photosOf = (r: { photo_url?: string | null; extra_photo_urls?: string[] | null } | null | undefined): string[] =>
+  [r?.photo_url, ...((r?.extra_photo_urls as string[] | null | undefined) || [])].filter((u): u is string => !!u);
+type LightItem = { url: string; cap?: string };
+const dropPhotos = (urls: string[]) => { urls.forEach(u => void dropPhoto(u)); };
 const dropPhoto = async (url: string | null | undefined) => {
   const p = photoPath(url);
   if (p) { try { await supabase.storage.from('review-photos').remove([p]); } catch { /* best effort */ } }
@@ -160,16 +174,25 @@ const RATING_WORDS = (n: number) => [
   tr('Excellent', 'ល្អឥតខ្ចោះ'),
 ][n] || '';
 
-function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+function Lightbox({ items, start = 0, onClose }: { items: LightItem[]; start?: number; onClose: () => void }) {
+  const [i, setI] = useState(Math.min(Math.max(0, start), Math.max(0, items.length - 1)));
+  const go = useCallback((d: number) => setI(x => (x + d + items.length) % items.length), [items.length]);
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); else if (e.key === 'ArrowLeft') go(-1); else if (e.key === 'ArrowRight') go(1); };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
-  }, [onClose]);
+  }, [onClose, go]);
+  const cur = items[i];
+  if (!cur) return null;
   return (
     <div className="reviewLightbox" role="dialog" aria-modal="true" onClick={onClose}>
       <button type="button" className="reviewLightboxClose" aria-label={tr('Close', 'បិទ')} onClick={onClose}><X /></button>
-      <img src={url} alt="" onClick={e => e.stopPropagation()} />
+      {items.length > 1 && <button type="button" className="reviewLightboxNav prev" aria-label={tr('Previous photo', 'រូបមុន')} onClick={e => { e.stopPropagation(); go(-1); }}><ChevronLeft /></button>}
+      <figure onClick={e => e.stopPropagation()}>
+        <img src={cur.url} alt={cur.cap || ''} />
+        {(cur.cap || items.length > 1) && <figcaption>{cur.cap}{items.length > 1 && <span> {i + 1}/{items.length}</span>}</figcaption>}
+      </figure>
+      {items.length > 1 && <button type="button" className="reviewLightboxNav next" aria-label={tr('Next photo', 'រូបបន្ទាប់')} onClick={e => { e.stopPropagation(); go(1); }}><ChevronRight /></button>}
     </div>
   );
 }
@@ -178,27 +201,33 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
 function ReviewForm({ productId, initial, onDone, onCancel }: { productId: string; initial: Review | null; onDone: () => void; onCancel: () => void }) {
   const [rating, setRating] = useState<number>(initial?.rating || 0);
   const [comment, setComment] = useState(initial?.comment || '');
-  const [photo, setPhoto] = useState<string>(initial?.photo_url || '');
+  const [photos, setPhotos] = useState<string[]>(photosOf(initial));
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { setErr(tr('Please choose a picture.', 'សូមជ្រើសរើសរូបភាព។')); return; }
-    if (file.size > 15 * 1024 * 1024) { setErr(tr('That picture is too big (max 15 MB).', 'រូបភាពធំពេក (អតិបរមា 15 MB)។')); return; }
+    if (!files.length) return;
+    const room = MAX_PHOTOS - photos.length;
+    if (room <= 0) { setErr(tr('You can add up to 3 photos.', 'អ្នកអាចបន្ថែមរូបភាពបានរហូតដល់ ៣។')); return; }
     setErr(''); setUploading(true);
     try {
       const u = (await supabase.auth.getUser()).data.user?.id;
       if (!u) throw new Error(tr('Please sign in first.', 'សូមចូលគណនីជាមុនសិន។'));
-      const small = await optimizeImage(file, 1280);
-      const ext = small.type === 'image/png' ? 'png' : small.type === 'image/webp' ? 'webp' : 'jpg';
-      const path = `${u}/${crypto.randomUUID()}.${ext}`;
-      const up = await supabase.storage.from('review-photos').upload(path, small, { cacheControl: '31536000', contentType: small.type || 'image/jpeg' });
-      if (up.error) throw up.error;
-      setPhoto(supabase.storage.from('review-photos').getPublicUrl(path).data.publicUrl);
+      const added: string[] = [];
+      for (const file of files.slice(0, room)) {
+        if (!file.type.startsWith('image/')) { setErr(tr('Please choose a picture.', 'សូមជ្រើសរើសរូបភាព។')); continue; }
+        if (file.size > 15 * 1024 * 1024) { setErr(tr('That picture is too big (max 15 MB).', 'រូបភាពធំពេក (អតិបរមា 15 MB)។')); continue; }
+        const small = await optimizeImage(file, 1280);
+        const ext = small.type === 'image/png' ? 'png' : small.type === 'image/webp' ? 'webp' : 'jpg';
+        const path = `${u}/${crypto.randomUUID()}.${ext}`;
+        const up = await supabase.storage.from('review-photos').upload(path, small, { cacheControl: '31536000', contentType: small.type || 'image/jpeg' });
+        if (up.error) throw up.error;
+        added.push(supabase.storage.from('review-photos').getPublicUrl(path).data.publicUrl);
+      }
+      if (added.length) setPhotos(x => [...x, ...added].slice(0, MAX_PHOTOS));
     } catch (x: any) {
       setErr(x?.message || tr('Could not upload the picture.', 'មិនអាចផ្ទុករូបភាពឡើងបានទេ។'));
     }
@@ -209,11 +238,21 @@ function ReviewForm({ productId, initial, onDone, onCancel }: { productId: strin
     if (!rating) { setErr(tr('Tap the stars to choose a rating.', 'សូមចុចផ្កាយដើម្បីជ្រើសរើសការវាយតម្លៃ។')); return; }
     setBusy(true); setErr('');
     const r = await supabase.rpc('submit_product_review', {
-      p_product_id: productId, p_rating: rating, p_comment: comment.trim() || null, p_photo_url: photo || null,
+      p_product_id: productId, p_rating: rating, p_comment: comment.trim() || null, p_photo_url: photos[0] || null,
     });
+    if (r.error) { setBusy(false); setErr(r.error.message); return; }
+    // photos 2 and 3 are saved by a second small function (supabase-review-photos-gallery.sql)
+    const hadExtra = (initial?.extra_photo_urls || []).length > 0;
+    if (photos.length > 1 || hadExtra) {
+      const x = await supabase.rpc('set_review_extra_photos', { p_product_id: productId, p_urls: photos.slice(1) });
+      if (x.error && photos.length > 1) {
+        setBusy(false);
+        setErr(tr('Your review was saved, but the extra photos could not be added. Ask the shop to run supabase-review-photos-gallery.sql.', 'ការវាយតម្លៃត្រូវបានរក្សាទុក ប៉ុន្តែមិនអាចបន្ថែមរូបភាពបន្ថែមបានទេ។'));
+        return;
+      }
+    }
     setBusy(false);
-    if (r.error) { setErr(r.error.message); return; }
-    if (initial?.photo_url && initial.photo_url !== photo) void dropPhoto(initial.photo_url); // replaced or removed: clean up the old file
+    dropPhotos(photosOf(initial).filter(u => !photos.includes(u))); // replaced or removed: clean up the old files
     actionFx('sent');
     void refreshRatings(true);
     onDone();
@@ -230,17 +269,20 @@ function ReviewForm({ productId, initial, onDone, onCancel }: { productId: strin
       <textarea rows={4} maxLength={1000} value={comment} onChange={e => setComment(e.target.value)}
         placeholder={tr('Tell others what you think (optional)', 'ចែករំលែកគំនិតរបស់អ្នកជូនអ្នកផ្សេង (ជម្រើស)')} />
       <div className="reviewFormRow">
-        {photo ? (
-          <div className="reviewPhotoPreview">
-            <img src={photo} alt="" />
-            <button type="button" aria-label={tr('Remove photo', 'លុបរូបភាព')} onClick={() => setPhoto('')}><X /></button>
-          </div>
-        ) : (
-          <label className={'reviewPhotoPick' + (uploading ? ' busy' : '')}>
-            <Camera /> {uploading ? tr('Uploading…', 'កំពុងផ្ទុកឡើង…') : tr('Add photo', 'បន្ថែមរូបភាព')}
-            <input type="file" accept="image/*" hidden onChange={pick} disabled={uploading} />
-          </label>
-        )}
+        <div className="reviewPhotoRow">
+          {photos.map(u => (
+            <div className="reviewPhotoPreview" key={u}>
+              <img src={u} alt="" />
+              <button type="button" aria-label={tr('Remove photo', 'លុបរូបភាព')} onClick={() => setPhotos(x => x.filter(y => y !== u))}><X /></button>
+            </div>
+          ))}
+          {photos.length < MAX_PHOTOS && (
+            <label className={'reviewPhotoPick' + (uploading ? ' busy' : '')}>
+              <Camera /> {uploading ? tr('Uploading…', 'កំពុងផ្ទុកឡើង…') : photos.length ? tr('Add another', 'បន្ថែមទៀត') : tr('Add photo', 'បន្ថែមរូបភាព')}
+              <input type="file" accept="image/*" multiple hidden onChange={pick} disabled={uploading} />
+            </label>
+          )}
+        </div>
         <small className="reviewCount">{comment.length}/1000</small>
       </div>
       {err && <p className="reviewErr" role="alert">{err}</p>}
@@ -323,7 +365,7 @@ export function ProductReviews({ productId }: { productId: string }) {
   const [can, setCan] = useState(false);
   const [form, setForm] = useState(false);
   const [shown, setShown] = useState(5);
-  const [light, setLight] = useState('');
+  const [light, setLight] = useState<{ items: LightItem[]; start: number } | null>(null);
   const [me, setMe] = useState('');
   const [why, setWhy] = useState(false);   // the "only buyers can review" note (shown when a non-buyer taps Write a review)
   const [want, setWant] = useState(false); // the shortcut under the product name was tapped before the section finished loading
@@ -335,7 +377,7 @@ export function ProductReviews({ productId }: { productId: string }) {
       setMe(u);
       const none: any = Promise.resolve({ data: null, error: null });
       const [list, st, mineQ, canQ]: any[] = await Promise.all([
-        supabase.from('product_reviews').select('id,user_id,rating,comment,photo_url,reviewer_name,created_at').eq('product_id', productId).eq('status', 'published').order('created_at', { ascending: false }).limit(60),
+        listReviews(productId),
         supabase.from('product_rating_stats').select('*').eq('product_id', productId).maybeSingle(),
         u ? supabase.from('product_reviews').select('*').eq('product_id', productId).eq('user_id', u).maybeSingle() : none,
         u ? supabase.rpc('can_review_product', { p_product_id: productId }) : none,
@@ -368,13 +410,14 @@ export function ProductReviews({ productId }: { productId: string }) {
     if (!mine || !window.confirm(tr('Delete your review?', 'លុបការវាយតម្លៃរបស់អ្នក?'))) return;
     const r = await supabase.from('product_reviews').delete().eq('id', mine.id);
     if (r.error) { window.alert(r.error.message); return; }
-    void dropPhoto(mine.photo_url);
+    dropPhotos(photosOf(mine));
     void refreshRatings(true);
     void refreshMine(true);
     setForm(false);
     void load();
   }
 
+  const gallery: LightItem[] = rows.flatMap(r => photosOf(r).map(url => ({ url, cap: `${r.reviewer_name || tr('Customer', 'អតិថិជន')} · ${r.rating}★` })));
   if (state === 'off') return null;
   if (state === 'loading') return <section className="reviewsSection" id="reviews" aria-busy="true"><div className="reviewsSkel"><i /><i /><i /></div></section>;
 
@@ -393,6 +436,20 @@ export function ProductReviews({ productId }: { productId: string }) {
         </div>
       ) : (
         <p className="reviewsEmpty">{tr('No reviews yet. Be the first to review this product.', 'មិនទាន់មានការវាយតម្លៃនៅឡើយទេ។ ក្លាយជាអ្នកទីមួយដែលវាយតម្លៃផលិតផលនេះ។')}</p>
+      )}
+
+      {gallery.length > 0 && (
+        <div className="reviewGallery" aria-label={tr('Customer photos', 'រូបភាពពីអតិថិជន')}>
+          <h3>{tr('Customer photos', 'រូបភាពពីអតិថិជន')} <small>({gallery.length})</small></h3>
+          <div className="reviewGalleryTrack">
+            {gallery.slice(0, 8).map((g, i) => (
+              <button type="button" key={g.url} className="reviewGalleryItem" aria-label={tr('View photo', 'មើលរូបភាព')} onClick={() => setLight({ items: gallery, start: i })}>
+                <img src={g.url} alt="" loading="lazy" />
+                {i === 7 && gallery.length > 8 && <span className="reviewGalleryMore">+{gallery.length - 8}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {mine?.status === 'hidden' && <p className="reviewsNote">{tr('Your review is hidden by YN Studio.', 'ការវាយតម្លៃរបស់អ្នកត្រូវបានលាក់ដោយ YN Studio។')}</p>}
@@ -431,12 +488,16 @@ export function ProductReviews({ productId }: { productId: string }) {
             </div>
             <StarRow value={r.rating} size={14} />
             {r.comment && <p className="reviewText">{r.comment}</p>}
-            {r.photo_url && <button type="button" className="reviewPhoto" aria-label={tr('View photo', 'មើលរូបភាព')} onClick={() => setLight(r.photo_url || '')}><img src={r.photo_url} alt="" loading="lazy" /></button>}
+            {photosOf(r).length > 0 && (
+              <div className="reviewPhotoRow">
+                {photosOf(r).map((u, i, all) => <button type="button" key={u} className="reviewPhoto" aria-label={tr('View photo', 'មើលរូបភាព')} onClick={() => setLight({ items: all.map(url => ({ url, cap: r.reviewer_name || undefined })), start: i })}><img src={u} alt="" loading="lazy" /></button>)}
+              </div>
+            )}
           </article>
         ))}
       </div>
       {rows.length > shown && <button type="button" className="secondary reviewMore" onClick={() => setShown(n => n + 10)}>{tr('Show more reviews', 'បង្ហាញការវាយតម្លៃបន្ថែម')}</button>}
-      {light && <Lightbox url={light} onClose={() => setLight('')} />}
+      {light && <Lightbox items={light.items} start={light.start} onClose={() => setLight(null)} />}
     </section>
   );
 }
@@ -446,7 +507,7 @@ export function AdminReviewsList() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [tab, setTab] = useState<'all' | 'published' | 'hidden'>('all');
   const [err, setErr] = useState('');
-  const [light, setLight] = useState('');
+  const [light, setLight] = useState<{ items: LightItem[]; start: number } | null>(null);
 
   const load = useCallback(async () => {
     const r = await supabase.from('product_reviews').select('*, products(name,main_image_url)').order('created_at', { ascending: false }).limit(300);
@@ -469,7 +530,7 @@ export function AdminReviewsList() {
     if (!window.confirm('Delete this review for good?')) return;
     const r = await supabase.from('product_reviews').delete().eq('id', x.id);
     if (r.error) { window.alert(r.error.message); return; }
-    void dropPhoto(x.photo_url);
+    dropPhotos(photosOf(x));
     void refreshRatings(true);
     void load();
   }
@@ -500,7 +561,7 @@ export function AdminReviewsList() {
               <b>{x.products?.name || 'Deleted product'}</b>
               <div className="adminReviewMeta"><StarRow value={Number(x.rating || 0)} size={14} /><span>{x.reviewer_name || 'Customer'} · {fmtDate(x.created_at)}</span>{x.status === 'hidden' && <em>Hidden</em>}</div>
               {x.comment && <p>{x.comment}</p>}
-              {x.photo_url && <button type="button" className="reviewPhoto" onClick={() => setLight(x.photo_url)}><img src={x.photo_url} alt="" loading="lazy" /></button>}
+              {photosOf(x).length > 0 && <div className="reviewPhotoRow">{photosOf(x).map((u, i, all) => <button type="button" key={u} className="reviewPhoto" onClick={() => setLight({ items: all.map(url => ({ url })), start: i })}><img src={u} alt="" loading="lazy" /></button>)}</div>}
             </div>
             <div className="adminReviewActions">
               <button type="button" className="secondary" onClick={() => toggle(x)}>{x.status === 'published' ? <><EyeOff /> Hide</> : <><Eye /> Show</>}</button>
@@ -509,7 +570,7 @@ export function AdminReviewsList() {
           </article>
         ))}
       </div>
-      {light && <Lightbox url={light} onClose={() => setLight('')} />}
+      {light && <Lightbox items={light.items} start={light.start} onClose={() => setLight(null)} />}
     </div>
   );
 }
