@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Download, ExternalLink, Heart, MessageCircle, RefreshCw, Search, Trash2, UserCheck, UserX, Users } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Heart, MessageCircle, Palette, RefreshCw, Search, Trash2, UserCheck, UserX, Users } from 'lucide-react';
 import { supabase } from './supabase';
 import { CountUp } from './adminMotion';
 import './admin-wedding.css';
@@ -121,6 +121,7 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
       <div className="wdCouple"><span className="wdHeart"><Heart /></span><div><h2>{couple}</h2><small>{sub || 'Edit names, date, venue and photos in public/wedding/config.js'}</small></div></div>
       <div className="wdHeroActions">
         <a className="button" href={INVITE_PATH} target="_blank" rel="noreferrer"><ExternalLink /> Open invitation</a>
+        <a className="secondary button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> Edit design</a>
         <button type="button" className="secondary" onClick={load} disabled={loading}><RefreshCw /> {loading ? 'Loading…' : 'Refresh'}</button>
       </div>
     </section>

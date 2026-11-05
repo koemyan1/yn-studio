@@ -1,5 +1,10 @@
 (() => {
   const C = window.CONFIG;
+  const E = new URLSearchParams(location.search).has("edit");
+  const DF = { th: {}, env: {}, seal: { shape: "circle", icon: "lotus", size: 76, x: 50, y: 50 }, bf: { on: true, n: 14, size: 20, speed: 1, color: "#f0d890" }, snd: { music: C.music || "", open: "", vol: 0.7 }, o: {}, add: [] };
+  const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] || {}, b[k]) : b[k]; return a; };
+  const D = mix(JSON.parse(JSON.stringify(DF)), window.DESIGN || {});
+  if (E) try { mix(D, JSON.parse(localStorage.getItem("wd_draft") || "{}")); } catch {}
   const $ = (s) => document.querySelector(s);
   const set = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
   const toKm = (n) => String(n).replace(/\d/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
@@ -58,12 +63,14 @@
     if (on) audio.play().then(() => musicBtn.classList.add("on")).catch(() => {});
     else { audio.pause(); musicBtn.classList.remove("on"); }
   }
-  $("#seal").addEventListener("click", () => {
+  const sfx = new Audio();
+  const open = () => {
     const env = $("#envelope"), card = env.querySelector(".env-card");
+    if (D.snd.open) { sfx.src = D.snd.open; sfx.volume = D.snd.vol; sfx.play().catch(() => {}); }
     $("#cover").classList.add("opening");
     env.classList.add("open");                       // 1) four flaps open
-    if (C.music) {
-      audio.src = C.music;
+    if (D.snd.music) {
+      audio.src = D.snd.music; audio.volume = D.snd.vol;
       audio.addEventListener("error", () => { musicBtn.hidden = true; }, { once: true });
       musicBtn.hidden = false;
       setMusic(true);
@@ -83,7 +90,8 @@
       observe();
       window.scrollTo(0, 0);
     }, 2400);
-  });
+  };
+  $("#seal").addEventListener("click", () => { if (!E) open(); });
   musicBtn.addEventListener("click", () => setMusic(audio.paused));
 
   function observe() {
@@ -162,26 +170,78 @@
     message: String(fd.get("message")).trim().slice(0, 300)
   }), "សូមអរគុណសម្រាប់ពាក្យជូនពរ 💛", (f) => { f.message.value = ""; loadWishes(); });
 
-  // ---- Falling petals ----
-  const cv = $("#petals"), ctx = cv.getContext("2d");
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    let W, H, dpr;
-    const size = () => { dpr = Math.min(devicePixelRatio || 1, 2); W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr; };
-    size(); addEventListener("resize", size);
-    const cols = ["rgba(217,179,95,", "rgba(179,36,95,", "rgba(243,236,224,"];
-    const mk = (y) => ({ x: Math.random() * W, y: y ?? Math.random() * H, r: (4 + Math.random() * 7) * dpr, v: (0.4 + Math.random() * 0.9) * dpr, s: Math.random() * 6, a: 0.25 + Math.random() * 0.4, c: cols[Math.floor(Math.random() * 3)] });
-    const ps = Array.from({ length: 26 }, () => mk());
-    (function loop() {
-      ctx.clearRect(0, 0, W, H);
-      ps.forEach((p, i) => {
-        p.y += p.v; p.s += 0.02; p.x += Math.sin(p.s) * 0.6 * dpr;
-        if (p.y > H + 20) ps[i] = mk(-20);
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.s);
-        ctx.fillStyle = p.c + p.a + ")";
-        ctx.beginPath(); ctx.ellipse(0, 0, p.r, p.r / 2.2, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-      });
-      requestAnimationFrame(loop);
-    })();
+  // ---- Everything editable: texts, seal, envelope, colours (see editor.js) ----
+  const BUILT = ["#coverTo", ".cover-hint", "#cardKm", "#cardEn", ".invite", "#groomKm", ".amp", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#guestLine", ".lotus-rule", "#count", "#hProg", "#timeline", "#hVenue", "#venueKm", "#venueEn", "#mapBtn", "#hGal", "#gallery", "#hRsvp", "#rsvpForm", "#hWish", "#wishForm", "#wishes", "#hGift", "#qr", ".foot"];
+  const sealEl = $("#seal"), LOTUS = sealEl.innerHTML;
+  const HEART = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg>';
+  function apply() {
+    const r = document.documentElement.style, V = (k, v) => (v ? r.setProperty(k, v) : r.removeProperty(k));
+    ["ink", "deep", "jade", "gold", "gold-2", "silk", "pearl"].forEach((k) => V("--" + k, D.th[k]));
+    V("--eb", D.env.body); V("--ef", D.env.flap); V("--el", D.env.line);
+    const S = D.seal, z = S.size || 76;
+    sealEl.style.setProperty("--sc", S.color || "");
+    Object.assign(sealEl.style, { width: z + "px", height: z + "px", margin: `${-z / 2}px 0 0 ${-z / 2}px`, left: (S.x ?? 50) + "%", top: (S.y ?? 50) + "%", padding: S.icon === "image" ? "0" : "", overflow: "hidden",
+      borderRadius: S.shape === "rounded" ? "22%" : S.shape === "square" ? "3px" : "50%", clipPath: S.shape === "diamond" ? "polygon(50% 0,100% 50%,50% 100%,0 50%)" : "" });
+    sealEl.innerHTML = S.icon === "heart" ? HEART : S.icon === "text" ? "" : S.icon === "image" && S.img ? "" : S.icon === "none" ? "" : LOTUS;
+    if (S.icon === "text") sealEl.append(Object.assign(document.createElement("span"), { className: "stxt", textContent: S.text || "♥" }));
+    if (S.icon === "image" && S.img) sealEl.append(Object.assign(document.createElement("img"), { src: S.img, alt: "" }));
+    document.querySelectorAll(".fr").forEach((n) => { if (!D.add.some((x) => x.id === n.dataset.e)) n.remove(); });
+    D.add.forEach((x) => { if (!document.querySelector(`.fr[data-e="${x.id}"]`)) { const n = document.createElement("div"); n.className = "fr"; n.dataset.e = x.id; $(x.pg === "cover" ? "#cover" : "main").append(n); } });
+    const items = [...BUILT.map((s) => [$(s), s]), ...[...document.querySelectorAll(".fr")].map((n) => [n, n.dataset.e])];
+    items.forEach(([el, k]) => {
+      if (!el) return;
+      const o = D.o[k] || {};
+      el.dataset.e = k;
+      if (!el.children.length || k === ".cover-hint") { el._h ??= el.innerHTML; if (o.t != null) el.textContent = o.t; else el.innerHTML = el._h; }
+      el.style.translate = o.x || o.y ? `${o.x || 0}px ${o.y || 0}px` : "";
+      el.style.fontSize = o.s ? o.s + "px" : "";
+      el.style.fontFamily = o.f ? `var(--${o.f})` : "";
+      el.style.backgroundImage = o.c ? "none" : ""; el.style.color = o.c || "";
+      el.style.display = o.h && !E ? "none" : "";
+      el.classList.toggle("ed-off", !!o.h);
+    });
   }
+
+  // ---- Golden butterflies flying around the whole screen ----
+  const cv = $("#petals"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1;
+  const size = () => { dpr = Math.min(devicePixelRatio || 1, 2); W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr; };
+  size(); addEventListener("resize", size);
+  const bs = [];
+  const mk = () => ({ x: Math.random() * W, y: Math.random() * H, a: Math.random() * 6.28, v: 0.6 + Math.random() * 0.8, p: Math.random() * 6.28, f: 0.22 + Math.random() * 0.12, k: 0.7 + Math.random() * 0.6, w: Math.random() * 6.28 });
+  function wing(s) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.bezierCurveTo(s * 0.2, -s, s * 1.3, -s * 0.9, s * 1.1, -s * 0.2); ctx.bezierCurveTo(s, s * 0.2, s * 0.3, s * 0.2, 0, 0);
+    ctx.moveTo(0, 0); ctx.bezierCurveTo(s * 0.9, s * 0.1, s, s * 0.9, s * 0.45, s * 0.85); ctx.bezierCurveTo(s * 0.2, s * 0.8, 0, s * 0.3, 0, 0);
+    ctx.fill(); ctx.stroke();
+  }
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  (function loop() {
+    ctx.clearRect(0, 0, W, H);
+    const B = D.bf, n = reduce || !B.on ? 0 : B.n;
+    while (bs.length < n) bs.push(mk());
+    bs.length = Math.min(bs.length, n);
+    const col = B.color || "#f0d890";
+    bs.forEach((b) => {
+      b.w += 0.03; b.a += Math.sin(b.w) * 0.05 + (Math.random() - 0.5) * 0.05; b.p += b.f;
+      const sp = b.v * (B.speed || 1) * dpr * (1 + 0.5 * Math.sin(b.p * 0.5));
+      b.x += Math.cos(b.a) * sp; b.y += Math.sin(b.a) * sp * 0.8 - 0.25 * dpr;
+      const m = 60 * dpr;
+      if (b.x < -m) b.x = W + m; if (b.x > W + m) b.x = -m; if (b.y < -m) b.y = H + m; if (b.y > H + m) b.y = -m;
+      const s = (B.size || 20) * b.k * dpr, flap = 0.2 + 0.8 * Math.abs(Math.sin(b.p));
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.3);
+      g.addColorStop(0, "#fffbe0"); g.addColorStop(0.45, col); g.addColorStop(1, "#8a5f12");
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a + Math.PI / 2);
+      ctx.fillStyle = g; ctx.strokeStyle = "rgba(110,72,10,.7)"; ctx.lineWidth = dpr * 0.8; ctx.shadowColor = col; ctx.shadowBlur = 10 * dpr;
+      [1, -1].forEach((d) => { ctx.save(); ctx.scale(d * flap, 1); wing(s); ctx.restore(); });
+      ctx.shadowBlur = 0; ctx.fillStyle = "#5a3a08"; ctx.beginPath(); ctx.ellipse(0, 0, s * 0.07, s * 0.5, 0, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = "#5a3a08"; ctx.beginPath(); ctx.moveTo(0, -s * 0.45); ctx.quadraticCurveTo(-s * 0.2, -s * 0.8, -s * 0.3, -s * 0.85); ctx.moveTo(0, -s * 0.45); ctx.quadraticCurveTo(s * 0.2, -s * 0.8, s * 0.3, -s * 0.85); ctx.stroke();
+      ctx.restore();
+    });
+    requestAnimationFrame(loop);
+  })();
+
+  window.WD = { E, D, apply, open, BUILT };
+  apply();
+  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js" })); }
 })();

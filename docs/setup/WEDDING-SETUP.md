@@ -23,3 +23,7 @@ Personal link: `https://YOUR-DOMAIN/wedding/?to=Sophea` greets that guest and pr
 
 ## Files
 `public/wedding/*`, `src/AdminWedding.tsx`, `src/admin-wedding.css`, `supabase/sql/supabase-wedding.sql`; small edits in `server/index.js` (route + no-cache for the page's own js/css), `public/sw.js` (the service worker ignores `/wedding`) and `src/main.tsx` (route + sidebar link).
+
+## Visual editor (new)
+Open **Admin -> Wedding -> Edit design** (or `/wedding/?edit=1`). Tap any text or block and drag it; change its text, size, colour, font, hide it, or add new text (Cover / Inside). Tabs: **Seal** (shape, picture, letters, your own image, colour, size, position), **Envelope** (body, flaps, edge), **Colours**, **Butterflies** (golden, count, size, speed), **Sound** (background music + a sound when the seal is tapped), **Save**.
+Save tab -> *Download design.js* -> replace `public/wedding/design.js` -> push. Put pictures and .mp3 files in `public/wedding/`.
