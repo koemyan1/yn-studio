@@ -128,7 +128,7 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
     {err && <div className="notice"><b>Heads up.</b> {err}</div>}
 
     <section className="panel wdHero">
-      <div className="wdCouple"><span className="wdHeart"><Heart /></span><div><h2>{couple}</h2><small>{sub || 'Edit names, date, venue and photos in public/wedding/config.js'}</small></div></div>
+      <div className="wdCouple"><span className="wdHeart"><Heart /></span><div><h2>{couple}</h2><small>{sub || 'Edit names, date, venue and photos in Edit design → Details'}</small></div></div>
       <div className="wdHeroActions">
         <a className="button" href={INVITE_PATH} target="_blank" rel="noreferrer"><ExternalLink /> Open invitation</a>
         <a className="secondary button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> Edit design</a>

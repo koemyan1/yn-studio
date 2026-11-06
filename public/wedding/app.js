@@ -1,65 +1,75 @@
 (() => {
-  const C = window.CONFIG;
+  // config.js is only the DEFAULT. Anything you change in the editor (Details tab) is stored in the design (D.cfg)
+  // and always wins, so names / date / venue can be changed without touching config.js.
+  const C0 = window.CONFIG || {};
   const QS = new URLSearchParams(location.search), E = QS.has("edit"), DK = "wd_draft" + (QS.get("i") ? "_" + QS.get("i") : "");
-  const DF = { th: {}, env: {}, seal: { shape: "circle", icon: "lotus", size: 76, x: 50, y: 50 }, bf: { on: true, n: 14, size: 11, speed: 1, color: "#f0d890" }, snd: { music: C.music || "", open: "", vol: 0.7 }, o: {}, add: [], pages: [] };
-  const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] || {}, b[k]) : b[k]; return a; };
-  const D = mix(JSON.parse(JSON.stringify(DF)), window.DESIGN || {});
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const DF = { th: {}, env: {}, seal: { shape: "circle", icon: "lotus", size: 76, x: 50, y: 50 }, bf: { on: true, n: 14, size: 11, speed: 1, color: "#f0d890" }, snd: { music: C0.music || "", open: "", vol: 0.7 }, o: {}, add: [], pages: [], cfg: {} };
+  const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] && typeof a[k] === "object" ? a[k] : {}, b[k]) : b[k]; return a; };
+  const D = mix(clone(DF), window.DESIGN || {});
   if (E) try { mix(D, JSON.parse(localStorage.getItem(DK) || "{}")); } catch {}
   const $ = (s) => document.querySelector(s);
   const set = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
-  const toKm = (n) => String(n).replace(/\d/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
 
-  // ---- Fill content ----
-  const guest = (window.GUEST || new URLSearchParams(location.search).get("to") || "").trim().slice(0, 60);
-  set("#cardKm", `${C.groom.km} & ${C.bride.km}`);
-  set("#cardEn", C.dateTextEn);
-  set("#groomKm", C.groom.km); set("#brideKm", C.bride.km);
-  set("#namesEn", `${C.groom.en} & ${C.bride.en}`);
-  set("#dateKm", C.dateTextKm); set("#dateEn", C.dateTextEn);
-  set("#venueKm", C.venueKm); set("#venueEn", C.venueEn);
-  set("#footNames", `${C.groom.en} & ${C.bride.en}`);
-  $("#mapBtn").href = C.mapUrl;
+  // The effective config = config.js + the design's own overrides
+  let C = C0;
+  const buildC = () => {
+    C = mix(clone(C0), D.cfg || {});
+    C.groom = C.groom || { km: "", en: "" }; C.bride = C.bride || { km: "", en: "" };
+    C.schedule = C.schedule || []; C.photos = C.photos || [];
+    return C;
+  };
+  buildC();
+
+  const guest = (window.GUEST || QS.get("to") || "").trim().slice(0, 60);
   const gn = guest || (E ? "Guest name" : "");
-  if (gn) {
-    set("#coverTo", `សូមគោរពអញ្ជើញ ${gn}`);
-    set("#frontTo", gn);
+  let dirty = true; // timeline / gallery / QR are rebuilt only when the editor changed the details
+
+  // ---- Fill content (cheap, runs on every apply) ----
+  function fillText() {
+    buildC();
+    const names = `${C.groom.en || ""} & ${C.bride.en || ""}`;
+    set("#cardKm", `${C.groom.km || ""} & ${C.bride.km || ""}`);
+    set("#cardEn", C.dateTextEn || "");
+    set("#groomKm", C.groom.km || ""); set("#brideKm", C.bride.km || "");
+    set("#namesEn", names);
+    set("#dateKm", C.dateTextKm || ""); set("#dateEn", C.dateTextEn || "");
+    set("#venueKm", C.venueKm || ""); set("#venueEn", C.venueEn || "");
+    set("#footNames", names);
+    $("#mapBtn").href = C.mapUrl || "#";
+    if (gn) { set("#coverTo", `សូមគោរពអញ្ជើញ ${gn}`); set("#frontTo", gn); }
+    document.title = `${C.groom.en || ""} & ${C.bride.en || ""} · Wedding Invitation`;
   }
+  // ---- Lists (only when changed) ----
+  const fallbacks = ["linear-gradient(160deg,#1d6b66,#b3245f)", "linear-gradient(200deg,#d9b35f,#103638)", "linear-gradient(120deg,#b3245f,#0b2527)"];
+  function fillLists() {
+    $("#timeline").replaceChildren(...C.schedule.map((s) => {
+      const li = document.createElement("li");
+      li.innerHTML = '<time></time><span class="km"></span><span class="latin"></span>';
+      li.children[0].textContent = s.time || "";
+      li.children[1].textContent = s.km || "";
+      li.children[2].textContent = s.en || "";
+      return li;
+    }));
+    const photos = C.photos.length ? C.photos : fallbacks;
+    $("#gallery").replaceChildren(...photos.map((p) => {
+      const d = document.createElement("div");
+      d.style.setProperty("--g", C.photos.length ? `url("${p}")` : p);
+      return d;
+    }));
+    const img = $("#qrImg");
+    if (C.khqrImage) { if (img.dataset.src !== C.khqrImage) { img.dataset.src = C.khqrImage; img.src = C.khqrImage; } }
+    else { img.hidden = true; img.removeAttribute("src"); delete img.dataset.src; }
+    set("#qrNote", C.khqrNote || "");
+    $("#giftSec").hidden = !C.khqrImage && !C.khqrNote;
+  }
+  { const img = $("#qrImg"); img.onload = () => { img.hidden = false; }; img.onerror = () => { img.hidden = true; }; }
   if (guest) {
     set("#guestLine", `សូមស្វាគមន៍ ${guest}`);
     $("#guestLine").hidden = false;
     $("#rsvpForm [name=name]").value = guest;
     $("#wishForm [name=name]").value = guest;
   }
-  document.title = `${C.groom.en} & ${C.bride.en} · Wedding Invitation`;
-
-  $("#timeline").append(...C.schedule.map((s) => {
-    const li = document.createElement("li");
-    li.innerHTML = '<time></time><span class="km"></span><span class="latin"></span>';
-    li.children[0].textContent = s.time;
-    li.children[1].textContent = s.km;
-    li.children[2].textContent = s.en;
-    return li;
-  }));
-
-  // Gallery
-  const g = $("#gallery");
-  const fallbacks = ["linear-gradient(160deg,#1d6b66,#b3245f)", "linear-gradient(200deg,#d9b35f,#103638)", "linear-gradient(120deg,#b3245f,#0b2527)"];
-  const photos = C.photos.length ? C.photos : fallbacks;
-  photos.forEach((p) => {
-    const d = document.createElement("div");
-    d.style.setProperty("--g", C.photos.length ? `url("${p}")` : p);
-    g.append(d);
-  });
-
-  // Gift QR
-  if (C.khqrImage) {
-    const img = $("#qrImg");
-    img.onload = () => { img.hidden = false; };
-    img.onerror = () => { img.hidden = true; };
-    img.src = C.khqrImage;
-  }
-  set("#qrNote", C.khqrNote || "");
-  if (!C.khqrImage && !C.khqrNote) $("#giftSec").hidden = true;
 
   // ---- Open envelope ----
   const audio = $("#bgm"), musicBtn = $("#musicBtn");
@@ -108,11 +118,11 @@
     document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
   }
 
-  // ---- Countdown ----
-  const target = new Date(C.date).getTime();
+  // ---- Countdown (reads the date from the effective config, so editor changes show at once) ----
   const cd = $("#count");
   function tick() {
-    let s = Math.max(0, Math.floor((target - Date.now()) / 1000));
+    const target = new Date(C.date).getTime();
+    let s = Math.max(0, Math.floor(((isNaN(target) ? Date.now() : target) - Date.now()) / 1000));
     const parts = [[Math.floor(s / 86400), "ថ្ងៃ"], [Math.floor(s % 86400 / 3600), "ម៉ោង"], [Math.floor(s % 3600 / 60), "នាទី"], [s % 60, "វិនាទី"]];
     cd.innerHTML = "";
     parts.forEach(([n, l]) => {
@@ -123,11 +133,11 @@
       cd.append(d);
     });
   }
-  tick(); setInterval(tick, 1000);
+  setInterval(tick, 1000);
 
   // ---- Supabase (or demo mode) ----
-  const live = C.supabaseUrl && !C.supabaseUrl.startsWith("YOUR") && window.supabase;
-  const sb = live ? window.supabase.createClient(C.supabaseUrl, C.supabaseKey) : null;
+  const live = C0.supabaseUrl && !C0.supabaseUrl.startsWith("YOUR") && window.supabase;
+  const sb = live ? window.supabase.createClient(C0.supabaseUrl, C0.supabaseKey) : null;
   const demo = (k) => JSON.parse(localStorage.getItem("demo_" + k) || "[]");
   const demoAdd = (k, row) => localStorage.setItem("demo_" + k, JSON.stringify([row, ...demo(k)].slice(0, 50)));
 
@@ -177,13 +187,18 @@
     message: String(fd.get("message")).trim().slice(0, 300)
   }), "សូមអរគុណសម្រាប់ពាក្យជូនពរ 💛", (f) => { f.message.value = ""; loadWishes(); });
 
-  // ---- Everything editable: texts, seal, envelope, colours (see editor.js) ----
+  // ---- Everything editable: texts, seal, envelope, colours, move + resize (see editor.js) ----
   if (D.bf.size === 20) D.bf.size = 11;
   const BUILT = ["#coverTo", ".cover-tap", ".cover-hint", "#frontTo", "#cardKm", "#cardEn", ".invite", "#groomKm", ".amp", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#guestLine", ".lotus-rule", "#count", "#hProg", "#timeline", "#hVenue", "#venueKm", "#venueEn", "#mapBtn", "#hGal", "#gallery", "#hRsvp", "#rsvpForm", "#hWish", "#wishForm", "#wishes", "#hGift", "#qr", ".foot"];
+  // text boxes that are filled from the details: re-filled on every apply, then a custom text (o.t) may replace them
+  const FILLED = new Set(["#cardKm", "#cardEn", "#groomKm", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#venueKm", "#venueEn"]);
   const sealEl = $("#seal"), LOTUS = sealEl.innerHTML;
   $(".front-stamp").innerHTML = LOTUS;
   const HEART = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg>';
+
   function apply() {
+    fillText();
+    if (dirty) { dirty = false; fillLists(); tick(); }
     const r = document.documentElement.style, V = (k, v) => (v ? r.setProperty(k, v) : r.removeProperty(k));
     ["ink", "deep", "jade", "gold", "gold-2", "silk", "pearl"].forEach((k) => V("--" + k, D.th[k]));
     const PT = { dots: '<circle cx="8" cy="8" r="1.6" fill="#fff" fill-opacity=".25"/>', lines: '<path d="M0 8h16" stroke="#fff" stroke-opacity=".2"/>', diamonds: '<path d="M8 1l7 7-7 7-7-7z" fill="none" stroke="#fff" stroke-opacity=".28"/>' }, pt = D.env.pat;
@@ -201,6 +216,7 @@
     sealEl.innerHTML = S.icon === "heart" ? HEART : S.icon === "text" ? "" : S.icon === "image" && S.img ? "" : S.icon === "none" ? "" : LOTUS;
     if (S.icon === "text") sealEl.append(Object.assign(document.createElement("span"), { className: "stxt", textContent: S.text || "♥" }));
     if (S.icon === "image" && S.img) sealEl.append(Object.assign(document.createElement("img"), { src: S.img, alt: "" }));
+    if (E) sealEl.dataset.e = "#seal";
     document.querySelectorAll(".pg").forEach((n) => { if (!D.pages.some((p) => p.id === n.dataset.pg)) n.remove(); });
     D.pages.forEach((p) => {
       let n = document.querySelector(`.pg[data-pg="${p.id}"]`);
@@ -217,17 +233,23 @@
     const items = [...BUILT.map((s) => [$(s), s]), ...[...document.querySelectorAll(".fr")].map((n) => [n, n.dataset.e])];
     items.forEach(([el, k]) => {
       if (!el) return;
-      const o = D.o[k] || {};
+      const o = D.o[k] || {}, dyn = k === "#frontTo" || k === "#coverTo", img = el.classList.contains("fi");
       el.dataset.e = k;
-      if (el.tagName !== "IMG" && (!el.children.length || k === ".cover-hint")) { el._h ??= el.innerHTML; if (o.t != null && k !== "#frontTo" && k !== "#coverTo") el.textContent = o.t; else el.innerHTML = el._h; }
+      if (el.tagName !== "IMG" && (!el.children.length || k === ".cover-hint")) {
+        if (dyn) { /* filled by fillText */ }
+        else if (FILLED.has(k)) { if (o.t != null) el.textContent = o.t; }
+        else { el._h ??= el.innerHTML; if (o.t != null) el.textContent = o.t; else el.innerHTML = el._h; }
+      }
       el.style.translate = o.x || o.y ? `${o.x || 0}px ${o.y || 0}px` : "";
+      el.style.scale = !img && o.k && o.k !== 1 ? String(o.k) : "";   // corner-handle resize for everything except pictures
       el.style.fontSize = o.s ? o.s + "px" : "";
       el.style.fontFamily = o.f ? `var(--${o.f})` : "";
       el.style.backgroundImage = o.c ? "none" : ""; el.style.color = o.c || "";
       el.style.display = o.h && !E ? "none" : "";
       el.classList.toggle("ed-off", !!o.h);
-      if (el.classList.contains("fi")) { el.style.width = (o.w || 160) + "px"; el.style.borderRadius = (o.r || 0) + "%"; }
+      if (img) { el.style.width = (o.w || 160) + "px"; el.style.borderRadius = (o.r || 0) + "%"; }
     });
+    fitNames();
   }
 
   // guest names always stay on ONE line: if a long name is too wide it shrinks to fit
@@ -236,11 +258,9 @@
       const el = $(s); if (!el || !el.textContent) return;
       el.style.fontSize = (D.o[s] || {}).s ? D.o[s].s + "px" : "";
       const m = w(), cw = el.offsetWidth;
-      if (cw > m) el.style.fontSize = (parseFloat(getComputedStyle(el).fontSize) * m) / cw + "px";
+      if (cw > m && cw > 0) el.style.fontSize = (parseFloat(getComputedStyle(el).fontSize) * m) / cw + "px";
     });
   }
-  const apply0 = apply;
-  apply = () => { apply0(); fitNames(); };
   addEventListener("resize", fitNames); document.fonts?.ready.then(fitNames);
 
   // ---- Golden butterflies flying around the whole screen ----
@@ -282,7 +302,7 @@
     requestAnimationFrame(loop);
   })();
 
-  window.WD = { E, D, DK, apply, open, turn, BUILT };
+  window.WD = { E, D, DK, C0, apply, open, turn, BUILT, getC: () => C, dirty: () => { dirty = true; } };
   apply();
-  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=4" })); }
+  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=6" })); }
 })();
