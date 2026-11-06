@@ -1,10 +1,10 @@
 (() => {
   const C = window.CONFIG;
-  const E = new URLSearchParams(location.search).has("edit");
+  const QS = new URLSearchParams(location.search), E = QS.has("edit"), DK = "wd_draft" + (QS.get("i") ? "_" + QS.get("i") : "");
   const DF = { th: {}, env: {}, seal: { shape: "circle", icon: "lotus", size: 76, x: 50, y: 50 }, bf: { on: true, n: 14, size: 11, speed: 1, color: "#f0d890" }, snd: { music: C.music || "", open: "", vol: 0.7 }, o: {}, add: [], pages: [] };
   const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] || {}, b[k]) : b[k]; return a; };
   const D = mix(JSON.parse(JSON.stringify(DF)), window.DESIGN || {});
-  if (E) try { mix(D, JSON.parse(localStorage.getItem("wd_draft") || "{}")); } catch {}
+  if (E) try { mix(D, JSON.parse(localStorage.getItem(DK) || "{}")); } catch {}
   const $ = (s) => document.querySelector(s);
   const set = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
   const toKm = (n) => String(n).replace(/\d/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
@@ -282,7 +282,7 @@
     requestAnimationFrame(loop);
   })();
 
-  window.WD = { E, D, apply, open, turn, BUILT };
+  window.WD = { E, D, DK, apply, open, turn, BUILT };
   apply();
-  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=3" })); }
+  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=4" })); }
 })();

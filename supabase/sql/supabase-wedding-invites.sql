@@ -1,3 +1,4 @@
+-- Wedding invitations: the admin saves a DRAFT, previews it, then SENDS it to a customer (status draft -> sent).
 -- Wedding invitations sent by the admin to a customer + the customer's guest list.
 -- Run once in Supabase -> SQL Editor (after supabase-wedding.sql). Safe to run again.
 --   * Admin (profiles.role = 'admin') creates an invitation for a customer (design + wording).
@@ -20,18 +21,27 @@ create table if not exists public.wedding_guests (
   created_at timestamptz not null default now()
 );
 create index if not exists wedding_guests_invite_idx on public.wedding_guests(invite_id);
+-- draft / sent flow (safe to re-run). Invitations that already existed were already with customers, so they become 'sent' once.
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='wedding_invites' and column_name='status') then
+    alter table public.wedding_invites add column status text not null default 'draft' check (status in ('draft','sent'));
+    update public.wedding_invites set status = 'sent';
+  end if;
+end $$;
+alter table public.wedding_invites add column if not exists sent_at timestamptz;
+alter table public.wedding_invites add column if not exists updated_at timestamptz not null default now();
 alter table public.wedding_invites enable row level security;
 alter table public.wedding_guests  enable row level security;
 
 drop policy if exists "owner reads invite" on public.wedding_invites;
-create policy "owner reads invite" on public.wedding_invites for select to authenticated using (owner_id = auth.uid() or public.yn_svc_is_admin());
+create policy "owner reads invite" on public.wedding_invites for select to authenticated using ((owner_id = auth.uid() and status = 'sent') or public.yn_svc_is_admin());
 drop policy if exists "admin writes invite" on public.wedding_invites;
 create policy "admin writes invite" on public.wedding_invites for all to authenticated using (public.yn_svc_is_admin()) with check (public.yn_svc_is_admin());
 
 drop policy if exists "owner manages guests" on public.wedding_guests;
 create policy "owner manages guests" on public.wedding_guests for all to authenticated
-  using (exists (select 1 from public.wedding_invites i where i.id = invite_id and (i.owner_id = auth.uid() or public.yn_svc_is_admin())))
-  with check (exists (select 1 from public.wedding_invites i where i.id = invite_id and (i.owner_id = auth.uid() or public.yn_svc_is_admin())));
+  using (exists (select 1 from public.wedding_invites i where i.id = invite_id and ((i.owner_id = auth.uid() and i.status = 'sent') or public.yn_svc_is_admin())))
+  with check (exists (select 1 from public.wedding_invites i where i.id = invite_id and ((i.owner_id = auth.uid() and i.status = 'sent') or public.yn_svc_is_admin())));
 
 -- what the invitation page calls (knowing the unguessable ids is the "key")
 create or replace function public.wedding_open(p_invite uuid, p_guest uuid default null) returns jsonb

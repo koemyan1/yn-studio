@@ -20,7 +20,7 @@
   document.body.append(h("div", { id: "wdp" }));
   document.body.append(h("button", { id: "wdt", textContent: "▾", title: "Hide / show editor", onclick: () => { const p = $("#wdp"), s = p.style.display === "none"; p.style.display = s ? "" : "none"; $("#wdt").textContent = s ? "▾" : "✎"; } }));
 
-  const commit = () => { try { localStorage.setItem("wd_draft", JSON.stringify(D)); } catch { alert("Browser storage is full (big pictures). Download design.js now so nothing is lost."); } W.apply(); };
+  const commit = () => { try { localStorage.setItem(W.DK, JSON.stringify(D)); } catch { alert("Browser storage is full (big pictures). Download design.js now so nothing is lost."); } W.apply(); };
   const say = (m) => { const t = h("div", { textContent: m }); t.style.cssText = "position:fixed;z-index:70;left:50%;top:14px;transform:translateX(-50%);background:#f0d890;color:#0b2527;padding:8px 14px;border-radius:20px;font:600 13px system-ui"; document.body.append(t); setTimeout(() => t.remove(), 2200); };
   const pick = (max, cb, sq, png) => {
     const i = h("input", { type: "file", accept: "image/*" }); i.style.cssText = "position:fixed;left:-999px;opacity:0"; document.body.append(i);
@@ -117,26 +117,59 @@
           h("p", {}, "Put your .mp3 files in public/wedding/ and type the file name (e.g. music.mp3, pop.mp3). Phones only play sound after a tap, which the seal tap provides.")];
       },
       save: () => {
-        const em = h("input", { type: "email", placeholder: "customer@email.com" }), ti = h("input", { placeholder: "Title (e.g. Sokha & Dara)" });
-        const send = async () => {
-          const C = window.CONFIG;
-          if (!window.supabase || !C.supabaseUrl || C.supabaseUrl.startsWith("YOUR")) return say("Set supabaseUrl / supabaseKey in config.js first");
-          const sb = window.supabase.createClient(C.supabaseUrl, C.supabaseKey);
-          const { data: u, error: e1 } = await sb.from("profiles").select("user_id").ilike("email", em.value.trim()).limit(1);
-          if (e1 || !u?.length) return say(e1 ? e1.message : "No customer with that email (log in as admin in this browser)");
-          const cfg = { ...C }; delete cfg.supabaseUrl; delete cfg.supabaseKey;
-          const { error } = await sb.from("wedding_invites").insert({ owner_id: u[0].user_id, title: ti.value || `${C.groom.en} & ${C.bride.en}`, design: D, config: cfg });
-          say(error ? error.message : "Sent to customer ✓");
+        const C = window.CONFIG, inv = W.inv, isSent = inv?.status === "sent";
+        const ti = h("input", { placeholder: "Title (e.g. Sokha & Dara)", value: W.title ?? inv?.title ?? "", oninput: () => { W.title = ti.value; } });
+        const em = h("input", { type: "email", placeholder: "customer@email.com", value: W.email || "", oninput: () => { W.email = em.value; } });
+        const ready = () => { if (window.supabase && C.supabaseUrl && !C.supabaseUrl.startsWith("YOUR")) return (W.sb ??= window.supabase.createClient(C.supabaseUrl, C.supabaseKey)); say("Set supabaseUrl / supabaseKey in public/wedding/config.js first"); return null; };
+        const cfgOut = () => { const c = { ...C }; delete c.supabaseUrl; delete c.supabaseKey; return c; };
+        const COLS = "id,title,status,owner_id";
+        const saveDraft = async (asNew) => {
+          const sb = ready(); if (!sb) return false;
+          const { data: au } = await sb.auth.getUser(); if (!au?.user) { say("Log in as admin in this browser first"); return false; }
+          const row = { title: ti.value.trim() || `${C.groom.en} & ${C.bride.en}`, design: D, config: cfgOut() };
+          const r = inv?.id && !asNew
+            ? await sb.from("wedding_invites").update({ ...row, updated_at: new Date().toISOString() }).eq("id", inv.id).select(COLS).single()
+            : await sb.from("wedding_invites").insert({ ...row, owner_id: au.user.id, status: "draft" }).select(COLS).single();
+          if (r.error) { say(r.error.code === "PGRST116" ? "Not saved: log in as admin in this browser" : r.error.message); return false; }
+          W.inv = r.data; W.title = r.data.title;
+          const k = "wd_draft_" + r.data.id; try { localStorage.setItem(k, JSON.stringify(D)); } catch {} W.DK = k;
+          const u = new URL(location.href); u.searchParams.set("i", r.data.id); history.replaceState(null, "", u);
+          return true;
         };
-        return [h("p", {}, "Send this invitation to a customer. They add their guests at /wedding/guests.html and each guest’s name appears on the envelope front. Log in as admin in this browser first."),
-          h("label", {}, "Customer email", em), h("label", {}, "Title", ti), btn("📨 Send to customer", send), h("hr"),
-        btn("⬇ Download design.js", () => { const a = h("a", { href: URL.createObjectURL(new Blob(["window.DESIGN = " + JSON.stringify(D, null, 2) + ";\n"], { type: "text/javascript" })), download: "design.js" }); document.body.append(a); a.click(); a.remove(); }),
-        btn("Reset everything", () => { if (confirm("Throw away all your edits?")) { localStorage.removeItem("wd_draft"); location.href = "?edit=1"; } }, true),
-        h("p", {}, "Your edits are kept in this browser while you work. To publish: download design.js, replace public/wedding/design.js with it, push to GitHub. Pictures and music go in public/wedding/."),
+        const sendIt = async () => {
+          const sb = ready(); if (!sb) return; if (!inv?.id) return say("Save the draft first");
+          const email = em.value.trim(); if (!email) return say("Type the customer's email");
+          const { data: u, error: e1 } = await sb.from("profiles").select("user_id").ilike("email", email.replace(/[\\%_]/g, "\\$&")).limit(1);
+          if (e1 || !u?.length) return say(e1 ? e1.message : "No customer with that email");
+          if (!confirm(`Send this invitation to ${email}? It will appear on their Services page.`)) return;
+          if (!(await saveDraft(false))) return;
+          const { error } = await sb.from("wedding_invites").update({ owner_id: u[0].user_id, status: "sent", sent_at: new Date().toISOString() }).eq("id", W.inv.id);
+          if (error) return say(error.message);
+          W.inv = { ...W.inv, status: "sent", owner_id: u[0].user_id }; say("Sent to customer ✓"); render();
+        };
+        const base = location.origin + location.pathname;
+        return [
+          h("p", {}, inv?.id ? (isSent ? "Status: SENT to the customer. Saving updates what they see." : "Status: DRAFT. Only you can see it, the customer cannot yet.") : "Not saved yet. Save a draft first, preview it, then send it."),
+          h("label", {}, "Title", ti),
+          h("div", { className: "row" }, btn(inv?.id ? (isSent ? "💾 Save changes" : "💾 Save draft") : "💾 Save draft", async () => { if (await saveDraft(false)) { say("Saved ✓"); render(); } }),
+            ...(inv?.id ? [btn("＋ Save as new copy", async () => { if (await saveDraft(true)) { say("Saved as new draft ✓"); render(); } }, true)] : [])),
+          ...(inv?.id ? [h("div", { className: "row" }, btn("👁 Preview (as the customer sees it)", () => window.open(`${base}?i=${inv.id}`, "_blank")), btn("Copy preview link", () => navigator.clipboard.writeText(`${base}?i=${inv.id}`).then(() => say("Link copied")), true)),
+            h("p", {}, "Preview shows the SAVED version. Save again after more edits, then refresh the preview.")] : []),
+          h("hr"),
+          h("p", {}, isSent ? "Already sent. To send it to a different customer, type their email:" : "When the preview looks right, send it. It appears on the customer's Services page, where they add their guests."),
+          h("label", {}, "Customer email", em), btn("📨 Send to customer", sendIt, !inv?.id), h("hr"),
+          btn("⬇ Download design.js", () => { const a = h("a", { href: URL.createObjectURL(new Blob(["window.DESIGN = " + JSON.stringify(D, null, 2) + ";\n"], { type: "text/javascript" })), download: "design.js" }); document.body.append(a); a.click(); a.remove(); }, true),
+          btn("Reset everything", () => { if (confirm("Throw away all your unsaved edits?")) { localStorage.removeItem(W.DK); location.reload(); } }, true),
+          h("p", {}, "Unsaved edits are kept in this browser while you work. Save draft stores them in the database."),
         ];
       },
     };
     const r = B[tab](); p.append(...(Array.isArray(r) ? r : [r])); p.scrollTop = y;
   }
-  W.view = view; render();
+  W.view = view;
+  const qi = new URLSearchParams(location.search).get("i"), C0 = window.CONFIG || {};
+  if (qi && window.supabase && C0.supabaseUrl && !C0.supabaseUrl.startsWith("YOUR")) {
+    (W.sb ??= window.supabase.createClient(C0.supabaseUrl, C0.supabaseKey)).from("wedding_invites").select("id,title,status,owner_id").eq("id", qi).maybeSingle().then((r) => { if (r.data) { W.inv = r.data; render(); } });
+  }
+  render();
 })();

@@ -62,3 +62,4 @@
   .wdTable td[data-l]::before{content:attr(data-l);color:var(--a-mute);font-size:12px;font-weight:700}
   .wdTable td:last-child{position:absolute;right:0;top:6px;padding:0}
 }
+.wdLinks li{flex-wrap:wrap}

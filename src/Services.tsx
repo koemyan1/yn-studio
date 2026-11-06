@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Check, Copy, ExternalLink, FileText, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
+  Check, Copy, ExternalLink, FileText, Heart, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
   Printer, Send, Smartphone, Trash2, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -168,6 +168,16 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
   useEffect(() => { loadOrders(); }, [loadOrders]);
   useOrderLive(loadOrders);
   const [mine, setMine] = useState<Mine[]>([]);
+  // wedding invitations the admin has sent to this customer (table wedding_invites; stays empty if the table is not installed)
+  const [invites, setInvites] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const u = data.user?.id; if (!u) return;
+      const r = await supabase.from('wedding_invites').select('id,title').eq('owner_id', u).eq('status', 'sent').order('created_at', { ascending: false });
+      if (!r.error) setInvites((r.data as any[]) || []);
+    })().catch(() => {});
+  }, []);
 
   const loadMine = useCallback(async () => {
     const { data } = await supabase.auth.getUser();
@@ -216,6 +226,19 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
           <h1 id="svcTitle">{tr('Print it. Copy it. Design it.', 'បោះពុម្ព ថតចម្លង រចនា។')}</h1>
           <p>{ALL.some(s => shopOn(s.k)) ? tr('Choose a service, set your options, see the price and pay. We start once it is paid.', 'ជ្រើសរើសសេវា កំណត់ជម្រើស មើលតម្លៃ ហើយទូទាត់។ យើងចាប់ផ្តើមនៅពេលបានបង់ប្រាក់។') : tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
+
+        {invites.map(w => (
+          <article className="svcCard" data-rv key={w.id} style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
+            <div className="svcInk"><Heart /></div>
+            <div className="svcBody">
+              <h3>{w.title || tr('Your wedding invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍របស់អ្នក')}</h3>
+              <p>{tr('Your invitation is ready. Open it, then add your guests: each guest gets a personal link with their name on the envelope.', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ។ បើកមើល រួចបន្ថែមភ្ញៀវ៖ ភ្ញៀវម្នាក់ៗទទួលបានតំណផ្ទាល់ខ្លួនដែលមានឈ្មោះលើស្រោមសំបុត្រ។')}</p>
+              <button type="button" className="svcAsk" onClick={() => window.open('/wedding/?i=' + w.id, '_blank', 'noopener')}>{tr('View invitation', 'មើលសំបុត្រអញ្ជើញ')}</button>{' '}
+              <button type="button" className="svcAsk" onClick={() => window.open('/wedding/guests.html', '_blank', 'noopener')}>{tr('Manage guests & links', 'គ្រប់គ្រងភ្ញៀវ និងតំណ')}</button>
+            </div>
+          </article>
+        ))}
+        {invites.length > 0 && <div style={{ height: 22 }} />}
 
         <article className="svcCard" data-rv style={{ ['--svc' as any]: '#7c3aed', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
           <div className="svcInk"><FileText /></div>

@@ -7,6 +7,7 @@ import './admin-wedding.css';
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
 type Rsvp = { id: number; name: string; attending: boolean; guests: number; created_at: string };
 type Wish = { id: number; name: string; message: string; created_at: string };
+type Invite = { id: string; title: string; status: 'draft' | 'sent'; created_at: string };
 type Cfg = { groom?: { km?: string; en?: string }; bride?: { km?: string; en?: string }; dateTextEn?: string; venueEn?: string };
 
 const INVITE_PATH = '/wedding/';
@@ -48,6 +49,7 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
   const [q, setQ] = useState('');
   const [names, setNames] = useState('');
   const [qr, setQr] = useState('');
+  const [invites, setInvites] = useState<Invite[]>([]);
   const { done, copy } = useCopy();
 
   const load = useCallback(async () => {
@@ -61,6 +63,8 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
     else setErr('');
     setRsvps((r.data as Rsvp[]) || []);
     setWishes((w.data as Wish[]) || []);
+    const iv = await supabase.from('wedding_invites').select('id,title,status,created_at').order('created_at', { ascending: false }).limit(100);
+    setInvites(iv.error ? [] : ((iv.data as Invite[]) || []));
     setLoading(false);
   }, []);
 
@@ -91,6 +95,12 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
 
   const nameList = useMemo(() => Array.from(new Set(names.split('\n').map(n => n.trim()).filter(Boolean))).slice(0, 500), [names]);
 
+  async function removeInvite(i: Invite) {
+    if (!window.confirm(`Delete the invitation “${i.title || 'Untitled'}”${i.status === 'sent' ? ' (already sent: the customer loses it and its guest list)' : ''}?`)) return;
+    const { error } = await supabase.from('wedding_invites').delete().eq('id', i.id);
+    if (error) { setErr(error.message); return; }
+    setInvites(x => x.filter(v => v.id !== i.id));
+  }
   async function removeRsvp(r: Rsvp) {
     if (!window.confirm(`Delete the reply from “${r.name}”?`)) return;
     const { error } = await supabase.from('rsvps').delete().eq('id', r.id);
@@ -124,6 +134,18 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
         <a className="secondary button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> Edit design</a>
         <button type="button" className="secondary" onClick={load} disabled={loading}><RefreshCw /> {loading ? 'Loading…' : 'Refresh'}</button>
       </div>
+    </section>
+
+    <section className="panel">
+      <div className="wdHead"><h2>Invitations for customers</h2>
+        <a className="button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> New invitation</a></div>
+      <p className="muted">Design it, press Save draft, preview it, then Send to customer. A sent invitation shows on the customer’s Services page.</p>
+      {invites.length === 0 ? <p className="wdEmpty">No saved invitations yet.</p> :
+        <ul className="wdLinks">{invites.map(i => <li key={i.id}><b>{i.title || 'Untitled'}</b>
+          <span className={'wdPill ' + (i.status === 'sent' ? 'yes' : 'no')}>{i.status === 'sent' ? 'Sent' : 'Draft'}</span>
+          <a className="secondary button" href={INVITE_PATH + '?i=' + i.id} target="_blank" rel="noreferrer"><ExternalLink /> Preview</a>
+          <a className="secondary button" href={INVITE_PATH + '?edit=1&i=' + i.id} target="_blank" rel="noreferrer"><Palette /> Edit</a>
+          <button type="button" className="icon" aria-label={'Delete ' + (i.title || 'invitation')} onClick={() => removeInvite(i)}><Trash2 /></button></li>)}</ul>}
     </section>
 
     <div className="stats wdStats">
