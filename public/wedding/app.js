@@ -5,6 +5,7 @@
   const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] || {}, b[k]) : b[k]; return a; };
   const D = mix(JSON.parse(JSON.stringify(DF)), window.DESIGN || {});
   if (E) try { mix(D, JSON.parse(localStorage.getItem(DK) || "{}")); } catch {}
+  if (D.cfg) mix(C, D.cfg); // names/date/venue typed in the editor override config.js everywhere (design.js, saved invites, guest links)
   const $ = (s) => document.querySelector(s);
   const set = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
   const toKm = (n) => String(n).replace(/\d/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
