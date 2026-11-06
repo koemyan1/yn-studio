@@ -22,7 +22,7 @@
   const gn = guest || (E ? "Guest name" : "");
   if (gn) {
     set("#coverTo", `សូមគោរពអញ្ជើញ ${gn}`);
-    set("#frontTo", `ជូនចំពោះ\n${gn}`);
+    set("#frontTo", gn);
   }
   if (guest) {
     set("#guestLine", `សូមស្វាគមន៍ ${guest}`);
@@ -187,7 +187,9 @@
     const r = document.documentElement.style, V = (k, v) => (v ? r.setProperty(k, v) : r.removeProperty(k));
     ["ink", "deep", "jade", "gold", "gold-2", "silk", "pearl"].forEach((k) => V("--" + k, D.th[k]));
     const PT = { dots: '<circle cx="8" cy="8" r="1.6" fill="#fff" fill-opacity=".25"/>', lines: '<path d="M0 8h16" stroke="#fff" stroke-opacity=".2"/>', diamonds: '<path d="M8 1l7 7-7 7-7-7z" fill="none" stroke="#fff" stroke-opacity=".28"/>' }, pt = D.env.pat;
-    $("#envelope").classList.toggle("fit", pt === "fit" && !!D.env.img);
+    $("#envelope").classList.toggle("fit-f", pt === "fit" && !!D.env.img);
+    $("#envelope").classList.toggle("fit-b", pt === "fit" && !!(D.env.back || D.env.img));
+    V("--epb", pt === "fit" && (D.env.back || D.env.img) ? `url("${D.env.back || D.env.img}")` : "");
     V("--ep", (pt === "img" || pt === "fit") && D.env.img ? `url("${D.env.img}")` : PT[pt] ? `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">' + PT[pt] + "</svg>")}")` : "");
     V("--eps", pt === "img" ? "90px 90px" : PT[pt] ? "16px 16px" : ""); V("--ew", D.env.w ? D.env.w + "px" : "");
     V("--eb", D.env.body); V("--ef", D.env.flap); V("--el", D.env.line);

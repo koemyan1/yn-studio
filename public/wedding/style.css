@@ -144,8 +144,8 @@ select option{color:#000}
 #cover.turned .cover-tap{opacity:0}
 body.editing .pg::before{content:"Page " attr(data-n);position:absolute;left:8px;top:6px;z-index:6;font:12px system-ui;color:#0b2527;background:#f0d890;padding:2px 8px;border-radius:10px}
 /* envelope photo that fits the square: front shows it whole, the four flaps are cut from the same picture */
-.envelope.fit .env-front{background:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.35)),var(--ep) center/100% 100% no-repeat!important}
-.envelope.fit .f-top{background:linear-gradient(rgba(255,255,255,.08),rgba(0,0,0,.3)),var(--ep) 0 0/100% 200% no-repeat!important}
-.envelope.fit .f-bottom{background:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.5)),var(--ep) 0 100%/100% 200% no-repeat!important}
-.envelope.fit .f-left{background:linear-gradient(90deg,rgba(0,0,0,.18),rgba(0,0,0,.4)),var(--ep) 0 0/200% 100% no-repeat!important}
-.envelope.fit .f-right{background:linear-gradient(270deg,rgba(0,0,0,.18),rgba(0,0,0,.4)),var(--ep) 100% 0/200% 100% no-repeat!important}
+.envelope.fit-f .env-front{background:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.35)),var(--ep) center/100% 100% no-repeat!important}
+.envelope.fit-b .f-top{background:linear-gradient(rgba(255,255,255,.08),rgba(0,0,0,.3)),var(--epb) 0 0/100% 200% no-repeat!important}
+.envelope.fit-b .f-bottom{background:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.5)),var(--epb) 0 100%/100% 200% no-repeat!important}
+.envelope.fit-b .f-left{background:linear-gradient(90deg,rgba(0,0,0,.18),rgba(0,0,0,.4)),var(--epb) 0 0/200% 100% no-repeat!important}
+.envelope.fit-b .f-right{background:linear-gradient(270deg,rgba(0,0,0,.18),rgba(0,0,0,.4)),var(--epb) 100% 0/200% 100% no-repeat!important}
