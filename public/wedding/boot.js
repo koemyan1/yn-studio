@@ -12,5 +12,5 @@
       window.CONFIG = Object.assign({}, C, data.config, { supabaseUrl: C.supabaseUrl, supabaseKey: C.supabaseKey }); window.DESIGN = data.design || {}; window.GUEST = data.guest || "";
     } catch (e) { return stop("This invitation could not be opened.<br><small>" + (e && e.message || e) + "</small>"); }
   }
-  document.body.append(Object.assign(document.createElement("script"), { src: "app.js?v=6" }));
+  document.body.append(Object.assign(document.createElement("script"), { src: "app.js?v=7" }));
 })();
