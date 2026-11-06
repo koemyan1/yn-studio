@@ -31,6 +31,6 @@ window.CONFIG = {
   khqrNote: "ABA · 000 000 000 · SOKHA & DARA",
 
   // Supabase (see README). Leave blank to run in demo mode (saves in this browser only).
-  supabaseUrl: "YOUR_SUPABASE_URL",
-  supabaseKey: "YOUR_SUPABASE_ANON_KEY"
+  supabaseUrl: "https://fdqrmzlnahrrqfervlde.supabase.co",
+  supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcXJtemxuYWhycnFmZXJ2bGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1MDE1MzcsImV4cCI6MjEwNjA3NzUzN30.X4_P5yB4i2nM4IoyC7reKykMpsYghMQ-2qI1dsaGKXk"
 };
