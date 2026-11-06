@@ -22,12 +22,12 @@
 
   const commit = () => { try { localStorage.setItem("wd_draft", JSON.stringify(D)); } catch { alert("Browser storage is full (big pictures). Download design.js now so nothing is lost."); } W.apply(); };
   const say = (m) => { const t = h("div", { textContent: m }); t.style.cssText = "position:fixed;z-index:70;left:50%;top:14px;transform:translateX(-50%);background:#f0d890;color:#0b2527;padding:8px 14px;border-radius:20px;font:600 13px system-ui"; document.body.append(t); setTimeout(() => t.remove(), 2200); };
-  const pick = (max, cb) => {
+  const pick = (max, cb, sq) => {
     const i = h("input", { type: "file", accept: "image/*" }); i.style.cssText = "position:fixed;left:-999px;opacity:0"; document.body.append(i);
     i.onchange = () => { const f = i.files[0]; if (!f) return i.remove(); const r = new FileReader();
       r.onerror = () => { say("Could not read that picture"); i.remove(); };
       r.onload = () => { const im = new Image(); im.onerror = () => { say("Could not open that picture"); i.remove(); };
-        im.onload = () => { try { const k = Math.min(1, max / Math.max(im.width, im.height)), c = h("canvas", { width: Math.max(1, Math.round(im.width * k)), height: Math.max(1, Math.round(im.height * k)) }); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(f.type === "image/png" ? "image/png" : "image/jpeg", 0.85)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
+        im.onload = () => { try { const s = sq ? Math.min(im.width, im.height) : 0, k = Math.min(1, max / (sq ? s : Math.max(im.width, im.height))), c = h("canvas", { width: Math.max(1, Math.round((sq ? s : im.width) * k)), height: Math.max(1, Math.round((sq ? s : im.height) * k)) }); if (sq) c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, c.width, c.height); else c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(f.type === "image/png" ? "image/png" : "image/jpeg", 0.85)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
         im.src = r.result; };
       r.readAsDataURL(f); };
     i.click();
@@ -74,12 +74,16 @@
       text() {
         const k = sel, o = k && (D.o[k] ??= {}), free = k && D.add.some((a) => a.id === k);
         const out = [btn("+ Add text", () => addItem({}, { t: "New text" })), btn("+ Add image", () => pick(900, (d) => addItem({ k: "img", src: d }, { w: 180 })))];
+        out.push(btn("👤 Guest name (front)", () => { view("cover"); sel = "#frontTo"; mark(); render(); }, true), btn("👤 Guest name (back)", () => { view("back"); sel = "#coverTo"; mark(); render(); }, true));
         if (!k) return [...out, h("p", {}, "Editor v3. Tap any text or block on the page to select it. Drag to move it. Tap + Add text for new text on the current view (Cover / Inside).")];
         const it = D.add.find((a) => a.id === k);
         if (it?.k === "img") return [...out, fld("Width (px)", "range", ["o", k, "w"], 180, { min: 30, max: 640 }), fld("Roundness (50 = circle)", "range", ["o", k, "r"], 0, { min: 0, max: 50 }),
           h("div", { className: "row" }, btn("Replace picture", () => pick(900, (d) => { it.src = d; commit(); })), btn(o.h ? "Show" : "Hide", () => { o.h = !o.h; commit(); render(); }, true), btn("Delete", () => { D.add = D.add.filter((a) => a.id !== k); delete D.o[k]; sel = null; commit(); render(); }, true))];
         const el = document.querySelector(`[data-e="${CSS.escape(k)}"]`), editable = el && (!el.children.length || k === ".cover-hint");
-        if (editable) out.push(fld("Text", "area", ["o", k, "t"], el.textContent));
+        const dyn = k === "#frontTo" || k === "#coverTo", W0 = $("#envelope").offsetWidth || 300;
+        if (dyn) out.push(h("p", {}, "Guest name: each guest's own name fills in here automatically. Drag it, or use the buttons:"),
+          h("div", { className: "row" }, ...[["Top", 0, -0.3], ["Middle", 0, 0], ["Bottom", 0, 0.3], ["Left", -0.16, null], ["Centre", 0, null], ["Right", 0.16, null]].map(([t, dx, dy]) => btn(t, () => { if (dy !== null) o.y = Math.round(dy * W0); else o.x = Math.round(dx * W0); commit(); }, true))));
+        if (editable && !dyn) out.push(fld("Text", "area", ["o", k, "t"], el.textContent));
         out.push(fld("Size (px)", "number", ["o", k, "s"], parseFloat(el && getComputedStyle(el).fontSize) || 20, { min: 8, max: 120 }));
         out.push(fld("Colour", "color", ["o", k, "c"], "#f0d890"));
         out.push(fld("Font", "select", ["o", k, "f"], "", { opt: [["", "Default"], ["km", "Khmer body"], ["moul", "Khmer Moul"], ["latin", "English script"]] }));
@@ -102,7 +106,7 @@
         fld("Left–right position", "range", "seal.x", 50, { min: 0, max: 100 }), fld("Up–down position", "range", "seal.y", 50, { min: 0, max: 100 }),
         h("p", {}, "Tap “Cover” above to see the seal. Re-select the picture after typing letters or a link."),
       ],
-      env: () => [fld("Pattern on the flaps", "select", "env.pat", "", { opt: [["", "Plain"], ["dots", "Dots"], ["lines", "Lines"], ["diamonds", "Diamonds"], ["img", "My picture (tiled)"]] }), btn("⬆ Upload pattern picture", () => pick(200, (d) => { D.env.img = d; D.env.pat = "img"; commit(); render(); })), fld("Envelope size (px)", "range", "env.w", 340, { min: 200, max: 520 }),fld("Envelope body", "color", "env.body", "#0c2f30"), fld("Flaps", "color", "env.flap", "#236f6b"), fld("Edge line", "color", "env.line", "#d9b35f"), fld("Card paper (inside the envelope)", "color", "th.pearl", "#f3ece0")],
+      env: () => [fld("Pattern on the flaps", "select", "env.pat", "", { opt: [["", "Plain"], ["dots", "Dots"], ["lines", "Lines"], ["diamonds", "Diamonds"], ["fit", "My photo (fits the envelope)"], ["img", "Small picture (tiled)"]] }), btn("⬆ Envelope photo (auto-fit + cut flaps)", () => pick(900, (d) => { D.env.img = d; D.env.pat = "fit"; commit(); render(); }, true)), btn("⬆ Tiled pattern picture", () => pick(200, (d) => { D.env.img = d; D.env.pat = "img"; commit(); render(); })), fld("Envelope size (px)", "range", "env.w", 340, { min: 200, max: 520 }),fld("Envelope body", "color", "env.body", "#0c2f30"), fld("Flaps", "color", "env.flap", "#236f6b"), fld("Edge line", "color", "env.line", "#d9b35f"), fld("Card paper (inside the envelope)", "color", "th.pearl", "#f3ece0")],
       col: () => [fld("Background dark", "color", "th.ink", "#0b2527"), fld("Background light", "color", "th.deep", "#103638"), fld("Gold (titles)", "color", "th.gold", "#d9b35f"), fld("Gold light (text)", "color", "th.gold-2", "#f0d890"), fld("Accent", "color", "th.silk", "#b3245f"), fld("Paper / main text", "color", "th.pearl", "#f3ece0")],
       bf: () => [fld("Show golden butterflies", "checkbox", "bf.on", true), fld("How many", "range", "bf.n", 14, { min: 0, max: 40 }), fld("Size", "range", "bf.size", 11, { min: 4, max: 30 }), fld("Speed", "range", "bf.speed", 1, { min: 0.2, max: 3, step: 0.1 }), fld("Colour", "color", "bf.color", "#f0d890")],
       snd: () => {

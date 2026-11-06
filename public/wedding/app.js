@@ -19,9 +19,12 @@
   set("#venueKm", C.venueKm); set("#venueEn", C.venueEn);
   set("#footNames", `${C.groom.en} & ${C.bride.en}`);
   $("#mapBtn").href = C.mapUrl;
+  const gn = guest || (E ? "Guest name" : "");
+  if (gn) {
+    set("#coverTo", `សូមគោរពអញ្ជើញ ${gn}`);
+    set("#frontTo", `ជូនចំពោះ\n${gn}`);
+  }
   if (guest) {
-    set("#coverTo", `សូមគោរពអញ្ជើញ ${guest}`);
-    set("#frontTo", `ជូនចំពោះ\n${guest}`);
     set("#guestLine", `សូមស្វាគមន៍ ${guest}`);
     $("#guestLine").hidden = false;
     $("#rsvpForm [name=name]").value = guest;
@@ -184,7 +187,8 @@
     const r = document.documentElement.style, V = (k, v) => (v ? r.setProperty(k, v) : r.removeProperty(k));
     ["ink", "deep", "jade", "gold", "gold-2", "silk", "pearl"].forEach((k) => V("--" + k, D.th[k]));
     const PT = { dots: '<circle cx="8" cy="8" r="1.6" fill="#fff" fill-opacity=".25"/>', lines: '<path d="M0 8h16" stroke="#fff" stroke-opacity=".2"/>', diamonds: '<path d="M8 1l7 7-7 7-7-7z" fill="none" stroke="#fff" stroke-opacity=".28"/>' }, pt = D.env.pat;
-    V("--ep", pt === "img" && D.env.img ? `url("${D.env.img}")` : PT[pt] ? `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">' + PT[pt] + "</svg>")}")` : "");
+    $("#envelope").classList.toggle("fit", pt === "fit" && !!D.env.img);
+    V("--ep", (pt === "img" || pt === "fit") && D.env.img ? `url("${D.env.img}")` : PT[pt] ? `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">' + PT[pt] + "</svg>")}")` : "");
     V("--eps", pt === "img" ? "90px 90px" : PT[pt] ? "16px 16px" : ""); V("--ew", D.env.w ? D.env.w + "px" : "");
     V("--eb", D.env.body); V("--ef", D.env.flap); V("--el", D.env.line);
     const S = D.seal, z = S.size || 76;
@@ -212,7 +216,7 @@
       if (!el) return;
       const o = D.o[k] || {};
       el.dataset.e = k;
-      if (el.tagName !== "IMG" && (!el.children.length || k === ".cover-hint")) { el._h ??= el.innerHTML; if (o.t != null) el.textContent = o.t; else el.innerHTML = el._h; }
+      if (el.tagName !== "IMG" && (!el.children.length || k === ".cover-hint")) { el._h ??= el.innerHTML; if (o.t != null && k !== "#frontTo" && k !== "#coverTo") el.textContent = o.t; else el.innerHTML = el._h; }
       el.style.translate = o.x || o.y ? `${o.x || 0}px ${o.y || 0}px` : "";
       el.style.fontSize = o.s ? o.s + "px" : "";
       el.style.fontFamily = o.f ? `var(--${o.f})` : "";
