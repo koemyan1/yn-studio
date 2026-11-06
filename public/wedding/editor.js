@@ -20,14 +20,15 @@
   document.body.append(h("div", { id: "wdp" }));
   document.body.append(h("button", { id: "wdt", textContent: "▾", title: "Hide / show editor", onclick: () => { const p = $("#wdp"), s = p.style.display === "none"; p.style.display = s ? "" : "none"; $("#wdt").textContent = s ? "▾" : "✎"; } }));
 
-  const commit = () => { try { localStorage.setItem(W.DK, JSON.stringify(D)); } catch { alert("Browser storage is full (big pictures). Download design.js now so nothing is lost."); } W.apply(); };
+  const commit = () => { try { localStorage.setItem(W.DK, JSON.stringify(D)); } catch { if (!W.fullWarned) { W.fullWarned = 1; say("Browser backup is full (big pictures). Tap Save draft so nothing is lost."); } } W.apply(); };
   const say = (m) => { const t = h("div", { textContent: m }); t.style.cssText = "position:fixed;z-index:70;left:50%;top:14px;transform:translateX(-50%);background:#f0d890;color:#0b2527;padding:8px 14px;border-radius:20px;font:600 13px system-ui"; document.body.append(t); setTimeout(() => t.remove(), 2200); };
-  const pick = (max, cb, sq, png) => {
+  const pick = (max0, cb, sq, png) => {
+    const max = Math.min(max0, png ? 500 : 800);
     const i = h("input", { type: "file", accept: "image/*" }); i.style.cssText = "position:fixed;left:-999px;opacity:0"; document.body.append(i);
     i.onchange = () => { const f = i.files[0]; if (!f) return i.remove(); const r = new FileReader();
       r.onerror = () => { say("Could not read that picture"); i.remove(); };
       r.onload = () => { const im = new Image(); im.onerror = () => { say("Could not open that picture"); i.remove(); };
-        im.onload = () => { try { const s = sq ? Math.min(im.width, im.height) : 0, k = Math.min(1, max / (sq ? s : Math.max(im.width, im.height))), c = h("canvas", { width: Math.max(1, Math.round((sq ? s : im.width) * k)), height: Math.max(1, Math.round((sq ? s : im.height) * k)) }); if (sq) c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, c.width, c.height); else c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(png || f.type === "image/png" ? "image/png" : "image/jpeg", 0.85)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
+        im.onload = () => { try { const s = sq ? Math.min(im.width, im.height) : 0, k = Math.min(1, max / (sq ? s : Math.max(im.width, im.height))), c = h("canvas", { width: Math.max(1, Math.round((sq ? s : im.width) * k)), height: Math.max(1, Math.round((sq ? s : im.height) * k)) }); if (sq) c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, c.width, c.height); else c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(png ? "image/png" : "image/jpeg", 0.72)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
         im.src = r.result; };
       r.readAsDataURL(f); };
     i.click();
