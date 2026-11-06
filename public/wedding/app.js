@@ -1,7 +1,7 @@
 (() => {
   const C = window.CONFIG;
   const E = new URLSearchParams(location.search).has("edit");
-  const DF = { th: {}, env: {}, seal: { shape: "circle", icon: "lotus", size: 76, x: 50, y: 50 }, bf: { on: true, n: 14, size: 20, speed: 1, color: "#f0d890" }, snd: { music: C.music || "", open: "", vol: 0.7 }, o: {}, add: [] };
+  const DF = { th: {}, env: {}, seal: { shape: "circle", icon: "lotus", size: 76, x: 50, y: 50 }, bf: { on: true, n: 14, size: 11, speed: 1, color: "#f0d890" }, snd: { music: C.music || "", open: "", vol: 0.7 }, o: {}, add: [], pages: [] };
   const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] || {}, b[k]) : b[k]; return a; };
   const D = mix(JSON.parse(JSON.stringify(DF)), window.DESIGN || {});
   if (E) try { mix(D, JSON.parse(localStorage.getItem("wd_draft") || "{}")); } catch {}
@@ -10,7 +10,7 @@
   const toKm = (n) => String(n).replace(/\d/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
 
   // ---- Fill content ----
-  const guest = (new URLSearchParams(location.search).get("to") || "").trim().slice(0, 60);
+  const guest = (window.GUEST || new URLSearchParams(location.search).get("to") || "").trim().slice(0, 60);
   set("#cardKm", `${C.groom.km} & ${C.bride.km}`);
   set("#cardEn", C.dateTextEn);
   set("#groomKm", C.groom.km); set("#brideKm", C.bride.km);
@@ -21,6 +21,7 @@
   $("#mapBtn").href = C.mapUrl;
   if (guest) {
     set("#coverTo", `សូមគោរពអញ្ជើញ ${guest}`);
+    set("#frontTo", `ជូនចំពោះ\n${guest}`);
     set("#guestLine", `សូមស្វាគមន៍ ${guest}`);
     $("#guestLine").hidden = false;
     $("#rsvpForm [name=name]").value = guest;
@@ -68,7 +69,8 @@
     const env = $("#envelope"), card = env.querySelector(".env-card");
     if (D.snd.open) { sfx.src = D.snd.open; sfx.volume = D.snd.vol; sfx.play().catch(() => {}); }
     $("#cover").classList.add("opening");
-    env.classList.add("open");                       // 1) four flaps open
+    env.classList.add("peeled");                     // 1) the seal comes off
+    setTimeout(() => env.classList.add("open"), 500);  // 2) four flaps open
     if (D.snd.music) {
       audio.src = D.snd.music; audio.volume = D.snd.vol;
       audio.addEventListener("error", () => { musicBtn.hidden = true; }, { once: true });
@@ -81,7 +83,7 @@
       env.style.setProperty("--dy", `${innerHeight / 2 - (r.top + r.height / 2)}px`);
       env.style.setProperty("--z", Math.max(innerWidth, innerHeight) / r.width * 1.2);
       env.classList.add("zoom");
-    }, 1100);
+    }, 1600);
     setTimeout(() => {                               // 3) reveal the invitation
       $("#cover").classList.add("gone");
       $("#main").hidden = false;
@@ -89,8 +91,10 @@
       document.body.classList.add("revealed");
       observe();
       window.scrollTo(0, 0);
-    }, 2400);
+    }, 2900);
   };
+  const turn = () => { $("#envelope").classList.add("turned"); $("#cover").classList.add("turned"); };
+  $("#front").addEventListener("click", () => { if (!E) turn(); });
   $("#seal").addEventListener("click", () => { if (!E) open(); });
   musicBtn.addEventListener("click", () => setMusic(audio.paused));
 
@@ -171,12 +175,17 @@
   }), "សូមអរគុណសម្រាប់ពាក្យជូនពរ 💛", (f) => { f.message.value = ""; loadWishes(); });
 
   // ---- Everything editable: texts, seal, envelope, colours (see editor.js) ----
-  const BUILT = ["#coverTo", ".cover-hint", "#cardKm", "#cardEn", ".invite", "#groomKm", ".amp", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#guestLine", ".lotus-rule", "#count", "#hProg", "#timeline", "#hVenue", "#venueKm", "#venueEn", "#mapBtn", "#hGal", "#gallery", "#hRsvp", "#rsvpForm", "#hWish", "#wishForm", "#wishes", "#hGift", "#qr", ".foot"];
+  if (D.bf.size === 20) D.bf.size = 11;
+  const BUILT = ["#coverTo", ".cover-tap", ".cover-hint", "#frontTo", "#cardKm", "#cardEn", ".invite", "#groomKm", ".amp", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#guestLine", ".lotus-rule", "#count", "#hProg", "#timeline", "#hVenue", "#venueKm", "#venueEn", "#mapBtn", "#hGal", "#gallery", "#hRsvp", "#rsvpForm", "#hWish", "#wishForm", "#wishes", "#hGift", "#qr", ".foot"];
   const sealEl = $("#seal"), LOTUS = sealEl.innerHTML;
+  $(".front-stamp").innerHTML = LOTUS;
   const HEART = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg>';
   function apply() {
     const r = document.documentElement.style, V = (k, v) => (v ? r.setProperty(k, v) : r.removeProperty(k));
     ["ink", "deep", "jade", "gold", "gold-2", "silk", "pearl"].forEach((k) => V("--" + k, D.th[k]));
+    const PT = { dots: '<circle cx="8" cy="8" r="1.6" fill="#fff" fill-opacity=".25"/>', lines: '<path d="M0 8h16" stroke="#fff" stroke-opacity=".2"/>', diamonds: '<path d="M8 1l7 7-7 7-7-7z" fill="none" stroke="#fff" stroke-opacity=".28"/>' }, pt = D.env.pat;
+    V("--ep", pt === "img" && D.env.img ? `url("${D.env.img}")` : PT[pt] ? `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">' + PT[pt] + "</svg>")}")` : "");
+    V("--eps", pt === "img" ? "90px 90px" : PT[pt] ? "16px 16px" : ""); V("--ew", D.env.w ? D.env.w + "px" : "");
     V("--eb", D.env.body); V("--ef", D.env.flap); V("--el", D.env.line);
     const S = D.seal, z = S.size || 76;
     sealEl.style.setProperty("--sc", S.color || "");
@@ -185,20 +194,32 @@
     sealEl.innerHTML = S.icon === "heart" ? HEART : S.icon === "text" ? "" : S.icon === "image" && S.img ? "" : S.icon === "none" ? "" : LOTUS;
     if (S.icon === "text") sealEl.append(Object.assign(document.createElement("span"), { className: "stxt", textContent: S.text || "♥" }));
     if (S.icon === "image" && S.img) sealEl.append(Object.assign(document.createElement("img"), { src: S.img, alt: "" }));
+    document.querySelectorAll(".pg").forEach((n) => { if (!D.pages.some((p) => p.id === n.dataset.pg)) n.remove(); });
+    D.pages.forEach((p) => {
+      let n = document.querySelector(`.pg[data-pg="${p.id}"]`);
+      if (!n) { n = document.createElement("section"); n.className = "pg"; n.dataset.pg = p.id; $("main").append(n); }
+      n.dataset.n = D.pages.indexOf(p) + 2;
+      Object.assign(n.style, { minHeight: (p.h || 700) + "px", backgroundColor: p.bg || "transparent", backgroundImage: p.img ? `url("${p.img}")` : "" });
+    });
     document.querySelectorAll(".fr").forEach((n) => { if (!D.add.some((x) => x.id === n.dataset.e)) n.remove(); });
-    D.add.forEach((x) => { if (!document.querySelector(`.fr[data-e="${x.id}"]`)) { const n = document.createElement("div"); n.className = "fr"; n.dataset.e = x.id; $(x.pg === "cover" ? "#cover" : "main").append(n); } });
+    D.add.forEach((x) => {
+      let n = document.querySelector(`.fr[data-e="${x.id}"]`);
+      if (!n) { n = document.createElement(x.k === "img" ? "img" : "div"); n.className = x.k === "img" ? "fr fi" : "fr"; n.dataset.e = x.id; (document.querySelector(`.pg[data-pg="${x.pg}"]`) || $(x.pg === "cover" ? "#cover" : "main")).append(n); }
+      if (x.k === "img" && n.getAttribute("src") !== x.src) n.src = x.src;
+    });
     const items = [...BUILT.map((s) => [$(s), s]), ...[...document.querySelectorAll(".fr")].map((n) => [n, n.dataset.e])];
     items.forEach(([el, k]) => {
       if (!el) return;
       const o = D.o[k] || {};
       el.dataset.e = k;
-      if (!el.children.length || k === ".cover-hint") { el._h ??= el.innerHTML; if (o.t != null) el.textContent = o.t; else el.innerHTML = el._h; }
+      if (el.tagName !== "IMG" && (!el.children.length || k === ".cover-hint")) { el._h ??= el.innerHTML; if (o.t != null) el.textContent = o.t; else el.innerHTML = el._h; }
       el.style.translate = o.x || o.y ? `${o.x || 0}px ${o.y || 0}px` : "";
       el.style.fontSize = o.s ? o.s + "px" : "";
       el.style.fontFamily = o.f ? `var(--${o.f})` : "";
       el.style.backgroundImage = o.c ? "none" : ""; el.style.color = o.c || "";
       el.style.display = o.h && !E ? "none" : "";
       el.classList.toggle("ed-off", !!o.h);
+      if (el.classList.contains("fi")) { el.style.width = (o.w || 160) + "px"; el.style.borderRadius = (o.r || 0) + "%"; }
     });
   }
 
@@ -241,7 +262,7 @@
     requestAnimationFrame(loop);
   })();
 
-  window.WD = { E, D, apply, open, BUILT };
+  window.WD = { E, D, apply, open, turn, BUILT };
   apply();
-  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js" })); }
+  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=3" })); }
 })();

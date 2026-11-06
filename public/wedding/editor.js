@@ -20,8 +20,21 @@
   document.body.append(h("div", { id: "wdp" }));
   document.body.append(h("button", { id: "wdt", textContent: "▾", title: "Hide / show editor", onclick: () => { const p = $("#wdp"), s = p.style.display === "none"; p.style.display = s ? "" : "none"; $("#wdt").textContent = s ? "▾" : "✎"; } }));
 
-  const commit = () => { localStorage.setItem("wd_draft", JSON.stringify(D)); W.apply(); };
-  const btn = (t, f, g) => h("button", { textContent: t, onclick: f, className: g ? "g" : "" });
+  const commit = () => { try { localStorage.setItem("wd_draft", JSON.stringify(D)); } catch { alert("Browser storage is full (big pictures). Download design.js now so nothing is lost."); } W.apply(); };
+  const say = (m) => { const t = h("div", { textContent: m }); t.style.cssText = "position:fixed;z-index:70;left:50%;top:14px;transform:translateX(-50%);background:#f0d890;color:#0b2527;padding:8px 14px;border-radius:20px;font:600 13px system-ui"; document.body.append(t); setTimeout(() => t.remove(), 2200); };
+  const pick = (max, cb) => {
+    const i = h("input", { type: "file", accept: "image/*" }); i.style.cssText = "position:fixed;left:-999px;opacity:0"; document.body.append(i);
+    i.onchange = () => { const f = i.files[0]; if (!f) return i.remove(); const r = new FileReader();
+      r.onerror = () => { say("Could not read that picture"); i.remove(); };
+      r.onload = () => { const im = new Image(); im.onerror = () => { say("Could not open that picture"); i.remove(); };
+        im.onload = () => { try { const k = Math.min(1, max / Math.max(im.width, im.height)), c = h("canvas", { width: Math.max(1, Math.round(im.width * k)), height: Math.max(1, Math.round(im.height * k)) }); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(f.type === "image/png" ? "image/png" : "image/jpeg", 0.85)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
+        im.src = r.result; };
+      r.readAsDataURL(f); };
+    i.click();
+  };
+  const yNew = () => (cur === "cover" || cur === "back" ? 140 : Math.max(40, Math.round(scrollY + 160 - (document.querySelector(`.pg[data-pg="${cur}"]`)?.offsetTop || 0))));
+  const addItem = (x, o) => { const id = "t" + Date.now().toString(36); D.add.push({ id, pg: cur === "back" ? "cover" : cur, ...x }); D.o[id] = { y: yNew(), ...o }; sel = id; commit(); mark(); render(); };
+  const btn = (t, f, g) => h("button", { textContent: t, onclick: () => { try { f(); } catch (x) { say("Error: " + x.message); } }, className: g ? "g" : "" });
   const fld = (label, type, path, def, o = {}) => {
     let i;
     if (type === "select") { i = h("select"); o.opt.forEach(([v, t]) => i.append(h("option", { value: v, textContent: t }))); i.value = get(path) ?? def; }
@@ -33,9 +46,10 @@
 
   function view(v) {
     const c = $("#cover"), env = $("#envelope");
-    if (v === "cover") { c.classList.remove("opening", "gone"); env.classList.remove("open", "zoom"); $("#main").hidden = true; document.body.classList.add("locked"); document.body.classList.remove("revealed"); scrollTo(0, 0); }
+    if (v === "cover" || v === "back") { c.classList.remove("opening", "gone", "turned"); env.classList.remove("open", "zoom", "peeled", "turned"); $("#main").hidden = true; document.body.classList.add("locked"); document.body.classList.remove("revealed"); scrollTo(0, 0); if (v === "back") W.turn(); }
     else { c.classList.add("gone"); $("#main").hidden = false; document.body.classList.remove("locked"); document.querySelectorAll(".reveal").forEach((e) => e.classList.add("in")); }
     cur = v; sel = null; mark(); render();
+    if (v !== "cover" && v !== "main") setTimeout(() => document.querySelector(`.pg[data-pg="${v}"]`)?.scrollIntoView(), 50);
   }
   const mark = () => document.querySelectorAll("[data-e]").forEach((e) => e.classList.toggle("sel", e.dataset.e === sel));
 
@@ -51,16 +65,19 @@
   document.addEventListener("click", (e) => { if (e.target.closest("a,button,form") && !e.target.closest("#wdp")) e.preventDefault(); }, true);
   document.addEventListener("submit", (e) => e.preventDefault(), true);
 
-  const tabs = [["text", "Text"], ["seal", "Seal"], ["env", "Envelope"], ["col", "Colours"], ["bf", "Butterflies"], ["snd", "Sound"], ["save", "Save"]];
+  const tabs = [["text", "Items"], ["pages", "Pages"], ["seal", "Seal"], ["env", "Envelope"], ["col", "Colours"], ["bf", "Butterflies"], ["snd", "Sound"], ["save", "Save"]];
   function render() {
     const p = $("#wdp"), y = p.scrollTop; p.innerHTML = "";
-    p.append(h("div", { className: "row" }, btn("Cover", () => view("cover"), cur !== "cover"), btn("Inside", () => view("main"), cur !== "main"), btn("▶ Test opening", () => { view("cover"); setTimeout(W.open, 60); }, true)));
-    p.append(h("div", { className: "row" }, ...tabs.map(([k, t]) => btn(t, () => { tab = k; render(); }, tab !== k))));
+    p.append(h("div", { className: "row" }, btn("Front", () => view("cover"), cur !== "cover"), btn("Back + seal", () => view("back"), cur !== "back"), btn("Inside", () => view("main"), cur !== "main"), btn("▶ Test", () => { view("cover"); setTimeout(() => { W.turn(); setTimeout(W.open, 1000); }, 60); }, true)));
+    p.append(h("div", { className: "row" }, ...tabs.map(([k, t]) => btn(t, () => { tab = k; if (k === "seal" && cur !== "back") view("back"); else render(); }, tab !== k))));
     const B = {
       text() {
         const k = sel, o = k && (D.o[k] ??= {}), free = k && D.add.some((a) => a.id === k);
-        const out = [btn("+ Add text", () => { const id = "t" + Date.now().toString(36); D.add.push({ id, pg: cur }); D.o[id] = { t: "New text", y: cur === "cover" ? 140 : Math.round(scrollY + 160) }; sel = id; commit(); mark(); render(); })];
-        if (!k) return [...out, h("p", {}, "Tap any text or block on the page to select it. Drag to move it. Tap + Add text for new text on the current view (Cover / Inside).")];
+        const out = [btn("+ Add text", () => addItem({}, { t: "New text" })), btn("+ Add image", () => pick(900, (d) => addItem({ k: "img", src: d }, { w: 180 })))];
+        if (!k) return [...out, h("p", {}, "Editor v3. Tap any text or block on the page to select it. Drag to move it. Tap + Add text for new text on the current view (Cover / Inside).")];
+        const it = D.add.find((a) => a.id === k);
+        if (it?.k === "img") return [...out, fld("Width (px)", "range", ["o", k, "w"], 180, { min: 30, max: 640 }), fld("Roundness (50 = circle)", "range", ["o", k, "r"], 0, { min: 0, max: 50 }),
+          h("div", { className: "row" }, btn("Replace picture", () => pick(900, (d) => { it.src = d; commit(); })), btn(o.h ? "Show" : "Hide", () => { o.h = !o.h; commit(); render(); }, true), btn("Delete", () => { D.add = D.add.filter((a) => a.id !== k); delete D.o[k]; sel = null; commit(); render(); }, true))];
         const el = document.querySelector(`[data-e="${CSS.escape(k)}"]`), editable = el && (!el.children.length || k === ".cover-hint");
         if (editable) out.push(fld("Text", "area", ["o", k, "t"], el.textContent));
         out.push(fld("Size (px)", "number", ["o", k, "s"], parseFloat(el && getComputedStyle(el).fontSize) || 20, { min: 8, max: 120 }));
@@ -70,28 +87,49 @@
           ...(free ? [btn("Delete", () => { D.add = D.add.filter((a) => a.id !== k); delete D.o[k]; sel = null; commit(); render(); }, true)] : [])));
         return out;
       },
-      seal: () => [
+      pages() {
+        const out = [btn("+ Add page", () => { const id = "p" + Date.now().toString(36); D.pages.push({ id, h: 700, bg: "#1f5a5d" }); commit(); view(id); say("Page added ✓"); }), h("p", {}, "Extra pages appear below the footer, in order. Use + Add text / + Add image on the Items tab while a page is open.")];
+        D.pages.forEach((p, i) => out.push(h("p", {}, "Page " + (i + 2)), fld("Background colour", "color", ["pages", i, "bg"], "#1f5a5d"), fld("Height (px)", "range", ["pages", i, "h"], 700, { min: 300, max: 1600, step: 50 }),
+          h("div", { className: "row" }, btn("Open", () => view(p.id), true), btn("Background picture", () => pick(1000, (d) => { p.img = d; commit(); })), btn("Remove picture", () => { delete p.img; commit(); }, true),
+            btn("Delete page", () => { if (!confirm("Delete this page and everything on it?")) return; D.pages.splice(i, 1); D.add = D.add.filter((a) => a.pg !== p.id); commit(); view("main"); }, true))));
+        return out;
+      },
+      seal: () => [btn("⬆ Upload seal image", () => pick(300, (d) => { D.seal.img = d; D.seal.icon = "image"; commit(); render(); })),
         fld("Shape", "select", "seal.shape", "circle", { opt: [["circle", "Circle"], ["rounded", "Rounded square"], ["square", "Square"], ["diamond", "Diamond"]] }),
         fld("Picture on seal", "select", "seal.icon", "lotus", { opt: [["lotus", "Lotus"], ["heart", "Heart"], ["text", "Letters / emoji"], ["image", "My image"], ["none", "Empty"]] }),
-        fld("Letters / emoji", "text", "seal.text", "", { maxLength: 6 }), fld("Image link (e.g. images/seal.png)", "text", "seal.img", ""),
+        fld("Letters / emoji", "text", "seal.text", "", { maxLength: 6 }), 
         fld("Colour", "color", "seal.color", "#b3245f"), fld("Size", "range", "seal.size", 76, { min: 40, max: 150 }),
         fld("Left–right position", "range", "seal.x", 50, { min: 0, max: 100 }), fld("Up–down position", "range", "seal.y", 50, { min: 0, max: 100 }),
         h("p", {}, "Tap “Cover” above to see the seal. Re-select the picture after typing letters or a link."),
       ],
-      env: () => [fld("Envelope body", "color", "env.body", "#0c2f30"), fld("Flaps", "color", "env.flap", "#236f6b"), fld("Edge line", "color", "env.line", "#d9b35f"), fld("Card paper (inside the envelope)", "color", "th.pearl", "#f3ece0")],
+      env: () => [fld("Pattern on the flaps", "select", "env.pat", "", { opt: [["", "Plain"], ["dots", "Dots"], ["lines", "Lines"], ["diamonds", "Diamonds"], ["img", "My picture (tiled)"]] }), btn("⬆ Upload pattern picture", () => pick(200, (d) => { D.env.img = d; D.env.pat = "img"; commit(); render(); })), fld("Envelope size (px)", "range", "env.w", 340, { min: 200, max: 520 }),fld("Envelope body", "color", "env.body", "#0c2f30"), fld("Flaps", "color", "env.flap", "#236f6b"), fld("Edge line", "color", "env.line", "#d9b35f"), fld("Card paper (inside the envelope)", "color", "th.pearl", "#f3ece0")],
       col: () => [fld("Background dark", "color", "th.ink", "#0b2527"), fld("Background light", "color", "th.deep", "#103638"), fld("Gold (titles)", "color", "th.gold", "#d9b35f"), fld("Gold light (text)", "color", "th.gold-2", "#f0d890"), fld("Accent", "color", "th.silk", "#b3245f"), fld("Paper / main text", "color", "th.pearl", "#f3ece0")],
-      bf: () => [fld("Show golden butterflies", "checkbox", "bf.on", true), fld("How many", "range", "bf.n", 14, { min: 0, max: 40 }), fld("Size", "range", "bf.size", 20, { min: 8, max: 50 }), fld("Speed", "range", "bf.speed", 1, { min: 0.2, max: 3, step: 0.1 }), fld("Colour", "color", "bf.color", "#f0d890")],
+      bf: () => [fld("Show golden butterflies", "checkbox", "bf.on", true), fld("How many", "range", "bf.n", 14, { min: 0, max: 40 }), fld("Size", "range", "bf.size", 11, { min: 4, max: 30 }), fld("Speed", "range", "bf.speed", 1, { min: 0.2, max: 3, step: 0.1 }), fld("Colour", "color", "bf.color", "#f0d890")],
       snd: () => {
         const play = (src) => { if (!src) return; const a = new Audio(src); a.volume = D.snd.vol; a.play().catch(() => alert("Could not play that file.")); setTimeout(() => a.pause(), 6000); };
         return [fld("Background music (file name or link)", "text", "snd.music", ""), fld("Sound when the seal is tapped", "text", "snd.open", ""), fld("Volume", "range", "snd.vol", 0.7, { min: 0, max: 1, step: 0.05 }),
           h("div", { className: "row" }, btn("Test music", () => play(D.snd.music), true), btn("Test seal sound", () => play(D.snd.open), true)),
           h("p", {}, "Put your .mp3 files in public/wedding/ and type the file name (e.g. music.mp3, pop.mp3). Phones only play sound after a tap, which the seal tap provides.")];
       },
-      save: () => [
+      save: () => {
+        const em = h("input", { type: "email", placeholder: "customer@email.com" }), ti = h("input", { placeholder: "Title (e.g. Sokha & Dara)" });
+        const send = async () => {
+          const C = window.CONFIG;
+          if (!window.supabase || !C.supabaseUrl || C.supabaseUrl.startsWith("YOUR")) return say("Set supabaseUrl / supabaseKey in config.js first");
+          const sb = window.supabase.createClient(C.supabaseUrl, C.supabaseKey);
+          const { data: u, error: e1 } = await sb.from("profiles").select("user_id").ilike("email", em.value.trim()).limit(1);
+          if (e1 || !u?.length) return say(e1 ? e1.message : "No customer with that email (log in as admin in this browser)");
+          const cfg = { ...C }; delete cfg.supabaseUrl; delete cfg.supabaseKey;
+          const { error } = await sb.from("wedding_invites").insert({ owner_id: u[0].user_id, title: ti.value || `${C.groom.en} & ${C.bride.en}`, design: D, config: cfg });
+          say(error ? error.message : "Sent to customer ✓");
+        };
+        return [h("p", {}, "Send this invitation to a customer. They add their guests at /wedding/guests.html and each guest’s name appears on the envelope front. Log in as admin in this browser first."),
+          h("label", {}, "Customer email", em), h("label", {}, "Title", ti), btn("📨 Send to customer", send), h("hr"),
         btn("⬇ Download design.js", () => { const a = h("a", { href: URL.createObjectURL(new Blob(["window.DESIGN = " + JSON.stringify(D, null, 2) + ";\n"], { type: "text/javascript" })), download: "design.js" }); document.body.append(a); a.click(); a.remove(); }),
         btn("Reset everything", () => { if (confirm("Throw away all your edits?")) { localStorage.removeItem("wd_draft"); location.href = "?edit=1"; } }, true),
         h("p", {}, "Your edits are kept in this browser while you work. To publish: download design.js, replace public/wedding/design.js with it, push to GitHub. Pictures and music go in public/wedding/."),
-      ],
+        ];
+      },
     };
     const r = B[tab](); p.append(...(Array.isArray(r) ? r : [r])); p.scrollTop = y;
   }
