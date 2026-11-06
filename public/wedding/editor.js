@@ -5,7 +5,7 @@
   const P = (p) => (Array.isArray(p) ? p : p.split("."));
   const get = (p) => P(p).reduce((o, k) => o?.[k], D);
   const put = (p, v) => { const a = P(p), l = a.pop(); a.reduce((o, k) => (o[k] ??= {}), D)[l] = v; };
-  let sel = null, tab = "info", cur = "cover";
+  let sel = null, tab = "text", cur = "cover";
 
   document.head.append(h("style", { textContent: `
   body.editing [data-e]{cursor:grab;touch-action:none;user-select:none;outline:1px dashed rgba(240,216,144,.4);outline-offset:3px}
@@ -52,58 +52,26 @@
     cur = v; sel = null; mark(); render();
     if (v !== "cover" && v !== "main") setTimeout(() => document.querySelector(`.pg[data-pg="${v}"]`)?.scrollIntoView(), 50);
   }
-  const q = (k) => document.querySelector(`[data-e="${CSS.escape(k)}"]`);
-  const hd = h("div", { id: "wdr", title: "Drag to resize" }); hd.style.cssText = "position:fixed;z-index:55;width:26px;height:26px;border-radius:50%;background:#f0d890;border:2px solid #0b2527;touch-action:none;cursor:nwse-resize;display:none;box-shadow:0 0 0 2px #f0d890";
-  document.body.append(hd);
-  const place = () => { const el = sel && q(sel), r = el && el.getBoundingClientRect(); if (!r || !r.width || !r.height || getComputedStyle(el).display === "none") { hd.style.display = "none"; return; } hd.style.display = "block"; hd.style.left = Math.max(0, Math.min(innerWidth - 26, r.right - 13)) + "px"; hd.style.top = Math.max(0, Math.min(innerHeight - 26, r.bottom - 13)) + "px"; };
-  addEventListener("scroll", place, { passive: true }); addEventListener("resize", place);
-  const mark = () => { document.querySelectorAll("[data-e]").forEach((e) => e.classList.toggle("sel", e.dataset.e === sel)); place(); };
+  const mark = () => document.querySelectorAll("[data-e]").forEach((e) => e.classList.toggle("sel", e.dataset.e === sel));
 
-  // drag to move, tap to select (pointer capture keeps the drag alive on touch + mouse)
-  let drag = null, rs = null;
+  // drag to move, tap to select
+  let drag = null;
   document.addEventListener("pointerdown", (e) => {
-    const t = e.target.closest("[data-e]"); if (!t || e.target.closest("#wdp") || e.target === hd) return;
-    e.preventDefault(); sel = t.dataset.e; tab = "text"; const o = (D.o[sel] ??= {});
-    try { t.setPointerCapture(e.pointerId); } catch {}
+    const t = e.target.closest("[data-e]"); if (!t || e.target.closest("#wdp")) return;
+    e.preventDefault(); sel = t.dataset.e; const o = (D.o[sel] ??= {});
     drag = { x: e.clientX, y: e.clientY, ox: o.x || 0, oy: o.y || 0, moved: false }; mark(); render();
   });
-  document.addEventListener("pointermove", (e) => { if (!drag || !sel) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 3) return; const o = (D.o[sel] ??= {}); o.x = Math.round(drag.ox + dx); o.y = Math.round(drag.oy + dy); drag.moved = true; W.apply(); place(); });
-  const endDrag = () => { if (drag?.moved) commit(); drag = null; place(); };
-  document.addEventListener("pointerup", endDrag); document.addEventListener("pointercancel", endDrag);
-  document.addEventListener("dragstart", (e) => e.preventDefault());
-  document.addEventListener("keydown", (e) => { if (!sel || !/^Arrow/.test(e.key) || e.target.closest("input,textarea,select")) return; e.preventDefault(); const o = (D.o[sel] ??= {}), n = e.shiftKey ? 10 : 1; if (e.key === "ArrowLeft") o.x = (o.x || 0) - n; if (e.key === "ArrowRight") o.x = (o.x || 0) + n; if (e.key === "ArrowUp") o.y = (o.y || 0) - n; if (e.key === "ArrowDown") o.y = (o.y || 0) + n; W.apply(); commit(); place(); });
-  // resize handle (bottom-right dot of the selected item): images change width, text changes size
-  hd.addEventListener("pointerdown", (e) => { const el = sel && q(sel); if (!el) return; e.preventDefault(); e.stopPropagation(); try { hd.setPointerCapture(e.pointerId); } catch {} const r = el.getBoundingClientRect(), o = (D.o[sel] ??= {}); rs = { x: e.clientX, w: Math.max(10, r.width), s: parseFloat(getComputedStyle(el).fontSize) || 20, w0: o.w || 160, img: el.classList.contains("fi") }; });
-  hd.addEventListener("pointermove", (e) => { if (!rs) return; const o = D.o[sel], k = Math.max(0.2, (rs.w + e.clientX - rs.x) / rs.w); if (rs.img) o.w = Math.max(30, Math.min(900, Math.round(rs.w0 * k))); else o.s = Math.max(8, Math.min(160, Math.round(rs.s * k))); W.apply(); place(); });
-  const endRs = () => { if (rs) { rs = null; commit(); render(); } };
-  hd.addEventListener("pointerup", endRs); hd.addEventListener("pointercancel", endRs);
+  document.addEventListener("pointermove", (e) => { if (!drag) return; const o = D.o[sel]; o.x = Math.round(drag.ox + e.clientX - drag.x); o.y = Math.round(drag.oy + e.clientY - drag.y); drag.moved = true; W.apply(); });
+  document.addEventListener("pointerup", () => { if (drag?.moved) commit(); drag = null; });
   document.addEventListener("click", (e) => { if (e.target.closest("a,button,form") && !e.target.closest("#wdp")) e.preventDefault(); }, true);
   document.addEventListener("submit", (e) => e.preventDefault(), true);
 
-  // Names & details: edits window.CONFIG (what config.js holds) live, and keeps a copy in D.cfg so it is saved with the design
-  const mixC = (a, b) => { for (const k in b) { if (b[k] && typeof b[k] === "object") mixC((a[k] ??= {}), b[k]); else a[k] = b[k]; } };
-  const putC = (p, v) => { const a = P(p), l = a.pop(); [window.CONFIG, (D.cfg ??= {})].forEach((root) => { a.reduce((o, k) => (o[k] ??= {}), root)[l] = v; }); };
-  const syncInfo = (quiet) => {
-    const C = window.CONFIG, g = C.groom || {}, b = C.bride || {}, s = (sel, t) => { const e = $(sel); if (e) { e.textContent = t ?? ""; e._h = e.innerHTML; } };
-    if (!quiet) ["#cardKm", "#cardEn", "#groomKm", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#venueKm", "#venueEn"].forEach((k) => { if (D.o[k]) delete D.o[k].t; });
-    s("#cardKm", `${g.km || ""} & ${b.km || ""}`); s("#cardEn", C.dateTextEn); s("#groomKm", g.km); s("#brideKm", b.km); s("#namesEn", `${g.en || ""} & ${b.en || ""}`);
-    s("#dateKm", C.dateTextKm); s("#dateEn", C.dateTextEn); s("#venueKm", C.venueKm); s("#venueEn", C.venueEn); s("#footNames", `${g.en || ""} & ${b.en || ""}`);
-    const m = $("#mapBtn"); if (m && C.mapUrl) m.href = C.mapUrl; document.title = `${g.en || ""} & ${b.en || ""} · Wedding Invitation`;
-    W.apply(); place(); if (!quiet) commit();
-  };
-  const cf = (label, path, o = {}) => { const i = h("input", { type: o.type || "text" }); i.value = o.get ? o.get() : P(path).reduce((x, k) => x?.[k], window.CONFIG) ?? ""; i.oninput = () => { if (o.set) o.set(i.value); else { putC(path, i.value); syncInfo(); } }; return h("label", {}, label, i); };
-  if (D.cfg) { mixC(window.CONFIG, D.cfg); syncInfo(true); }
-  const tabs = [["info", "Names"], ["text", "Items"], ["pages", "Pages"], ["seal", "Seal"], ["env", "Envelope"], ["col", "Colours"], ["bf", "Butterflies"], ["snd", "Sound"], ["save", "Save"]];
+  const tabs = [["text", "Items"], ["pages", "Pages"], ["seal", "Seal"], ["env", "Envelope"], ["col", "Colours"], ["bf", "Butterflies"], ["snd", "Sound"], ["save", "Save"]];
   function render() {
     const p = $("#wdp"), y = p.scrollTop; p.innerHTML = "";
     p.append(h("div", { className: "row" }, btn("Front", () => view("cover"), cur !== "cover"), btn("Back + seal", () => view("back"), cur !== "back"), btn("Inside", () => view("main"), cur !== "main"), btn("▶ Test", () => { view("cover"); setTimeout(() => { W.turn(); setTimeout(W.open, 1000); }, 60); }, true)));
     p.append(h("div", { className: "row" }, ...tabs.map(([k, t]) => btn(t, () => { tab = k; if (k === "seal" && cur !== "back") view("back"); else render(); }, tab !== k))));
     const B = {
-      info: () => [h("p", {}, "Change the names and details here. Every place they appear updates, and they are saved with Save draft."),
-        cf("Groom name (Khmer)", "groom.km"), cf("Groom name (English)", "groom.en"), cf("Bride name (Khmer)", "bride.km"), cf("Bride name (English)", "bride.en"),
-        cf("Date text (Khmer)", "dateTextKm"), cf("Date text (English)", "dateTextEn"), cf("Venue (Khmer)", "venueKm"), cf("Venue (English)", "venueEn"), cf("Map link", "mapUrl"),
-        cf("Date & time (countdown)", "date", { type: "datetime-local", get: () => String(window.CONFIG.date || "").slice(0, 16), set: (v) => { if (v) { putC("date", v + ":00+07:00"); commit(); } } }),
-        h("p", {}, "The countdown reads the date & time after you Save draft and refresh. To change any other text (titles, buttons), tap it on the page and use the Items tab.")],
       text() {
         const k = sel, o = k && (D.o[k] ??= {}), free = k && D.add.some((a) => a.id === k);
         const out = [btn("+ Add text", () => addItem({}, { t: "New text" })), btn("+ Add image", () => pick(900, (d) => addItem({ k: "img", src: d }, { w: 180 })))];

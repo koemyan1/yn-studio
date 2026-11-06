@@ -1,15 +1,15 @@
 // ✏️ EDIT THIS FILE to personalise the invitation. No build step needed.
 window.CONFIG = {
-  groom: { km: "ភា​ បារាំង", en: "Phea Barang" },
-  bride: { km: "អ៊ុំ ណាវិន", en: "Om Navin" },
+  groom: { km: "សុខា", en: "Sokha" },
+  bride: { km: "ដារ៉ា", en: "Dara" },
 
   // Wedding day (ISO format, Cambodia time = +07:00)
-  date: "2026-12-06T17:30:00+07:00",
-  dateTextKm: "ថ្ងៃអាទិត្យ ទី០៦ ខែធ្នូ ឆ្នាំ២០២៦",
-  dateTextEn: "Sunday, 06 December 2026",
+  date: "2026-12-20T17:30:00+07:00",
+  dateTextKm: "ថ្ងៃអាទិត្យ ទី២០ ខែធ្នូ ឆ្នាំ២០២៦",
+  dateTextEn: "Sunday, 20 December 2026",
 
-  venueKm: "គេហដ្ឋានកូនក្រមុំ",
-  venueEn: "Bride's house",
+  venueKm: "សណ្ឋាគារ អង្គរ ផាឡេស ភ្នំពេញ",
+  venueEn: "Angkor Palace Hotel, Phnom Penh",
   mapUrl: "https://www.google.com/maps/search/?api=1&query=Phnom+Penh",
 
   // Programme: edit, add or remove rows
@@ -33,5 +33,4 @@ window.CONFIG = {
   // Supabase (see README). Leave blank to run in demo mode (saves in this browser only).
   supabaseUrl: "https://fdqrmzlnahrrqfervlde.supabase.co",
   supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkcXJtemxuYWhycnFmZXJ2bGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1MDE1MzcsImV4cCI6MjEwNjA3NzUzN30.X4_P5yB4i2nM4IoyC7reKykMpsYghMQ-2qI1dsaGKXk"
-
 };

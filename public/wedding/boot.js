@@ -9,8 +9,9 @@
       const { data, error } = await sb.rpc("wedding_open", { p_invite: q.get("i"), p_guest: q.get("g") || null });
       if (error) return stop("This invitation could not be opened.<br><small>" + error.message + "</small>");
       if (!data) return stop("Invitation not found.");
+      if (data.config && data.config.theme === "braya") return location.replace("braya/index.html" + location.search);
       window.CONFIG = Object.assign({}, C, data.config, { supabaseUrl: C.supabaseUrl, supabaseKey: C.supabaseKey }); window.DESIGN = data.design || {}; window.GUEST = data.guest || "";
     } catch (e) { return stop("This invitation could not be opened.<br><small>" + (e && e.message || e) + "</small>"); }
   }
-  document.body.append(Object.assign(document.createElement("script"), { src: "app.js?v=8" }));
+  document.body.append(Object.assign(document.createElement("script"), { src: "app.js?v=5" }));
 })();

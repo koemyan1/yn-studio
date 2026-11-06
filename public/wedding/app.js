@@ -5,7 +5,6 @@
   const mix = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) ? mix(a[k] || {}, b[k]) : b[k]; return a; };
   const D = mix(JSON.parse(JSON.stringify(DF)), window.DESIGN || {});
   if (E) try { mix(D, JSON.parse(localStorage.getItem(DK) || "{}")); } catch {}
-  if (D.cfg) mix(C, D.cfg); // names/date/venue typed in the editor override config.js everywhere (design.js, saved invites, guest links)
   const $ = (s) => document.querySelector(s);
   const set = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
   const toKm = (n) => String(n).replace(/\d/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
@@ -181,11 +180,6 @@
   // ---- Everything editable: texts, seal, envelope, colours (see editor.js) ----
   if (D.bf.size === 20) D.bf.size = 11;
   const BUILT = ["#coverTo", ".cover-tap", ".cover-hint", "#frontTo", "#cardKm", "#cardEn", ".invite", "#groomKm", ".amp", "#brideKm", "#namesEn", "#dateKm", "#dateEn", "#guestLine", ".lotus-rule", "#count", "#hProg", "#timeline", "#hVenue", "#venueKm", "#venueEn", "#mapBtn", "#hGal", "#gallery", "#hRsvp", "#rsvpForm", "#hWish", "#wishForm", "#wishes", "#hGift", "#qr", ".foot"];
-  // every other piece of plain text on the page becomes editable too: each text-only element gets its own key
-  (() => { let n = 0; document.querySelectorAll("body *").forEach((el) => {
-    if (el.children.length || !el.textContent.trim() || el.closest("#count,#wishes,#qr,.fr,.cover-hint,script,style,canvas,select,textarea,option") || BUILT.some((b) => el.matches(b))) return;
-    el.setAttribute("data-t", ++n); BUILT.push(`[data-t="${n}"]`);
-  }); })();
   const sealEl = $("#seal"), LOTUS = sealEl.innerHTML;
   $(".front-stamp").innerHTML = LOTUS;
   const HEART = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg>';
@@ -290,5 +284,5 @@
 
   window.WD = { E, D, DK, apply, open, turn, BUILT };
   apply();
-  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=5" })); }
+  if (E) { document.body.classList.add("editing"); document.body.append(Object.assign(document.createElement("script"), { src: "editor.js?v=4" })); }
 })();

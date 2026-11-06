@@ -1,0 +1,35 @@
+/* Admin "Wedding editor" page. Scoped under .wbPage; colours come from the admin variables so light / dark both work. */
+.wbPage{display:grid;gap:16px;position:relative}
+.wbPage .muted{color:var(--a-mute);font-size:13px;margin:0}
+.wbPage h2{margin:0}.wbPage h3{margin:14px 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute)}
+.wbBar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 22px}
+.wbCouple{display:flex;align-items:center;gap:14px;min-width:0}
+.wbCouple h2::after{display:none}.wbCouple small{display:block;margin-top:3px;color:var(--a-mute)}
+.wbHeart{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;color:#fff;background:linear-gradient(135deg,#b3245f,#d9b35f)}
+.wbHeart svg{width:22px;height:22px}
+.wbBarActions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.wbBarActions select{max-width:240px}
+.wbGrid{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:16px;align-items:start}
+.wbEditor{padding:0;overflow:hidden}
+.wbTabs{display:flex;flex-wrap:wrap;gap:6px;padding:12px;border-bottom:1px solid var(--a-line);position:sticky;top:0;z-index:2;background:var(--a-card,inherit)}
+.wbTabs button{padding:7px 12px;min-height:0}
+.wbPane{display:grid;gap:12px;padding:16px 18px 24px;align-content:start}
+.wbF{display:grid;gap:5px;font-size:12px;color:var(--a-mute)}
+.wbF input,.wbF textarea,.wbF select{width:100%;font:inherit;font-size:14px}
+.wbF input[type=color]{height:38px;padding:3px}
+.wbCk{display:flex;align-items:center;gap:8px;font-size:14px}.wbCk input{width:auto}
+.wbRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.wbRow .grow{flex:1;min-width:0}
+.wbThumb{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--a-line);background:var(--a-card2)}
+.wbUp{cursor:pointer}
+.wbItem{display:grid;gap:10px;padding:12px;border:1px solid var(--a-line);border-radius:14px;background:var(--a-card2)}
+.wbItem.wbRow{display:flex}
+.wbBox{display:grid;gap:8px;padding:12px;border:1px solid var(--a-line);border-radius:14px;background:var(--a-card2)}
+.wbLink{display:inline-flex;align-items:center;gap:6px;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.wbLink svg{width:16px;height:16px}
+.wbPreview{position:sticky;top:12px;display:grid;gap:10px;justify-items:center}
+.wbPreview iframe{width:100%;max-width:430px;height:min(760px,calc(100dvh - 130px));border:1px solid var(--a-line);border-radius:22px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.wbSeg{display:inline-flex;border:1px solid var(--a-line);border-radius:999px;overflow:hidden}
+.wbSeg button{background:transparent;color:inherit;border:0;border-radius:0;padding:7px 16px;min-height:0;box-shadow:none}
+.wbSeg button.on{background:#7c3aed;color:#fff}
+.wbToast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:200;background:#1c1530;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+@media(max-width:1100px){.wbGrid{grid-template-columns:1fr}.wbPreview{position:static}.wbPreview iframe{height:640px}}
