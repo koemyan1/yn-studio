@@ -197,6 +197,7 @@
     sealEl.style.setProperty("--sc", S.color || "");
     Object.assign(sealEl.style, { width: z + "px", height: z + "px", margin: `${-z / 2}px 0 0 ${-z / 2}px`, left: (S.x ?? 50) + "%", top: (S.y ?? 50) + "%", padding: S.icon === "image" ? "0" : "", overflow: "hidden",
       borderRadius: S.shape === "rounded" ? "22%" : S.shape === "square" ? "3px" : "50%", clipPath: S.shape === "diamond" ? "polygon(50% 0,100% 50%,50% 100%,0 50%)" : "" });
+    sealEl.classList.toggle("bare", S.icon === "image" && !!S.img && !S.bg);
     sealEl.innerHTML = S.icon === "heart" ? HEART : S.icon === "text" ? "" : S.icon === "image" && S.img ? "" : S.icon === "none" ? "" : LOTUS;
     if (S.icon === "text") sealEl.append(Object.assign(document.createElement("span"), { className: "stxt", textContent: S.text || "♥" }));
     if (S.icon === "image" && S.img) sealEl.append(Object.assign(document.createElement("img"), { src: S.img, alt: "" }));
@@ -228,6 +229,19 @@
       if (el.classList.contains("fi")) { el.style.width = (o.w || 160) + "px"; el.style.borderRadius = (o.r || 0) + "%"; }
     });
   }
+
+  // guest names always stay on ONE line: if a long name is too wide it shrinks to fit
+  function fitNames() {
+    [["#frontTo", () => $("#envelope").offsetWidth * 0.9], ["#coverTo", () => innerWidth * 0.92]].forEach(([s, w]) => {
+      const el = $(s); if (!el || !el.textContent) return;
+      el.style.fontSize = (D.o[s] || {}).s ? D.o[s].s + "px" : "";
+      const m = w(), cw = el.offsetWidth;
+      if (cw > m) el.style.fontSize = (parseFloat(getComputedStyle(el).fontSize) * m) / cw + "px";
+    });
+  }
+  const apply0 = apply;
+  apply = () => { apply0(); fitNames(); };
+  addEventListener("resize", fitNames); document.fonts?.ready.then(fitNames);
 
   // ---- Golden butterflies flying around the whole screen ----
   const cv = $("#petals"), ctx = cv.getContext("2d");

@@ -22,12 +22,12 @@
 
   const commit = () => { try { localStorage.setItem("wd_draft", JSON.stringify(D)); } catch { alert("Browser storage is full (big pictures). Download design.js now so nothing is lost."); } W.apply(); };
   const say = (m) => { const t = h("div", { textContent: m }); t.style.cssText = "position:fixed;z-index:70;left:50%;top:14px;transform:translateX(-50%);background:#f0d890;color:#0b2527;padding:8px 14px;border-radius:20px;font:600 13px system-ui"; document.body.append(t); setTimeout(() => t.remove(), 2200); };
-  const pick = (max, cb, sq) => {
+  const pick = (max, cb, sq, png) => {
     const i = h("input", { type: "file", accept: "image/*" }); i.style.cssText = "position:fixed;left:-999px;opacity:0"; document.body.append(i);
     i.onchange = () => { const f = i.files[0]; if (!f) return i.remove(); const r = new FileReader();
       r.onerror = () => { say("Could not read that picture"); i.remove(); };
       r.onload = () => { const im = new Image(); im.onerror = () => { say("Could not open that picture"); i.remove(); };
-        im.onload = () => { try { const s = sq ? Math.min(im.width, im.height) : 0, k = Math.min(1, max / (sq ? s : Math.max(im.width, im.height))), c = h("canvas", { width: Math.max(1, Math.round((sq ? s : im.width) * k)), height: Math.max(1, Math.round((sq ? s : im.height) * k)) }); if (sq) c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, c.width, c.height); else c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(f.type === "image/png" ? "image/png" : "image/jpeg", 0.85)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
+        im.onload = () => { try { const s = sq ? Math.min(im.width, im.height) : 0, k = Math.min(1, max / (sq ? s : Math.max(im.width, im.height))), c = h("canvas", { width: Math.max(1, Math.round((sq ? s : im.width) * k)), height: Math.max(1, Math.round((sq ? s : im.height) * k)) }); if (sq) c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, c.width, c.height); else c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL(png || f.type === "image/png" ? "image/png" : "image/jpeg", 0.85)); say("Picture added ✓"); } catch (x) { say("Picture failed: " + x.message); } i.remove(); };
         im.src = r.result; };
       r.readAsDataURL(f); };
     i.click();
@@ -84,7 +84,8 @@
         if (dyn) out.push(h("p", {}, "Guest name: each guest's own name fills in here automatically. Drag it, or use the buttons:"),
           h("div", { className: "row" }, ...[["Top", 0, -0.3], ["Middle", 0, 0], ["Bottom", 0, 0.3], ["Left", -0.16, null], ["Centre", 0, null], ["Right", 0.16, null]].map(([t, dx, dy]) => btn(t, () => { if (dy !== null) o.y = Math.round(dy * W0); else o.x = Math.round(dx * W0); commit(); }, true))));
         if (editable && !dyn) out.push(fld("Text", "area", ["o", k, "t"], el.textContent));
-        out.push(fld("Size (px)", "number", ["o", k, "s"], parseFloat(el && getComputedStyle(el).fontSize) || 20, { min: 8, max: 120 }));
+        if (dyn) out.push(fld("Name size", "range", ["o", k, "s"], parseFloat(el && getComputedStyle(el).fontSize) || 18, { min: 10, max: 90 }));
+        else out.push(fld("Size (px)", "number", ["o", k, "s"], parseFloat(el && getComputedStyle(el).fontSize) || 20, { min: 8, max: 120 }));
         out.push(fld("Colour", "color", ["o", k, "c"], "#f0d890"));
         out.push(fld("Font", "select", ["o", k, "f"], "", { opt: [["", "Default"], ["km", "Khmer body"], ["moul", "Khmer Moul"], ["latin", "English script"]] }));
         out.push(h("div", { className: "row" }, btn(o.h ? "Show" : "Hide (remove)", () => { o.h = !o.h; commit(); render(); }), btn("Reset", () => { delete D.o[k]; commit(); render(); }, true),
@@ -98,7 +99,7 @@
             btn("Delete page", () => { if (!confirm("Delete this page and everything on it?")) return; D.pages.splice(i, 1); D.add = D.add.filter((a) => a.pg !== p.id); commit(); view("main"); }, true))));
         return out;
       },
-      seal: () => [btn("⬆ Upload seal image", () => pick(300, (d) => { D.seal.img = d; D.seal.icon = "image"; commit(); render(); })),
+      seal: () => [btn("⬆ Upload seal image", () => pick(400, (d) => { D.seal.img = d; D.seal.icon = "image"; commit(); render(); }, false, true)), fld("Keep the round seal behind my picture", "checkbox", "seal.bg", false), h("p", {}, "Use a PNG with a see-through background: only your picture shows, with nothing around it."),
         fld("Shape", "select", "seal.shape", "circle", { opt: [["circle", "Circle"], ["rounded", "Rounded square"], ["square", "Square"], ["diamond", "Diamond"]] }),
         fld("Picture on seal", "select", "seal.icon", "lotus", { opt: [["lotus", "Lotus"], ["heart", "Heart"], ["text", "Letters / emoji"], ["image", "My image"], ["none", "Empty"]] }),
         fld("Letters / emoji", "text", "seal.text", "", { maxLength: 6 }), 
