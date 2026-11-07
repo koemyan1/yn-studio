@@ -258,3 +258,6 @@
 .wgAll{justify-self:start}
 .wgAct button:focus-visible,.wgAct a:focus-visible,.wgAll:focus-visible,.wgName:focus-visible{outline:2px solid var(--svc,#b3245f);outline-offset:2px}
 @media (max-width:420px){.wgRow{flex-direction:column}.svcPage .wgBtn{justify-content:center}}
+
+.wgReady{display:inline-flex;align-items:center;gap:6px;margin:2px 0 12px;padding:5px 12px;border-radius:999px;background:color-mix(in srgb,#b3245f 12%,#fff);color:#b3245f;font-size:13px;font-weight:800}
+.wgReady svg{width:14px;height:14px}
