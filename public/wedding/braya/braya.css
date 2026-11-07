@@ -136,3 +136,5 @@ body.locked .main,body.locked .music{opacity:0;visibility:hidden}
 .ending p::after{background:#e2b94c}
 .h-en{font-weight:600}.date{font-weight:600}.grid7 span,.count b{font-weight:600}.sched .d,.para{font-weight:500}
 .h-km,.h-en{filter:drop-shadow(0 0 3px #fffcf4) drop-shadow(0 0 6px #fffcf4) drop-shadow(0 0 10px #fffcf4) drop-shadow(0 0 16px rgba(255,252,244,.9))}
+
+.yt-link{display:inline-block;margin-top:10px;font-size:13px;color:var(--text);text-decoration:underline;text-underline-offset:3px;background:rgba(255,252,244,.8);border-radius:999px;padding:4px 12px}

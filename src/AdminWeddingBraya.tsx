@@ -247,7 +247,7 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
     Venue: <>
       {Check('Show venue', 'show.venue')}{Text('Heading (Khmer)', 'venue.km')}{Text('Heading (English)', 'venue.en')}
       {Text('Venue name (Khmer)', 'venue.nameKm', true)}{Text('Venue name (English)', 'venue.nameEn')}
-      {Text('Google Maps link', 'venue.mapUrl')}{Text('Map button text', 'venue.mapBtn')}{Text('YouTube embed link (empty = hide)', 'venue.youtube')}</>,
+      {Text('Google Maps link', 'venue.mapUrl')}{Text('Map button text', 'venue.mapBtn')}{Text('YouTube link (any YouTube link works, empty = hide)', 'venue.youtube')}</>,
     Gallery: <>
       {Check('Show gallery', 'show.gallery')}{Text('Heading (Khmer)', 'galleryTitle.km')}{Text('Heading (English)', 'galleryTitle.en')}
       <div className="wbRow">

@@ -8,6 +8,20 @@
   const P = (p) => p.split("."), get = (p) => P(p).reduce((o, k) => o?.[k], D);
   const put = (p, v) => { const a = P(p), l = a.pop(); a.reduce((o, k) => (o[k] ??= {}), D)[l] = v; };
   const KD = "០១២៣៤៥៦៧៨៩", kd = (s) => String(s).replace(/\d/g, (d) => KD[d]);
+  // Any YouTube link (watch?v=, youtu.be/, shorts/, live/, embed/) -> the /embed/ address YouTube allows inside a page. Returns {embed, watch} or null.
+  const yt = (raw) => {
+    try {
+      const u = new URL(String(raw || "").trim().replace(/^(?!https?:)\/\//, "https://").replace(/^(?!https?:)(?=(www\.|m\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com))/, "https://"));
+      const host = u.hostname.replace(/^(www\.|m\.)/, ""); let id = "";
+      if (host === "youtu.be") id = u.pathname.split("/")[1] || "";
+      else if (host === "youtube.com" || host === "youtube-nocookie.com") { const m = u.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/); id = m ? m[1] : u.searchParams.get("v") || ""; }
+      else return null;
+      if (!/^[\w-]{11}$/.test(id)) return null;
+      let start = u.searchParams.get("start") || u.searchParams.get("t") || ""; const tm = start.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+      start = tm ? (+(tm[1] || 0) * 3600 + +(tm[2] || 0) * 60 + +(tm[3] || 0)) : 0;
+      return { embed: `https://www.youtube.com/embed/${id}?rel=0&playsinline=1${start ? "&start=" + start : ""}`, watch: `https://www.youtube.com/watch?v=${id}` };
+    } catch { return null; }
+  };
   const KM = ["មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"];
   const EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const hasSb = !!(window.supabase && C0.supabaseUrl && !String(C0.supabaseUrl).startsWith("YOUR"));
@@ -92,7 +106,8 @@
     if (S.venue !== false) sec.push(h("section", { className: "sec" }, ...head(D.venue),
       h("div", { className: "card reveal" }, h("p", { className: "vname", textContent: D.venue.nameKm }), h("p", { className: "ven", textContent: D.venue.nameEn }),
         D.venue.mapUrl ? h("a", { className: "map-btn", href: D.venue.mapUrl, target: "_blank", rel: "noopener", textContent: D.venue.mapBtn }) : null),
-      D.venue.youtube ? h("iframe", { className: "yt reveal", src: D.venue.youtube, title: "Wedding video", loading: "lazy", allow: "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture", allowFullscreen: true }) : null));
+      ...(yt(D.venue.youtube) ? [h("iframe", { className: "yt reveal", src: yt(D.venue.youtube).embed, title: "Wedding video", loading: "lazy", referrerPolicy: "strict-origin-when-cross-origin", allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", allowFullscreen: true }),
+        h("a", { className: "yt-link reveal", href: yt(D.venue.youtube).watch, target: "_blank", rel: "noopener noreferrer", textContent: "▶ Watch on YouTube" })] : [])));
     if (S.gallery !== false && D.gallery?.length) sec.push(h("section", { className: "sec" }, ...head(D.galleryTitle),
       h("div", { className: "gal" }, ...D.gallery.map((src, i) => h("button", { type: "button", className: "reveal", ariaLabel: `Open photo ${i + 1}`, onclick: () => lightbox(src) }, h("img", { src, alt: `Wedding photo ${i + 1}`, loading: "lazy" }))))));
     if (S.gift !== false) sec.push(h("section", { className: "sec" }, ...head(D.gift),
@@ -205,7 +220,7 @@
         h("div", { className: "row" }, h("button", { type: "button", className: "g", textContent: "Up", onclick: () => { move(D.schedule, i, -1); commit(); draw(); } }), h("button", { type: "button", className: "g", textContent: "Down", onclick: () => { move(D.schedule, i, 1); commit(); draw(); } }), h("button", { type: "button", className: "g", textContent: "Delete", onclick: () => { D.schedule.splice(i, 1); commit(); draw(); } })))),
       h("button", { type: "button", textContent: "+ Add row", onclick: () => { D.schedule.push({ time: "", text: "", icon: "" }); commit(); draw(); } })],
     Venue: () => [fld("Heading (Khmer)", "venue.km"), fld("Heading (English)", "venue.en"), fld("Venue name (Khmer)", "venue.nameKm", "area"), fld("Venue name (English)", "venue.nameEn"),
-      fld("Google Maps link", "venue.mapUrl"), fld("Map button text", "venue.mapBtn"), fld("YouTube embed URL (empty = hide)", "venue.youtube")],
+      fld("Google Maps link", "venue.mapUrl"), fld("Map button text", "venue.mapBtn"), fld("YouTube link (any YouTube link works, empty = hide)", "venue.youtube")],
     Gallery: () => [fld("Heading (Khmer)", "galleryTitle.km"), fld("Heading (English)", "galleryTitle.en"),
       h("button", { type: "button", textContent: "+ Upload photo", onclick: () => pickImage((u) => { D.gallery.push(u); commit(); draw(); }) }),
       h("button", { type: "button", className: "g", textContent: "+ Add by URL", onclick: () => { const u = prompt("Image URL"); if (u) { D.gallery.push(u.trim()); commit(); draw(); } } }),
