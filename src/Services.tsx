@@ -6,6 +6,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
+import WeddingGuests, { guestLink } from './WeddingGuests';
+import type { SentInvite } from './WeddingGuests';
 import { isKm, tr, useLang } from './lang';
 import './services.css';
 import { ServiceOrderCard, ServiceOrderSheet, fetchMyOrders, useOrderLive, useServiceCatalog, waiting } from './ServiceOrder';
@@ -169,12 +171,12 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
   useOrderLive(loadOrders);
   const [mine, setMine] = useState<Mine[]>([]);
   // wedding invitations the admin has sent to this customer (table wedding_invites; stays empty if the table is not installed)
-  const [invites, setInvites] = useState<{ id: string; title: string }[]>([]);
+  const [invites, setInvites] = useState<SentInvite[]>([]);
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
       const u = data.user?.id; if (!u) return;
-      const r = await supabase.from('wedding_invites').select('id,title').eq('owner_id', u).eq('status', 'sent').order('created_at', { ascending: false });
+      const r = await supabase.from('wedding_invites').select('id,title,theme:config->>theme').eq('owner_id', u).eq('status', 'sent').order('created_at', { ascending: false });
       if (!r.error) setInvites((r.data as any[]) || []);
     })().catch(() => {});
   }, []);
@@ -228,13 +230,13 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
         </section>
 
         {invites.map(w => (
-          <article className="svcCard" data-rv key={w.id} style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
+          <article className="svcCard wgCard" data-rv key={w.id} style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
             <div className="svcInk"><Heart /></div>
             <div className="svcBody">
               <h3>{w.title || tr('Your wedding invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍របស់អ្នក')}</h3>
-              <p>{tr('Your invitation is ready. Open it, then add your guests: each guest gets a personal link with their name on the envelope.', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ។ បើកមើល រួចបន្ថែមភ្ញៀវ៖ ភ្ញៀវម្នាក់ៗទទួលបានតំណផ្ទាល់ខ្លួនដែលមានឈ្មោះលើស្រោមសំបុត្រ។')}</p>
-              <button type="button" className="svcAsk" onClick={() => window.open('/wedding/?i=' + w.id, '_blank', 'noopener')}>{tr('View invitation', 'មើលសំបុត្រអញ្ជើញ')}</button>{' '}
-              <button type="button" className="svcAsk" onClick={() => window.open('/wedding/guests.html', '_blank', 'noopener')}>{tr('Manage guests & links', 'គ្រប់គ្រងភ្ញៀវ និងតំណ')}</button>
+              <p>{tr('Your invitation is ready. Type a guest name: it appears on the cover and that guest gets a personal link to send.', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ។ វាយឈ្មោះភ្ញៀវ៖ ឈ្មោះនោះនឹងបង្ហាញលើមុខសំបុត្រ ហើយភ្ញៀវម្នាក់ៗទទួលបានតំណផ្ទាល់ខ្លួនសម្រាប់ផ្ញើ។')}</p>
+              <button type="button" className="svcAsk" onClick={() => window.open(guestLink(w), '_blank', 'noopener')}>{tr('View invitation', 'មើលសំបុត្រអញ្ជើញ')}</button>
+              <WeddingGuests invite={w} />
             </div>
           </article>
         ))}

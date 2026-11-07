@@ -28,6 +28,11 @@
   if (EDIT) { try { const s = localStorage.getItem(DK); if (s) D = merge(clone(window.BRAYA_DEFAULT), JSON.parse(s)); } catch {} }
   if (!GUEST && q.get("to")) GUEST = q.get("to").slice(0, 60);
 
+  // Invitations saved before the gold update still hold the old brown / grey text colours: swap them for the new gold ones.
+  const OLDC = { text: "#3d3a2e", muted: "#6f6a58", card: "rgba(255,255,255,0.55)" };
+  function fixOld(d) { const c = d.colors || (d.colors = {}), n = window.BRAYA_DEFAULT.colors || {}; for (const k in OLDC) if (c[k] === OLDC[k]) c[k] = n[k]; return d; }
+  fixOld(D);
+
   function msg(t) { document.body.classList.remove("locked"); app.replaceChildren(h("p", { className: "msg", textContent: t })); }
 
   // ---------- RENDER ----------
@@ -38,15 +43,20 @@
 
   function render() {
     const c = D.colors || {}, r = document.documentElement.style;
-    for (const k of ["accent", "text", "muted", "card", "gold"]) if (c[k]) r.setProperty("--" + k, c[k]);
+    for (const k of ["accent", "text", "muted", "card", "gold", "goldLight"]) if (c[k]) r.setProperty("--" + k, c[k]);
+    const FONTS = { pali: '"Khmer OS Muol Pali","Moulpali","Moul",serif', light: '"Khmer OS Muol Light","Moul",serif', body: '"Kantumruy Pro",system-ui,sans-serif' };
+    r.setProperty("--moul", FONTS[(D.fonts || {}).heading] || FONTS.pali);
     clearInterval(timer);
     const S = D.show || {};
     const head = (o) => [h("p", { className: "h-km reveal", textContent: o.km }), h("h2", { className: "h-en reveal", textContent: o.en })];
 
+    // One fixed background (cover picture + moving-branches video) shared by the cover AND the inside of the invitation.
+    // It never scrolls: the cover fades away on top of it and the page content scrolls over it.
     const vid = D.cover.video ? h("video", { src: D.cover.video, muted: true, autoplay: true, loop: true, playsInline: true, defaultMuted: true }) : null;
     if (vid) vid.setAttribute("muted", "");
+    const fixedBg = h("div", { className: "fixed-bg", ariaHidden: "true", style: `background-image:url("${D.cover.bgImage}")` }, vid);
     const cover = h("section", { className: "cover" + (opened ? " gone" : ""), id: "cover" },
-      h("div", { className: "cover-in", style: `background-image:url("${D.cover.bgImage}")` }, vid, h("div", { className: "shade" }),
+      h("div", { className: "cover-in" }, h("div", { className: "shade" }),
         h("p", { className: "cover-names", textContent: D.cover.names }),
         h("p", { className: "cover-label", textContent: D.cover.guestLabel }),
         h("div", { className: "vine", ariaHidden: "true" }),
@@ -101,7 +111,7 @@
     if (mbtn) mbtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
     if (audio.src !== new URL(D.music || "", location.href).href && D.music) audio.src = D.music;
 
-    const stage = h("div", { className: "stage" }, cover, h("main", { className: "main", style: `background-image:url("${D.bgImage}")` }, ...sec), mbtn);
+    const stage = h("div", { className: "stage" }, fixedBg, cover, h("main", { className: "main" }, ...sec), mbtn);
     app.replaceChildren(stage);
     document.body.classList.toggle("locked", !opened);
     observe();
@@ -125,7 +135,7 @@
     // Embedded in the admin page: the parent sends the live content and we just re-render it.
     addEventListener("message", (e) => {
       if (e.origin !== location.origin || !e.data || e.data.type !== "braya-content") return;
-      D = merge(clone(window.BRAYA_DEFAULT), e.data.content || {}); opened = e.data.opened !== false; render();
+      D = fixOld(merge(clone(window.BRAYA_DEFAULT), e.data.content || {})); opened = e.data.opened !== false; render();
     });
     parent.postMessage({ type: "braya-ready" }, location.origin);
     return;
@@ -206,8 +216,9 @@
       fld("QR code image", "gift.qr", "img"), fld("Holder label", "gift.holderLabel"), fld("Account holder", "gift.holder"), fld("Account number (optional)", "gift.account")],
     Thanks: () => [fld("Heading (Khmer)", "thanks.km"), fld("Heading (English)", "thanks.en"), fld("Text (Khmer)", "thanks.textKm", "area"), fld("Text (English)", "thanks.textEn", "area"),
       h("h3", { textContent: "Ending" }), fld("Ending video URL", "ending.video"), fld("Ending text", "ending.text")],
-    Style: () => [fld("Accent (calendar day, buttons)", "colors.accent", "color"), fld("Text colour", "colors.text", "color"), fld("Soft text colour", "colors.muted", "color"), fld("Gold details", "colors.gold", "color"),
-      fld("Page background image", "bgImage", "img"), h("h3", { textContent: "Show sections" }),
+    Style: () => [fld("Accent (calendar day, buttons)", "colors.accent", "color"), fld("Text colour", "colors.text", "color"), fld("Soft text colour", "colors.muted", "color"), fld("Gold details", "colors.gold", "color"), fld("Light gold (names on the photo)", "colors.goldLight", "color"),
+      h("label", {}, "Heading font (Khmer)", (() => { const sel = h("select", {}, ...[["pali", "Khmer OS Muol Pali"], ["light", "Khmer OS Muol Light"], ["body", "Easy-to-read (Kantumruy Pro)"]].map(([v, t]) => h("option", { value: v, textContent: t }))); sel.value = (D.fonts || {}).heading || "pali"; sel.onchange = () => { put("fonts.heading", sel.value); commit(); }; return sel; })()),
+      h("p", { style: "font-size:12px;opacity:.75;margin:6px 0", textContent: "The inside of the invitation uses the cover background image + video (set them in the Cover tab). It stays fixed while the info scrolls." }), h("h3", { textContent: "Show sections" }),
       ...Object.keys(D.show).map((k) => fld(k[0].toUpperCase() + k.slice(1), "show." + k, "check"))],
     Save: () => {
       const title = h("input", { value: `${D.groom.km} & ${D.bride.km}`, ariaLabel: "Invitation title" });

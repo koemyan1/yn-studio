@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom';
 import { Copy, Download, ExternalLink, Eye, Heart, ImagePlus, Plus, RotateCcw, Save, Send, Trash2, Users } from 'lucide-react';
 import { supabase } from './supabase';
+import { CustomerPicker, customerLabel, sendInviteTo } from './WeddingSend';
+import type { Customer } from './WeddingSend';
 import './admin-wedding-braya.css';
 
 /* Admin → Wedding editor (/admin/wedding-editor): edit EVERY part of the "Braya" invitation theme with a live phone preview.
@@ -23,6 +25,9 @@ function setAt(o: Doc, path: string, v: any) {
   for (const k of keys) cur = cur[k] ??= {};
   cur[last] = v;
 }
+/** Invitations saved before the gold update hold the old brown / grey text colours: swap them for the new gold defaults. */
+const OLD_COLORS: Record<string, string> = { text: '#3d3a2e', muted: '#6f6a58', card: 'rgba(255,255,255,0.55)' };
+const fixOld = (d: Doc, def: Doc): Doc => { const c = d.colors || (d.colors = {}); for (const k in OLD_COLORS) if (c[k] === OLD_COLORS[k]) c[k] = def.colors?.[k]; return d; };
 const merge = (a: Doc, b: Doc): Doc => {
   for (const k in b) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && a[k] && typeof a[k] === 'object') merge(a[k], b[k]); else a[k] = b[k]; }
   return a;
@@ -76,7 +81,6 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
-  const [email, setEmail] = useState('');
   const [dirty, setDirty] = useState(false);
   const [list, setList] = useState<{ id: string; title: string; status: string }[]>([]);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -106,7 +110,7 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
         setRow({ id: r.data.id, title: r.data.title, status: r.data.status, owner_id: r.data.owner_id }); t = r.data.title || '';
       }
       try { const s = localStorage.getItem(draftKey); if (s) { start = merge(clone(def), JSON.parse(s)); setDirty(true); say('Restored your unsaved edits'); } } catch { /* ignore */ }
-      setD(start); setTitle(t || `${start.groom?.en || ''} & ${start.bride?.en || ''}`.trim());
+      fixOld(start, def); setD(start); setTitle(t || `${start.groom?.en || ''} & ${start.bride?.en || ''}`.trim());
     })();
     return () => { live = false; };
   }, [invParam, draftKey, say]);
@@ -180,17 +184,23 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
     return saved;
   }
   async function onSave(asNew = false) { setBusy(true); const s = await save(asNew); setBusy(false); if (s) say(asNew ? 'Saved as a new draft ✓' : 'Saved ✓'); }
-  async function onSend() {
-    const addr = email.trim(); if (!addr) return say('Type the customer’s email');
+  /** Rename a saved invitation straight away (only the name is written, not your other unsaved edits). */
+  async function rename() {
+    const t = title.trim() || 'Wedding';
+    setTitle(t);
+    if (!row || t === row.title) return;
+    const r = await supabase.from('wedding_invites').update({ title: t, updated_at: new Date().toISOString() }).eq('id', row.id);
+    if (r.error) { setErr(r.error.message); return; }
+    setRow({ ...row, title: t }); setList(l => l.map(x => (x.id === row.id ? { ...x, title: t } : x))); say('Name changed ✓');
+  }
+  async function onSend(c: Customer): Promise<string | void> {
+    if (!window.confirm(`Send this invitation to ${customerLabel(c)}? It will appear on their Services page.`)) return;
     setBusy(true);
     try {
-      const u = await supabase.from('profiles').select('user_id').ilike('email', addr.replace(/[\\%_]/g, '\\$&')).limit(1);
-      if (u.error || !u.data?.length) return say(u.error ? u.error.message : 'No customer with that email');
-      if (!window.confirm(`Send this invitation to ${addr}? It will appear on their Services page.`)) return;
-      const saved = await save(false); if (!saved) return;
-      const r = await supabase.from('wedding_invites').update({ owner_id: u.data[0].user_id, status: 'sent', sent_at: new Date().toISOString() }).eq('id', saved.id);
-      if (r.error) return say(r.error.message);
-      setRow({ ...saved, status: 'sent', owner_id: u.data[0].user_id }); say('Sent to customer ✓');
+      const saved = await save(false); if (!saved) return 'Could not save the invitation first. See the message at the top.';
+      const m = await sendInviteTo(saved.id, c.user_id);
+      if (m) return m;
+      setRow({ ...saved, status: 'sent', owner_id: c.user_id }); say('Sent to ' + (c.name?.trim() || c.email || 'customer') + ' ✓');
     } finally { setBusy(false); }
   }
   function download() {
@@ -257,11 +267,14 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
       {Text('Text (Khmer)', 'thanks.textKm', true)}{Text('Text (English)', 'thanks.textEn', true)}
       <h3>Ending</h3>{Check('Show ending', 'show.ending')}{Text('Ending video link', 'ending.video')}{Text('Ending text', 'ending.text')}</>,
     Style: <>
-      {Color('Accent (calendar day, buttons)', 'colors.accent')}{Color('Text colour', 'colors.text')}{Color('Soft text colour', 'colors.muted')}{Color('Gold details', 'colors.gold')}
+      {Color('Accent (calendar day, buttons)', 'colors.accent')}{Color('Text colour', 'colors.text')}{Color('Soft text colour', 'colors.muted')}{Color('Gold details', 'colors.gold')}{Color('Light gold (names on the photo)', 'colors.goldLight')}
+      <label className="wbF">Heading font (Khmer)
+        <select value={D.fonts?.heading || 'pali'} onChange={e => update('fonts.heading', e.target.value)}>
+          <option value="pali">Khmer OS Muol Pali</option><option value="light">Khmer OS Muol Light</option><option value="body">Easy-to-read (Kantumruy Pro)</option></select></label>
       {Img('Page background picture', 'bgImage')}</>,
     Save: <>
       <p className="muted">{row ? (row.status === 'sent' ? 'Status: SENT to the customer. Saving updates what they see.' : 'Status: DRAFT. Only you can see it.') : 'Not saved yet. Save a draft, preview it, then send it.'}{dirty ? ' You have unsaved changes.' : ''}</p>
-      <label className="wbF">Title<input value={title} onChange={e => { setTitle(e.target.value); setDirty(true); }} /></label>
+      <label className="wbF">Invitation name<input value={title} maxLength={80} onChange={e => setTitle(e.target.value)} onBlur={rename} /></label>
       <div className="wbRow">
         <button type="button" disabled={busy} onClick={() => onSave(false)}><Save /> {row ? (row.status === 'sent' ? 'Save changes' : 'Save draft') : 'Save draft'}</button>
         {row && <button type="button" className="secondary" disabled={busy} onClick={() => onSave(true)}><Copy /> Save as new copy</button>}
@@ -273,9 +286,8 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
         <a className="wbLink" href={BASE + 'guests.html'} target="_blank" rel="noreferrer"><Users /> Guests and personal links (customer page)</a>
       </div>}
       <div className="wbBox">
-        <span className="muted">{row?.status === 'sent' ? 'Already sent. To send it to a different customer, type their email:' : 'When the preview looks right, send it. It appears on the customer’s Services page, where they add their guests.'}</span>
-        <input type="email" placeholder="Customer email" value={email} onChange={e => setEmail(e.target.value)} />
-        <button type="button" disabled={busy || !email.trim()} onClick={onSend}><Send /> Send to customer</button>
+        <span className="muted">{row?.status === 'sent' ? 'Already sent. To send it to a different customer, pick them here:' : 'When the preview looks right, pick the customer and send it. It appears on their Services page, where they add guest names and copy a personal link for each guest.'}</span>
+        <CustomerPicker onSend={onSend} busy={busy} />
       </div>
       <div className="wbRow">
         <button type="button" className="secondary" onClick={download}><Download /> Download content.js</button>
@@ -287,7 +299,8 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
     {err && <div className="notice"><b>Heads up.</b> {err}</div>}
     <section className="panel wbBar">
       <div className="wbCouple"><span className="wbHeart"><Heart /></span>
-        <div><h2>{title || 'Wedding invitation'}</h2><small>{row ? (row.status === 'sent' ? 'Sent to customer' : 'Draft') : 'New invitation (not saved)'}{dirty ? ' · unsaved changes' : ''}</small></div></div>
+        <div className="wbName"><input className="wbTitle" aria-label="Invitation name" placeholder="Invitation name" maxLength={80} value={title}
+          onChange={e => setTitle(e.target.value)} onBlur={rename} onKeyDown={e => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }} /><small>{row ? (row.status === 'sent' ? 'Sent to customer' : 'Draft') : 'New invitation (not saved)'}{dirty ? ' · unsaved changes' : ''}</small></div></div>
       <div className="wbBarActions">
         <select aria-label="Open a saved invitation" value={invParam || ''} onChange={e => { if (dirty && !window.confirm('Leave without saving your edits?')) return; setSp(e.target.value ? { i: e.target.value } : {}); }}>
           <option value="">New invitation</option>{list.map(x => <option key={x.id} value={x.id}>{x.title || 'Untitled'} ({x.status})</option>)}</select>

@@ -17,3 +17,10 @@ No new SQL or dependencies. Needs `supabase/sql/supabase-wedding-invites.sql` (a
 
 ## Not verified
 Written without installing dependencies: `npm run build` and a real Supabase round trip have not been run. Test: open the page, edit, Save draft, open the preview link in a private window, then Send to a test customer.
+
+## Update: gold text + Khmer OS Muol Pali
+- All text in the garden invitation is now deep gold. Titles, names and section headings use a gold foil; body text is solid gold with a soft cream halo, and text that sits straight on the flowers has a cream panel behind it so it stays readable. Names on the cover and ending picture use a bright gold foil with a dark gold edge (readable on light and dark pictures).
+- Headings, names, the open button and Khmer section titles use **Khmer OS Muol Pali** (Google's Moulpali is the fallback on devices without it). Extra padding and line-height keep Khmer vowel signs from being clipped.
+- Admin -> Wedding editor -> Style: new **Light gold** colour and a **Heading font (Khmer)** choice (Muol Pali / Muol Light / easy-to-read). Invitations saved with the old brown / grey text colours are switched to the new gold automatically.
+- Files: `public/wedding/braya/braya.css`, `braya.js`, `content.js`, `index.html`; `src/AdminWeddingBraya.tsx`.
+- Invitation name: editable at the top of Wedding editor (and in the Save tab); renaming a saved invitation saves the name immediately, without touching other unsaved edits.

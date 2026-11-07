@@ -2,7 +2,8 @@
 // (changes are saved to Supabase / downloaded as a new content.js — this file is just the starting point).
 window.BRAYA_DEFAULT = {
   theme: "braya",
-  colors: { accent: "#c8603f", text: "#3d3a2e", muted: "#6f6a58", card: "rgba(255,255,255,0.55)", gold: "#c9a96a" },
+  colors: { accent: "#c8603f", text: "#8a6414", muted: "#8a6a20", card: "rgba(255,252,244,0.78)", gold: "#c9a96a", goldLight: "#f2dc98" },
+  fonts: { heading: "pali" },
   bgImage: "img/garden-bg.png",
   show: { couple: true, calendar: true, countdown: true, schedule: true, venue: true, gallery: true, gift: true, thanks: true, ending: true },
 

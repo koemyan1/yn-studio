@@ -33,3 +33,7 @@
 .wbSeg button.on{background:#7c3aed;color:#fff}
 .wbToast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:200;background:#1c1530;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 @media(max-width:1100px){.wbGrid{grid-template-columns:1fr}.wbPreview{position:static}.wbPreview iframe{height:640px}}
+.wbName{min-width:0;flex:1}
+.wbTitle{width:100%;min-width:200px;font-size:clamp(18px,2.4vw,24px);font-weight:700;border:1px solid transparent;background:transparent;padding:4px 8px;margin:-4px -8px;border-radius:10px;color:inherit}
+.wbTitle:hover{border-color:var(--a-line)}.wbTitle:focus{border-color:#7c3aed;background:var(--a-card2,transparent);outline:none}
+.wbName small{display:block;margin-top:3px;color:var(--a-mute)}
