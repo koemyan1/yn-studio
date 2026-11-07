@@ -71,7 +71,7 @@
     const fixedBg = h("div", { className: "fixed-bg", ariaHidden: "true", style: `background-image:url("${D.cover.bgImage}")` }, vid);
     const cover = h("section", { className: "cover" + (opened ? " gone" : ""), id: "cover" },
       h("div", { className: "cover-in" }, h("div", { className: "shade" }),
-        h("p", { className: "cover-names", textContent: D.cover.names }),
+        D.cover.namesImage ? h("img", { className: "cover-names-img", src: D.cover.namesImage, alt: D.cover.names || "" }) : h("p", { className: "cover-names", textContent: D.cover.names }),
         h("p", { className: "cover-label", textContent: D.cover.guestLabel }),
         h("div", { className: "vine", ariaHidden: "true" }),
         h("p", { className: "cover-guest", textContent: GUEST || D.cover.guestDefault }),
@@ -206,7 +206,7 @@
   const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; };
 
   const TABS = {
-    Cover: () => [fld("Names (new line = new line)", "cover.names", "area"), fld("Cover background video URL (.mp4)", "cover.video"), fld("Cover background image", "cover.bgImage", "img"),
+    Cover: () => [fld("Names picture (replaces the text names)", "cover.namesImage", "img"), fld("Names text (shown only when there is no names picture)", "cover.names", "area"), fld("Cover background video URL (.mp4)", "cover.video"), fld("Cover background image", "cover.bgImage", "img"),
       fld("Label above guest name", "cover.guestLabel"), fld("Guest name when no guest link", "cover.guestDefault"), fld("Button (Khmer)", "cover.btnKm"), fld("Button (English)", "cover.btnEn"),
       fld("Background music URL (.mp3)", "music"), h("p", { textContent: "Videos and music must be links (upload them to your storage, then paste the URL)." }),
       h("button", { type: "button", className: "g", textContent: "Preview cover", onclick: () => { opened = false; render(); } }), h("button", { type: "button", className: "g", textContent: "Show invitation", onclick: () => { opened = true; render(); } })],

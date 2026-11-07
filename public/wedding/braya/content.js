@@ -11,6 +11,7 @@ window.BRAYA_DEFAULT = {
     bgImage: "img/cover-bg.png",
     video: "https://www.braya-malis.love/videos/vid-3.mp4",
     names: "Braya\nMalis",
+    namesImage: "img/cover-names.png", // gold name frame shown on the cover instead of the text names (clear it in the editor to show the text again)
     guestLabel: "សូមគោរពអញ្ជើញ",
     guestDefault: "ភ្ញៀវកិត្តិយស",
     btnKm: "សូមចុចបើកសំបុត្រ",
