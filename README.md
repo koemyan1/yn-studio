@@ -57,6 +57,7 @@ Set on Render (see `render.yaml`). Secrets must never use a `VITE_` prefix.
 | Order statuses and barcode scanning | [ORDER-BARCODE-STATUS-SETUP](docs/setup/ORDER-BARCODE-STATUS-SETUP.md) |
 | Push notifications / Telegram | [PUSH-SETUP](docs/setup/PUSH-SETUP.md), [TELEGRAM-SETUP](docs/setup/TELEGRAM-SETUP.md) |
 | Secret themes | [SECRET-THEME-SETUP](docs/setup/SECRET-THEME-SETUP.md), [CHIIKAWA-THEME-SETUP](docs/setup/CHIIKAWA-THEME-SETUP.md) |
+| NFC coins, passkeys, YN EMERGENCY | [YN-CORE-SETUP](docs/setup/YN-CORE-SETUP.md). Admin: `/admin/core` |
 | Other features | [FEATURES-SETUP](docs/setup/FEATURES-SETUP.md) |
 | Security | [SECURITY-REPORT](SECURITY-REPORT.md) (findings, what is still open) and [SECURITY-SETUP](docs/setup/SECURITY-SETUP.md). Dashboard: `/admin/security` |
 
