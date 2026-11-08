@@ -33,6 +33,3 @@ Save tab -> *Download design.js* -> replace `public/wedding/design.js` -> push. 
 2. Admin: log in to the site, open `/wedding/?edit=1`, design it, then **Save -> Send to customer** (customer's account email).
 3. Customer: open `/wedding/guests.html` (link it from their account/order page), log in, type guest names (one per line), then Copy link / Share per guest.
 4. Each guest link (`/wedding/?i=...&g=...`) opens the envelope with that guest's name on the front; the customer sees "Opened ✓".
-
-## Garden theme editor (new)
-**Admin -> Wedding editor** (`/admin/wedding-editor`) edits the garden (Braya) invitation, with a live preview, draft / send to customer, and uploads. Default content is `public/wedding/braya/content.js`; saved invitations are stored in `wedding_invites` and open at `/wedding/?i=<id>` (boot.js forwards them to `/wedding/braya/`). See `docs/changelog/CHANGELOG-WEDDING-GARDEN-EDITOR.md`.

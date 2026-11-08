@@ -1,15 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Check, Copy, Download, ExternalLink, Heart, MessageCircle, Palette, RefreshCw, Search, Send, Trash2, UserCheck, UserX, Users } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Heart, MessageCircle, Palette, RefreshCw, Search, Trash2, UserCheck, UserX, Users } from 'lucide-react';
 import { supabase } from './supabase';
 import { CountUp } from './adminMotion';
-import { CustomerPicker, customerLabel, sendInviteTo, useCustomers } from './WeddingSend';
 import './admin-wedding.css';
 
 type Shell = React.ComponentType<{ title: string; children: React.ReactNode }>;
 type Rsvp = { id: number; name: string; attending: boolean; guests: number; created_at: string };
 type Wish = { id: number; name: string; message: string; created_at: string };
-type Invite = { id: string; title: string; status: 'draft' | 'sent'; created_at: string; owner_id?: string; theme?: string | null };
+type Invite = { id: string; title: string; status: 'draft' | 'sent'; created_at: string };
 type Cfg = { groom?: { km?: string; en?: string }; bride?: { km?: string; en?: string }; dateTextEn?: string; venueEn?: string };
 
 const INVITE_PATH = '/wedding/';
@@ -52,8 +50,6 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
   const [names, setNames] = useState('');
   const [qr, setQr] = useState('');
   const [invites, setInvites] = useState<Invite[]>([]);
-  const [sendFor, setSendFor] = useState<string | null>(null);
-  const customers = useCustomers();
   const { done, copy } = useCopy();
 
   const load = useCallback(async () => {
@@ -67,7 +63,7 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
     else setErr('');
     setRsvps((r.data as Rsvp[]) || []);
     setWishes((w.data as Wish[]) || []);
-    const iv = await supabase.from('wedding_invites').select('id,title,status,created_at,owner_id,theme:config->>theme').order('created_at', { ascending: false }).limit(100);
+    const iv = await supabase.from('wedding_invites').select('id,title,status,created_at').order('created_at', { ascending: false }).limit(100);
     setInvites(iv.error ? [] : ((iv.data as Invite[]) || []));
     setLoading(false);
   }, []);
@@ -105,12 +101,6 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
     if (error) { setErr(error.message); return; }
     setInvites(x => x.filter(v => v.id !== i.id));
   }
-  async function sendInvite(i: Invite, customerId: string): Promise<string | void> {
-    const m = await sendInviteTo(i.id, customerId);
-    if (m) return m;
-    setInvites(x => x.map(v => (v.id === i.id ? { ...v, status: 'sent', owner_id: customerId } : v)));
-    setSendFor(null);
-  }
   async function removeRsvp(r: Rsvp) {
     if (!window.confirm(`Delete the reply from “${r.name}”?`)) return;
     const { error } = await supabase.from('rsvps').delete().eq('id', r.id);
@@ -141,34 +131,21 @@ export default function AdminWedding({ Shell }: { Shell: Shell }) {
       <div className="wdCouple"><span className="wdHeart"><Heart /></span><div><h2>{couple}</h2><small>{sub || 'Edit names, date, venue and photos in public/wedding/config.js'}</small></div></div>
       <div className="wdHeroActions">
         <a className="button" href={INVITE_PATH} target="_blank" rel="noreferrer"><ExternalLink /> Open invitation</a>
-        <Link className="secondary button" to="/admin/wedding-editor"><Palette /> Garden editor</Link>
-        <a className="secondary button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> Envelope editor</a>
+        <a className="secondary button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> Edit design</a>
         <button type="button" className="secondary" onClick={load} disabled={loading}><RefreshCw /> {loading ? 'Loading…' : 'Refresh'}</button>
       </div>
     </section>
 
     <section className="panel">
       <div className="wdHead"><h2>Invitations for customers</h2>
-        <div className="wdTools"><Link className="button" to="/admin/wedding-editor"><Palette /> New garden invitation</Link>
-          <a className="secondary button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> New envelope invitation</a></div></div>
+        <a className="button" href={INVITE_PATH + '?edit=1'} target="_blank" rel="noreferrer"><Palette /> New invitation</a></div>
       <p className="muted">Design it, press Save draft, preview it, then Send to customer. A sent invitation shows on the customer’s Services page.</p>
       {invites.length === 0 ? <p className="wdEmpty">No saved invitations yet.</p> :
-        <ul className="wdLinks wdInvites">{invites.map(i => {
-          const owner = i.status === 'sent' ? customers.find(c => c.user_id === i.owner_id) : undefined;
-          return <li key={i.id}><b>{i.title || 'Untitled'}</b>
-            <span className={'wdPill ' + (i.status === 'sent' ? 'yes' : 'no')}>{i.status === 'sent' ? 'Sent' : 'Draft'}</span>
-            {owner && <small className="wdTo">to {customerLabel(owner)}</small>}
-            <a className="secondary button" href={INVITE_PATH + '?i=' + i.id} target="_blank" rel="noreferrer"><ExternalLink /> Preview</a>
-            {i.theme === 'braya'
-              ? <Link className="secondary button" to={'/admin/wedding-editor?i=' + i.id}><Palette /> Edit</Link>
-              : <a className="secondary button" href={INVITE_PATH + '?edit=1&i=' + i.id} target="_blank" rel="noreferrer"><Palette /> Edit</a>}
-            <button type="button" className={sendFor === i.id ? '' : 'secondary'} onClick={() => setSendFor(sendFor === i.id ? null : i.id)}><Send /> {i.status === 'sent' ? 'Send to another' : 'Send'}</button>
-            <button type="button" className="icon" aria-label={'Delete ' + (i.title || 'invitation')} onClick={() => removeInvite(i)}><Trash2 /></button>
-            {sendFor === i.id && <div className="wdSendRow"><CustomerPicker onClose={() => setSendFor(null)}
-              hint={i.status === 'sent' ? 'It is already with a customer. Sending it again moves it (and its guest list) to the customer you pick.' : 'The customer gets it on their Services page, adds guest names, and copies a personal link for each guest.'}
-              onSend={async c => { if (!window.confirm(`Send “${i.title || 'Untitled'}” to ${customerLabel(c)}?`)) return; return sendInvite(i, c.user_id); }} /></div>}
-          </li>;
-        })}</ul>}
+        <ul className="wdLinks">{invites.map(i => <li key={i.id}><b>{i.title || 'Untitled'}</b>
+          <span className={'wdPill ' + (i.status === 'sent' ? 'yes' : 'no')}>{i.status === 'sent' ? 'Sent' : 'Draft'}</span>
+          <a className="secondary button" href={INVITE_PATH + '?i=' + i.id} target="_blank" rel="noreferrer"><ExternalLink /> Preview</a>
+          <a className="secondary button" href={INVITE_PATH + '?edit=1&i=' + i.id} target="_blank" rel="noreferrer"><Palette /> Edit</a>
+          <button type="button" className="icon" aria-label={'Delete ' + (i.title || 'invitation')} onClick={() => removeInvite(i)}><Trash2 /></button></li>)}</ul>}
     </section>
 
     <div className="stats wdStats">

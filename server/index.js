@@ -15,6 +15,7 @@ import { createGeoLookup } from './security/geo.js';
 import { createPresence } from './presence.js';
 import fsp from 'node:fs/promises';
 import { createPreviewPages } from './ogPreview.js';
+import { createCore } from './core/index.js';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -127,6 +128,12 @@ app.post('/api/presence', shield.limiter('presence', 30), express.json({ limit: 
 app.get('/api/admin/live', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(presence.snapshot()); });
 logEnvAudit(console);
 app.post('/api/security/csp-report', shield.limiter('csp-report', 30), express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '20kb' }), adminApi.cspReport);
+// YN CORE (NFC coins, YN EMERGENCY, passkeys). OFF unless YN_CORE=on; see docs/setup/YN-CORE-SETUP.md. Mounted here so it sits behind the
+// shield and the /api/admin default-deny above, and BEFORE static files and the SPA catch-all (the /nfc/<token> route and the
+// /admin/emergency page lock must win over the catch-all).
+const core = createCore({ sb, shield, store: secStore, requireAdmin: adminApi.requireAdmin, notify: (t, m, l) => notifyAdmin(t, m, l), env });
+core.mount(app, { json: express.json({ limit: '30kb' }), express });
+core.start();
 const ORDER_CHECK_MSG = 'We could not verify this order\'s price. Please go back to your cart and place the order again.';
 
 const toAmount = total => {
