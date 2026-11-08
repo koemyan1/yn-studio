@@ -2,13 +2,6 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
-## Unreleased: YN CORE (NFC coins, passkeys, YN EMERGENCY)
-
-- **New, off by default (`YN_CORE=on`).** Five NFC coins with permanent random URLs (`/nfc/<256-bit token>`), server-side destination rotation, per-coin pause / regenerate / revoke, analytics and tap log. Admin pages `/admin/core`; initialization at `/admin/emergency`.
-- **Passkeys (WebAuthn, Face ID / Touch ID through the device).** Each coin activation, regeneration and revoke needs a fresh single-use passkey session. After the fifth coin, initialization locks (404) and only passkey + recovery code + waiting period can reopen it.
-- New SQL `supabase/sql/supabase-yn-core.sql` (new `yn_core_*` tables only). New server folder `server/core/`; the shield's event log now redacts `/nfc/<token>`.
-- Setup: [`docs/setup/YN-CORE-SETUP.md`](docs/setup/YN-CORE-SETUP.md). Tests: `tests/core.test.mjs`.
-
 ## Unreleased: Wedding invitation + admin Wedding page
 
 - **Khmer wedding invitation added to the project** at `/wedding/` (same domain; static page in `public/wedding/`). Edit `public/wedding/config.js`.

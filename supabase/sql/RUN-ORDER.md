@@ -120,9 +120,3 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 49 | `supabase-security-hardening.sql` | must come after supabase-wallet-order-payment.sql: both define pay_order_with_wallet and the later one wins |
 | 50 | `supabase-server-side-order.sql` | NEW: server-side pricing; needs supabase-security-hardening.sql (uses its settings/log helpers) |
 | 51 | `supabase-security-audit.sql` | (run again) |
-
-## 9. YN CORE (NFC coins + YN EMERGENCY)
-
-| # | File | Why here |
-|---|---|---|
-| 52 | `supabase-yn-core.sql` | NEW: tables `yn_core_*` + server-only functions for the five NFC coins, passkeys, emergency sessions, recovery and the audit log. Creates only new objects; idempotent. Needs nothing from the baseline. Read `docs/setup/YN-CORE-SETUP.md` before enabling `YN_CORE=on`. |
