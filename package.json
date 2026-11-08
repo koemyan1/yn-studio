@@ -12,7 +12,7 @@
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
     "mobile:setup": "npm install && npx cap add android && npx cap add ios && npx cap sync",
-    "test": "node --test tests/security.test.mjs tests/repo-hygiene.test.mjs tests/og-preview.test.mjs tests/secrets.test.mjs tests/service-shop.test.mjs tests/review-photos.test.mjs tests/presence.test.mjs",
+    "test": "node --test tests/security.test.mjs tests/repo-hygiene.test.mjs tests/og-preview.test.mjs tests/secrets.test.mjs tests/service-shop.test.mjs tests/review-photos.test.mjs tests/presence.test.mjs tests/core.test.mjs",
     "test:e2e": "node --test tests/e2e-server.test.mjs",
     "scan:secrets": "node tools/scan-secrets.mjs",
     "security:smoke": "node tools/security-smoke.mjs",

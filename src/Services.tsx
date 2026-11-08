@@ -6,8 +6,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
-import WeddingGuests, { guestLink } from './WeddingGuests';
-import type { SentInvite } from './WeddingGuests';
 import { isKm, tr, useLang } from './lang';
 import './services.css';
 import { ServiceOrderCard, ServiceOrderSheet, fetchMyOrders, useOrderLive, useServiceCatalog, waiting } from './ServiceOrder';
@@ -85,17 +83,6 @@ const DESIGN: Service[] = [
 ];
 
 const ALL = [...PRINT_COPY, ...DESIGN];
-
-/** Wedding e-invitation: shown as its own service. Once the admin sends a finished invitation it opens here (no payment step). */
-const WEDDING_SVC: Service = {
-  k: 'wedding', ink: '#b3245f', Icon: Heart,
-  en: 'Wedding e-invitation', km: 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញ',
-  dEn: 'An online wedding invitation with a personal link for every guest.',
-  dKm: 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញ ជាមួយតំណផ្ទាល់ខ្លួនសម្រាប់ភ្ញៀវម្នាក់ៗ។',
-  tagsEn: ['Online invitation', 'Guest names', 'Personal links'], tagsKm: ['សំបុត្រអនឡាញ', 'ឈ្មោះភ្ញៀវ', 'តំណផ្ទាល់ខ្លួន'],
-  hintEn: 'Tell us the groom and bride names, wedding date and time, venue, and any colours or style you like. Add photos if you have them.',
-  hintKm: 'សូមប្រាប់ឈ្មោះកូនកំលោះ កូនក្រមុំ ថ្ងៃ និងម៉ោងមង្គលការ ទីកន្លែង និងពណ៌ ឬស្ទីលដែលចូលចិត្ត។ បញ្ចូលរូបថតបើមាន។',
-};
 const MAX_MB = 10;
 
 const STATUS: Record<Status, { en: string; km: string }> = {
@@ -182,12 +169,12 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
   useOrderLive(loadOrders);
   const [mine, setMine] = useState<Mine[]>([]);
   // wedding invitations the admin has sent to this customer (table wedding_invites; stays empty if the table is not installed)
-  const [invites, setInvites] = useState<SentInvite[]>([]);
+  const [invites, setInvites] = useState<{ id: string; title: string }[]>([]);
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
       const u = data.user?.id; if (!u) return;
-      const r = await supabase.from('wedding_invites').select('id,title,theme:config->>theme').eq('owner_id', u).eq('status', 'sent').order('created_at', { ascending: false });
+      const r = await supabase.from('wedding_invites').select('id,title').eq('owner_id', u).eq('status', 'sent').order('created_at', { ascending: false });
       if (!r.error) setInvites((r.data as any[]) || []);
     })().catch(() => {});
   }, []);
@@ -240,19 +227,18 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
           <p>{ALL.some(s => shopOn(s.k)) ? tr('Choose a service, set your options, see the price and pay. We start once it is paid.', 'ជ្រើសរើសសេវា កំណត់ជម្រើស មើលតម្លៃ ហើយទូទាត់។ យើងចាប់ផ្តើមនៅពេលបានបង់ប្រាក់។') : tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
 
-        <article className="svcCard" data-rv style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
-          <div className="svcInk"><Heart /></div>
-          <div className="svcBody">
-            <h3>{tr('Wedding e-invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញ')}</h3>
-            <p>{tr('A beautiful online wedding invitation. We design it and send it to you here. Then you add each guest’s name and get a personal link to share.', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញដ៏ស្អាត។ យើងរចនា ហើយផ្ញើមកអ្នកនៅទីនេះ។ បន្ទាប់មកអ្នកបន្ថែមឈ្មោះភ្ញៀវម្នាក់ៗ ហើយទទួលបានតំណផ្ទាល់ខ្លួនសម្រាប់ចែករំលែក។')}</p>
-            <ul className="svcTags">{(isKm() ? WEDDING_SVC.tagsKm : WEDDING_SVC.tagsEn).map(t => <li key={t}>{t}</li>)}</ul>
-            {invites.length > 0 && <p className="wgReady"><Heart /> {invites.length === 1 ? tr('Your invitation is ready', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ') : tr(`${invites.length} invitations are ready`, `សំបុត្រអញ្ជើញ ${invites.length} រួចរាល់ហើយ`)}</p>}
-            {invites.length > 0
-              ? <button type="button" className="svcAsk" onClick={() => nav('/services/wedding')}>{tr('Open my invitation', 'បើកសំបុត្រអញ្ជើញរបស់ខ្ញុំ')}</button>
-              : <button type="button" className="svcAsk" onClick={() => setOpen(WEDDING_SVC)}>{tr('Request this', 'ស្នើសុំសេវានេះ')}</button>}
-          </div>
-        </article>
-        <div style={{ height: 22 }} />
+        {invites.map(w => (
+          <article className="svcCard" data-rv key={w.id} style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
+            <div className="svcInk"><Heart /></div>
+            <div className="svcBody">
+              <h3>{w.title || tr('Your wedding invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍របស់អ្នក')}</h3>
+              <p>{tr('Your invitation is ready. Open it, then add your guests: each guest gets a personal link with their name on the envelope.', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ។ បើកមើល រួចបន្ថែមភ្ញៀវ៖ ភ្ញៀវម្នាក់ៗទទួលបានតំណផ្ទាល់ខ្លួនដែលមានឈ្មោះលើស្រោមសំបុត្រ។')}</p>
+              <button type="button" className="svcAsk" onClick={() => window.open('/wedding/?i=' + w.id, '_blank', 'noopener')}>{tr('View invitation', 'មើលសំបុត្រអញ្ជើញ')}</button>{' '}
+              <button type="button" className="svcAsk" onClick={() => window.open('/wedding/guests.html', '_blank', 'noopener')}>{tr('Manage guests & links', 'គ្រប់គ្រងភ្ញៀវ និងតំណ')}</button>
+            </div>
+          </article>
+        ))}
+        {invites.length > 0 && <div style={{ height: 22 }} />}
 
         <article className="svcCard" data-rv style={{ ['--svc' as any]: '#7c3aed', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
           <div className="svcInk"><FileText /></div>
@@ -303,51 +289,6 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
         <ServiceOrderSheet svc={shop} cat={catalog[shop.k]} api={api} PayModal={PayModal} onClose={() => setShop(null)} onChanged={loadOrders} />
       )}
       {payOrder && PayModal && <PayModal svc={{ orderId: payOrder }} onClose={() => { setPayOrder(null); loadOrders(); }} onPaid={() => { setPayOrder(null); loadOrders(); }} />}
-      <Nav />
-    </>
-  );
-}
-
-/** /services/wedding: the invitation(s) the admin sent to this customer, each with its guest manager (guest name -> cover -> personal link). */
-export function WeddingServicePage({ Top, Nav }: Chrome) {
-  useLang();
-  const [invites, setInvites] = useState<SentInvite[] | null>(null);
-  const [ask, setAsk] = useState(false);
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      const u = data.user?.id;
-      if (!u) { setInvites([]); return; }
-      const r = await supabase.from('wedding_invites').select('id,title,theme:config->>theme').eq('owner_id', u).eq('status', 'sent').order('created_at', { ascending: false });
-      setInvites(r.error ? [] : ((r.data as any[]) || []));
-    })().catch(() => setInvites([]));
-  }, []);
-  return (
-    <>
-      <main className="shop svcPage">
-        <Top title={tr('Wedding e-invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញ')} back />
-        {invites === null ? <p className="wgNote">{tr('Loading…', 'កំពុងផ្ទុក…')}</p> : invites.length === 0 ? (
-          <article className="svcCard wgCard" style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff' }}>
-            <div className="svcInk"><Heart /></div>
-            <div className="svcBody">
-              <h3>{tr('No invitation yet', 'មិនទាន់មានសំបុត្រអញ្ជើញ')}</h3>
-              <p>{tr('When we finish your wedding invitation it appears right here. Then you can add your guests and copy their personal links.', 'នៅពេលយើងធ្វើសំបុត្រអញ្ជើញរបស់អ្នករួច វានឹងបង្ហាញនៅទីនេះ។ បន្ទាប់មកអ្នកអាចបន្ថែមភ្ញៀវ និងចម្លងតំណផ្ទាល់ខ្លួនរបស់ពួកគេ។')}</p>
-              <button type="button" className="svcAsk" onClick={() => setAsk(true)}>{tr('Request this', 'ស្នើសុំសេវានេះ')}</button>
-            </div>
-          </article>
-        ) : invites.map(w => (
-          <article className="svcCard wgCard" key={w.id} style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff' }}>
-            <div className="svcInk"><Heart /></div>
-            <div className="svcBody">
-              <h3>{w.title || tr('Your wedding invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍របស់អ្នក')}</h3>
-              <p>{tr('Your invitation is ready. Type a guest name: it appears on the cover and that guest gets a personal link to send.', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ។ វាយឈ្មោះភ្ញៀវ៖ ឈ្មោះនោះនឹងបង្ហាញលើមុខសំបុត្រ ហើយភ្ញៀវម្នាក់ៗទទួលបានតំណផ្ទាល់ខ្លួនសម្រាប់ផ្ញើ។')}</p>
-              <button type="button" className="svcAsk" onClick={() => window.open(guestLink(w), '_blank', 'noopener')}>{tr('View invitation', 'មើលសំបុត្រអញ្ជើញ')}</button>
-              <WeddingGuests invite={w} />
-            </div>
-          </article>
-        ))}
-      </main>
-      {ask && <RequestSheet service={WEDDING_SVC} onClose={() => setAsk(false)} onSent={() => {}} />}
       <Nav />
     </>
   );
