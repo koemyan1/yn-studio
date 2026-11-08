@@ -28,11 +28,8 @@ export function createStore({ sb, enabled, now = Date.now, log = console, retent
     details: detailsOf(e), count: e.count || 1,
   });
 
-  // An NFC URL (/nfc/<token>) is a bearer secret: it must never be written to the event log, in memory or in the database.
-  const redactPath = p => (typeof p === 'string' ? p.replace(/\/nfc\/[^/?#\s]+/gi, '/nfc/:token') : p);
   function logEvent(e) {
     try {
-      if (e && e.path) e = { ...e, path: redactPath(e.path) };
       const t = now();
       if (t - state.minuteStart > MIN) { state.minuteStart = t; state.perMinute = 0; }
       const k = `${e.ip || '-'}|${e.type}`;

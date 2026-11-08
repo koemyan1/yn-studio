@@ -199,7 +199,6 @@ export default function AdminAssistantHost() {
   }, [log, busy]); // eslint-disable-line
 
   if (!admin || isPreviewFrame() || !loc.pathname.startsWith('/admin')) return null;
-  if (loc.pathname.startsWith('/admin/emergency')) return null; // YN EMERGENCY runs without the assistant (it must not be able to see or touch it)
   if (!settings.showAvatar && !forceShow) return null;
 
   const state: BotState = busy ? 'working' : listening ? 'listening' : talking ? 'talking' : 'idle';

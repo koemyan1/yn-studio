@@ -1,10 +1,12 @@
 /* "More sales per visit" helpers:
    - ShareButton / shareProduct : native share sheet (Telegram, Messenger, ...) with a copy-link fallback
    - RelatedProducts            : "You may also like" rail on the product page
+   - RecentlyViewed / recordViewed : "Recently viewed" rail (kept on this device)
    - buyAgain                   : put every item of a past order back in the cart in one tap
    The rails get ProductCard from main.tsx as a prop (this file never imports main.tsx). */
 import React, { useEffect, useState } from 'react';
 import { Share2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from './supabase';
 import { tr, useLang } from './lang';
@@ -59,8 +61,23 @@ export function ShareButton({ product, onResult }: { product: { id: string; name
   );
 }
 
-/* The old "Recently viewed" rail was removed; clear any history it left on this device. */
-try { localStorage.removeItem('yn-recent-v1'); } catch { /* ignore */ }
+/* ---------- recently viewed (this device only) ---------- */
+const RV_KEY = 'yn-recent-v1';
+const RV_EVT = 'yn-recent-updated';
+export function getRecentIds(): string[] {
+  try {
+    const a = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+    return Array.isArray(a) ? a.filter((x: any) => typeof x === 'string').slice(0, 12) : [];
+  } catch { return []; }
+}
+export function recordViewed(id: string) {
+  if (!id) return;
+  try {
+    localStorage.setItem(RV_KEY, JSON.stringify([id, ...getRecentIds().filter(x => x !== id)].slice(0, 12)));
+    window.dispatchEvent(new Event(RV_EVT));
+  } catch { /* storage full or blocked: not important */ }
+}
+export function clearRecent() { try { localStorage.removeItem(RV_KEY); } catch { /* ignore */ } }
 
 function Rail({ title, rows, Card, className = '' }: { title: string; rows: any[]; Card: CardComp; className?: string }) {
   if (!rows.length) return null;
@@ -68,6 +85,58 @@ function Rail({ title, rows, Card, className = '' }: { title: string; rows: any[
     <section className={'growRail ' + className} aria-label={title}>
       <div className="growHead"><h2>{title}</h2></div>
       <div className="growTrack shop">{rows.map(x => <div className="growItem" key={x.id}><Card p={x} /></div>)}</div>
+    </section>
+  );
+}
+
+export function RecentlyViewed({ prep, excludeId }: { Card?: CardComp; prep?: Prep; excludeId?: string }) {
+  useLang();
+  const [ids, setIds] = useState<string[]>(getRecentIds);
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    const f = () => setIds(getRecentIds());
+    window.addEventListener(RV_EVT, f);
+    return () => window.removeEventListener(RV_EVT, f);
+  }, []);
+  const want = ids.filter(x => x !== excludeId).slice(0, 10);
+  const key = want.join(',');
+  useEffect(() => {
+    let live = true;
+    if (!want.length) { setRows([]); return; }
+    (async () => {
+      const { data } = await supabase.from('products').select('*').in('id', want).eq('status', 'published');
+      let list: any[] = (data || []).filter((x: any) => !x.store_page);
+      if (prep && list.length) list = await prep(list).catch(() => list);
+      const by = new Map(list.map((x: any) => [x.id, x]));
+      if (live) setRows(want.map(i => by.get(i)).filter(Boolean));
+    })().catch(() => { /* offline: keep what we have */ });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  if (!rows.length) return null;
+  const title = tr('Recently viewed', 'បានមើលថ្មីៗ');
+  return (
+    <section className="rvTrail" aria-label={title}>
+      <div className="rvHead">
+        <h2>{title}</h2>
+        <button type="button" className="rvClear" onClick={() => { clearRecent(); setIds([]); setRows([]); }}>{tr('Clear', 'សម្អាត')}</button>
+      </div>
+      <ol className="rvList">
+        {rows.map((x, i) => {
+          const price = Number((x.display_price ?? x.price) || 0);
+          return (
+            <li key={x.id} className="rvItem" style={{ ['--age' as any]: Math.min(i, 7) }}>
+              <Link to={'/product/' + x.id} className="rvLink">
+                <span className="rvThumb">
+                  {x.main_image_url ? <img src={x.main_image_url} alt="" loading="lazy" decoding="async" /> : <img className="rvLogo" src="/yn-logo.png" alt="" />}
+                </span>
+                <span className="rvName">{x.name}</span>
+                <span className="rvPrice">${price.toFixed(2)}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
