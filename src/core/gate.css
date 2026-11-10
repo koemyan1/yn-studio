@@ -123,3 +123,84 @@
   .yg-coin{transform:none}
 }
 @media (max-height:640px){.yg-main{gap:4px}.yg-stage{width:min(74vw,300px)}}
+
+/* =====================================================================================================================
+   v2 restyle: neon HUD, perspective grid floor, scanline sweep, glass sheet. Added on top of the rules above.
+   ===================================================================================================================== */
+.yg{--glass:rgba(14,20,44,.55);--line:rgba(255,255,255,.12);
+  background:radial-gradient(110% 80% at 50% -10%,#1b2a66 0%,#0a1030 38%,var(--ink) 75%)}
+
+/* perspective grid floor that drifts toward you */
+.yg-grid{position:absolute;left:-50%;right:-50%;bottom:-2%;height:52%;pointer-events:none;opacity:.5;transform-origin:50% 100%;transform:perspective(520px) rotateX(64deg);
+  background-image:linear-gradient(color-mix(in srgb,var(--cy) 55%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--vi) 55%,transparent) 1px,transparent 1px);
+  background-size:56px 56px;animation:ygGridMove 3.2s linear infinite;
+  -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 82%);mask-image:linear-gradient(to top,#000 10%,transparent 82%)}
+/* a thin light line that sweeps down the screen, like a scanner */
+.yg-scan{position:absolute;left:0;right:0;top:0;height:140px;pointer-events:none;opacity:.55;
+  background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--cy) 16%,transparent) 70%,color-mix(in srgb,var(--cy) 55%,transparent) 99%,transparent 100%);
+  animation:ygSweep 6.5s cubic-bezier(.5,0,.5,1) infinite}
+/* HUD corner brackets */
+.yg-hud{position:absolute;width:26px;height:26px;pointer-events:none;z-index:2;border:0 solid color-mix(in srgb,var(--gold) 75%,transparent);opacity:.85;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--gold) 60%,transparent))}
+.yg-hud.tl{left:14px;top:calc(env(safe-area-inset-top) + 58px);border-left-width:2px;border-top-width:2px;border-top-left-radius:8px}
+.yg-hud.tr{right:14px;top:calc(env(safe-area-inset-top) + 58px);border-right-width:2px;border-top-width:2px;border-top-right-radius:8px}
+.yg-hud.bl{left:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);border-left-width:2px;border-bottom-width:2px;border-bottom-left-radius:8px}
+.yg-hud.br{right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);border-right-width:2px;border-bottom-width:2px;border-bottom-right-radius:8px}
+
+/* header: glass brand + progress pips */
+.yg-brand{background:linear-gradient(90deg,#fff1b8,var(--gold),var(--cy));-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;letter-spacing:.42em}
+.yg-count{display:inline-flex;align-items:center;gap:9px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-color:var(--line)}
+.yg-pips{display:inline-flex;gap:4px}
+.yg-pips i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.16);transition:background .4s,box-shadow .4s,transform .4s}
+.yg-pips i.on{background:var(--gold);box-shadow:0 0 8px var(--gold);transform:scale(1.2)}
+
+/* stage: bigger halo, an orbit ring and a soft floor glow */
+.yg-stage::before{content:'';position:absolute;inset:3%;border-radius:50%;border:1px dashed color-mix(in srgb,var(--cy) 35%,transparent);animation:ygSpin 40s linear infinite;pointer-events:none}
+.yg-stage::after{content:'';position:absolute;left:12%;right:12%;bottom:-4%;height:12%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--cy) 38%,transparent),transparent);filter:blur(6px);pointer-events:none}
+.yg-halo{inset:6%;background:radial-gradient(circle,color-mix(in srgb,var(--cy) 24%,transparent),color-mix(in srgb,var(--vi) 10%,transparent) 45%,transparent 70%)}
+.yg-face{box-shadow:inset 0 0 0 3px rgba(255,255,255,.1),inset 0 0 0 9px rgba(0,0,0,.3),0 0 14px color-mix(in srgb,var(--cy) 22%,transparent)}
+.yg-slot.on .yg-face{box-shadow:inset 0 0 0 3px rgba(255,255,255,.5),inset 0 0 0 9px rgba(120,70,0,.22),0 0 36px color-mix(in srgb,var(--gold) 85%,transparent),0 0 70px color-mix(in srgb,var(--gold2) 45%,transparent)}
+
+/* title: big gradient wordmark */
+.yg-title{font-size:clamp(24px,7vw,34px);font-weight:900;letter-spacing:.2em;margin-top:6px;
+  background:linear-gradient(180deg,#fff,#b9c6ff 55%,#7e8cff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 14px color-mix(in srgb,var(--vi) 55%,transparent))}
+.ph-ready .yg-title,.ph-verifying .yg-title{background:linear-gradient(180deg,#fff7d6,var(--gold) 60%,var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 16px color-mix(in srgb,var(--gold) 60%,transparent))}
+.ph-granted .yg-title,.ph-open .yg-title{background:linear-gradient(180deg,#eafff5,#8affc7 60%,#18c98a);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 18px rgba(138,255,199,.6))}
+.ph-denied .yg-title{background:linear-gradient(180deg,#ffd9dd,var(--red) 65%,#c01f33);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 18px rgba(255,93,108,.55))}
+.yg-sub{color:#c4ccec}
+.yg-clock{display:inline-block;padding:3px 12px;border-radius:999px;background:var(--glass);border:1px solid var(--line)}
+
+/* buttons: shimmer sweep */
+.yg-btn{position:relative;overflow:hidden;border-radius:18px;padding:16px 30px;font-size:15px}
+.yg-btn::after{content:'';position:absolute;top:0;bottom:0;width:46%;left:-60%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:ygShine 3.4s ease-in-out infinite}
+.yg-btn.ghost{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.yg-btn.ghost::after,.yg-btn:disabled::after{display:none}
+.yg-nfcbtn{background:linear-gradient(135deg,#b9fff1,var(--cy) 45%,#2bb3a0);color:#022a25;box-shadow:0 8px 30px color-mix(in srgb,var(--cy) 45%,transparent);animation:ygBtnCy 2.4s ease-in-out infinite}
+.yg-nfcicon{width:20px;height:20px;border-radius:50%;border:2px solid currentColor;position:relative;flex:none}
+.yg-nfcicon::before,.yg-nfcicon::after{content:'';position:absolute;border-radius:50%;border:2px solid currentColor;clip-path:polygon(50% 0,100% 0,100% 100%,50% 100%)}
+.yg-nfcicon::before{inset:-6px;opacity:.6}.yg-nfcicon::after{inset:-11px;opacity:.3}
+.yg-nfcicon.big{width:34px;height:34px;color:var(--cy)}
+
+/* NFC reader sheet */
+.yg-sheet{position:absolute;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:16px;background:rgba(3,5,12,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:ygFade .25s ease-out}
+.yg-card{width:min(100%,440px);margin-bottom:max(8px,env(safe-area-inset-bottom));padding:26px 22px 20px;border-radius:26px;text-align:center;color:#eef2ff;
+  background:linear-gradient(180deg,rgba(26,36,78,.92),rgba(10,14,34,.96));border:1px solid var(--line);box-shadow:0 -10px 60px color-mix(in srgb,var(--cy) 22%,transparent),0 20px 60px rgba(0,0,0,.5);animation:ygUp .38s cubic-bezier(.2,.9,.3,1.1)}
+.yg-card h2{margin:12px 0 6px;font-size:20px;letter-spacing:.08em}
+.yg-card p{margin:0 auto;max-width:34ch;font-size:14px;line-height:1.5;color:#b6bfdc}
+.yg-card.m-error h2{color:var(--red)}
+.yg-sheet-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.yg-radar{position:relative;width:132px;height:132px;margin:0 auto;display:grid;place-items:center}
+.yg-radar i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--cy);opacity:0;animation:ygRadar 2.4s ease-out infinite}
+.yg-radar i:nth-child(2){animation-delay:.8s}.yg-radar i:nth-child(3){animation-delay:1.6s}
+.yg-radar::before{content:'';position:absolute;inset:30%;border-radius:50%;background:color-mix(in srgb,var(--cy) 18%,transparent);box-shadow:0 0 30px color-mix(in srgb,var(--cy) 50%,transparent)}
+.yg-radar .yg-nfcicon{position:relative}
+.m-error .yg-radar i,.m-unsupported .yg-radar i{animation:none;opacity:.25}
+
+@keyframes ygGridMove{from{background-position:0 0}to{background-position:0 56px}}
+@keyframes ygSweep{0%{transform:translateY(-160px)}100%{transform:translateY(110vh)}}
+@keyframes ygShine{0%,55%{left:-60%}100%{left:130%}}
+@keyframes ygBtnCy{0%,100%{box-shadow:0 8px 30px color-mix(in srgb,var(--cy) 36%,transparent)}50%{box-shadow:0 8px 46px color-mix(in srgb,var(--cy) 72%,transparent)}}
+@keyframes ygRadar{0%{transform:scale(.3);opacity:.9}100%{transform:scale(1.15);opacity:0}}
+@keyframes ygFade{from{opacity:0}to{opacity:1}}
+@keyframes ygUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.yg-grid,.yg-scan{animation:none}.yg-scan{display:none}}
+@media (max-height:640px){.yg-hud{display:none}}

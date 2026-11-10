@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPasskey, passkeysSupported } from './webauthn';
+import { nfcErrorText, nfcSupported, nfcTimer, readTag } from './nfcWrite';
+import { maskCoinText, parseCoinUrl } from '../../shared/coinUrl.js';
 import './gate.css';
 
 // /yn-core: where every coin tap lands. Five coins turn slowly in a ring; each real tap lights one. When all five are lit the
@@ -10,6 +12,7 @@ type GateState = {
   taps: boolean[]; expiresAt: string | null; windowSeconds: number; unlockedUntil: string | null;
   enforce: boolean; coinMode: string; passkeyReady: boolean;
 };
+type NfcSheet = { mode: 'scanning' | 'unsupported' | 'error'; msg: string } | null;
 type Phase = 'loading' | 'off' | 'scan' | 'ready' | 'verifying' | 'granted' | 'denied' | 'open';
 
 const API_BASE: string = (((import.meta as any).env?.VITE_API_BASE_URL as string | undefined) || '').replace(/\/$/, '');
@@ -34,6 +37,8 @@ export default function CoreGate() {
   const [left, setLeft] = useState(0);
   const prev = useRef<boolean[]>([false, false, false, false, false]);
   const busy = useRef(false);
+  const [nfc, setNfc] = useState<NfcSheet>(null);
+  const nfcRef = useRef<ReturnType<typeof nfcTimer> | null>(null);
   const count = st ? st.taps.filter(Boolean).length : 0;
 
   const refresh = useCallback(async () => {
@@ -90,6 +95,32 @@ export default function CoreGate() {
     } finally { busy.current = false; refresh(); }
   };
 
+
+  // NFC reader button. Web NFC exists only in Chrome on Android; there the phone shows its own NFC sheet and we read the coin's address.
+  // A coin of THIS site is opened like a normal tap, so the server (not this page) records it. Anything else is refused and never shown in full.
+  const closeNfc = () => { const t = nfcRef.current; nfcRef.current = null; if (t) { t.abort(); t.done(); } setNfc(null); };
+  const startNfc = async () => {
+    if (!nfcSupported()) { setNfc({ mode: 'unsupported', msg: '' }); return; }
+    nfcRef.current?.abort();
+    const t = nfcTimer(30000); nfcRef.current = t;
+    setNfc({ mode: 'scanning', msg: '' });
+    try {
+      const found = await readTag(t.signal, () => setNfc({ mode: 'scanning', msg: 'Could not read that tag. Hold it still and try again.' }));
+      t.done();
+      const r = parseCoinUrl(found, window.location.origin);
+      if (!r.ok) { setNfc({ mode: 'error', msg: found ? 'That tag is not a YN coin (' + maskCoinText(found) + ').' : 'That tag is empty.' }); return; }
+      if (!r.sameOrigin) { setNfc({ mode: 'error', msg: 'This coin belongs to another website (' + r.host + ').' }); return; }
+      nfcRef.current = null;
+      window.location.assign(r.url);
+    } catch (e: any) {
+      t.done();
+      if (nfcRef.current !== t) return;   // closed by the person
+      nfcRef.current = null;
+      setNfc({ mode: 'error', msg: t.timedOut() ? 'No coin found. Hold a coin to the back of your phone and try again.' : nfcErrorText(e) });
+    }
+  };
+  useEffect(() => () => { nfcRef.current?.abort(); nfcRef.current?.done(); }, []);
+
   const lockNow = async () => { try { await gateFetch('/api/core-gate/lock', {}); } catch { /* ignore */ } prev.current = [false, false, false, false, false]; setPhase('scan'); refresh(); };
   const again = () => { setMsg(''); setPhase('scan'); refresh(); };
 
@@ -117,10 +148,15 @@ export default function CoreGate() {
       <div className="yg-aurora" aria-hidden="true" />
       <div className="yg-stars" aria-hidden="true" />
       <div className="yg-flash" aria-hidden="true" />
+      <div className="yg-grid" aria-hidden="true" />
+      <div className="yg-scan" aria-hidden="true" />
+      <i className="yg-hud tl" aria-hidden="true" /><i className="yg-hud tr" aria-hidden="true" /><i className="yg-hud bl" aria-hidden="true" /><i className="yg-hud br" aria-hidden="true" />
 
       <header className="yg-top">
         <span className="yg-brand">YN&nbsp;CORE</span>
-        <span className="yg-count" aria-live="polite">{count}/5</span>
+        <span className="yg-count" aria-live="polite">
+          <span className="yg-pips" aria-hidden="true">{COINS.map(n => <i key={n} className={st?.taps[n - 1] ? 'on' : ''} />)}</span>{count}/5
+        </span>
       </header>
 
       <main className="yg-main">
@@ -158,6 +194,9 @@ export default function CoreGate() {
               <span className="yg-faceid" aria-hidden="true" />{phase === 'verifying' ? 'Waiting for Face ID…' : 'Verify with Face ID'}
             </button>
           )}
+          {phase === 'scan' && (
+            <button className="yg-btn yg-nfcbtn" onClick={startNfc}><span className="yg-nfcicon" aria-hidden="true" />Scan a coin</button>
+          )}
           {phase === 'denied' && <button className="yg-btn ghost" onClick={again}>Start again</button>}
           {phase === 'open' && (<>
             <button className="yg-btn" onClick={() => nav('/admin')}>Open admin</button>
@@ -170,6 +209,22 @@ export default function CoreGate() {
         )}
         {st && !st.passkeyReady && <p className="yg-note">Passkeys need PUBLIC_URL set to your https address on the server.</p>}
       </main>
+
+      {nfc && (
+        <div className="yg-sheet" role="dialog" aria-modal="true" aria-label="NFC reader" onClick={closeNfc}>
+          <div className={'yg-card m-' + nfc.mode} onClick={e => e.stopPropagation()}>
+            <div className="yg-radar" aria-hidden="true"><i /><i /><i /><span className="yg-nfcicon big" /></div>
+            <h2>{nfc.mode === 'scanning' ? 'Ready to scan' : nfc.mode === 'unsupported' ? 'Just tap the coin' : 'Could not scan'}</h2>
+            <p>{nfc.mode === 'scanning' ? (nfc.msg || 'Hold a YN coin to the back of your phone and keep it still.')
+              : nfc.mode === 'unsupported' ? 'This browser cannot open an NFC reader. On iPhone, hold the top edge of the phone to the coin. On Android, open this page in Chrome.'
+              : nfc.msg}</p>
+            <div className="yg-sheet-actions">
+              {nfc.mode === 'error' && <button className="yg-btn" onClick={startNfc}>Try again</button>}
+              <button className="yg-btn ghost" onClick={closeNfc}>{nfc.mode === 'scanning' ? 'Cancel' : 'Close'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
