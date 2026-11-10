@@ -116,6 +116,11 @@ const secAlerts = createAlerts({ notify: (title, message, link) => notifyAdmin(t
 shield = createShield({ store: secStore, alerts: secAlerts, intel: secIntel });
 const integrity = createIntegrity({ sb, store: secStore, alerts: secAlerts });
 const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
+// YN CORE is created here (not further down) so its five-coin gate can sit in front of EVERYTHING under /admin and /api/admin, including
+// the routes registered just below. The gate does nothing until YN_CORE_GATE=on (docs/setup/YN-CORE-GATE.md); core.mount() further down
+// registers its routes.
+const core = createCore({ sb, shield, store: secStore, requireAdmin: adminApi.requireAdmin, notify: (t, m, l) => notifyAdmin(t, m, l), env });
+app.use(core.guard);
 // Default-deny: EVERYTHING under /api/admin needs a signed-in user whose profiles.role is 'admin' (checked in the database,
 // cached 60 s). A route added here later is protected automatically; it cannot be forgotten.
 app.use('/api/admin', async (req, res, next) => { if (req.method === 'OPTIONS') return next(); const admin = await adminApi.requireAdmin(req, res); if (admin) { req.admin = admin; next(); } });
@@ -131,7 +136,6 @@ app.post('/api/security/csp-report', shield.limiter('csp-report', 30), express.j
 // YN CORE (NFC coins, YN EMERGENCY, passkeys). OFF unless YN_CORE=on; see docs/setup/YN-CORE-SETUP.md. Mounted here so it sits behind the
 // shield and the /api/admin default-deny above, and BEFORE static files and the SPA catch-all (the /nfc/<token> route and the
 // /admin/emergency page lock must win over the catch-all).
-const core = createCore({ sb, shield, store: secStore, requireAdmin: adminApi.requireAdmin, notify: (t, m, l) => notifyAdmin(t, m, l), env });
 core.mount(app, { json: express.json({ limit: '30kb' }), express });
 core.start();
 const ORDER_CHECK_MSG = 'We could not verify this order\'s price. Please go back to your cart and place the order again.';

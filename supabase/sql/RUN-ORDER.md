@@ -126,3 +126,4 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | # | File | Why here |
 |---|---|---|
 | 52 | `supabase-yn-core.sql` | NEW: tables `yn_core_*` + server-only functions for the five NFC coins, passkeys, emergency sessions, recovery and the audit log. Creates only new objects; idempotent. Needs nothing from the baseline. Read `docs/setup/YN-CORE-SETUP.md` before enabling `YN_CORE=on`. |
+| 53 | `supabase-yn-core-owner.sql` | NEW: owner list `yn_core_owners` + the profile guard now blocks admins from changing `profiles.role` from the browser. Needs supabase-security-hardening.sql and supabase-yn-core.sql first. After it, add yourself as owner (see the header of the file). |

@@ -5,6 +5,7 @@ import { ApiError, coreApi, stepUp, when } from './api';
 import { createPasskey, isNativeApp, passkeysSupported } from './webauthn';
 import { resetCoreInit } from './useCoreInit';
 import TokenReveal from './TokenReveal';
+import WriteCoin from './WriteCoin';
 import '../admin-security.css';
 import './core.css';
 
@@ -14,10 +15,11 @@ const STATUS: Record<string, string> = { uninitialized: 'Not set up', active: 'A
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ago = (iso?: string | null) => { if (!iso) return 'never'; const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); return s < 90 ? 'just now' : s < 5400 ? Math.round(s / 60) + ' min ago' : s < 129600 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago'; };
 
-/** YN CORE admin: /admin/core (overview), /admin/core/coins/:slot, /admin/core/security. Rendered inside the normal admin shell. */
+/** YN CORE admin: /admin/core (overview), /admin/core/coins/:slot, /admin/core/write, /admin/core/security. Rendered inside the normal admin shell. */
 export default function CoreAdmin({ Shell }: { Shell: Shell }) {
   const loc = useLocation();
   const p = loc.pathname.replace(/\/$/, '');
+  if (p.endsWith('/write')) return <Shell title="YN CORE · Write coin"><div className="secPage corePage"><WriteCoin /></div></Shell>;
   if (p.endsWith('/security')) return <Shell title="YN CORE · Security"><div className="secPage corePage"><SecurityView /></div></Shell>;
   if (/\/coins\/\d/.test(p)) return <Shell title="YN CORE · Coin"><div className="secPage corePage"><CoinView /></div></Shell>;
   return <Shell title="YN CORE"><div className="secPage corePage"><Overview /></div></Shell>;
@@ -78,7 +80,7 @@ function Overview() {
           ? <p>Initialization is open. <Link to="/admin/emergency">Open YN EMERGENCY</Link> to activate the remaining coins (each one needs its own passkey check).</p>
           : <p className="secMuted">Initialization is locked. Only <Link to="/admin/emergency/recover">recovery</Link> (passkey + recovery code + waiting period) can reopen it.</p>}
       </div>
-      <p className="secMuted"><Link to="/admin/core/security">Security, passkeys and audit log →</Link></p>
+      <p className="secMuted"><Link to="/admin/core/write">Write a coin to an NFC sticker →</Link> · <Link to="/admin/core/security">Security, passkeys and audit log →</Link></p>
     </>}
   </>;
 }
@@ -214,7 +216,7 @@ function CoinView() {
           <button className="secondary" disabled={busy} onClick={regenerate}><KeyRound size={14} /> Regenerate URL (passkey)</button>
           <button className="secondary dangerBtn" disabled={busy} onClick={revoke}><Lock size={14} /> Revoke coin (passkey)</button>
         </div>
-        <p className="secMuted">Both actions ask for Face ID / passkey first. Regenerating means you must write the new address to the sticker.</p>
+        <p className="secMuted">Both actions ask for Face ID / passkey first. Regenerating means you must write the new address to the sticker: <Link to="/admin/core/write">open the Write coin page</Link>.</p>
       </div>
     </>}
   </>;

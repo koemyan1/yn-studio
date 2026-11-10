@@ -14,7 +14,10 @@ import { b64u, createKeyring, isToken, newRecoveryCode, newToken, normalizeRecov
 import { verifyAssertion, verifyRegistration, WebAuthnError } from './webauthn.js';
 import { pickDestination } from './rotation.js';
 import { parseHostList, validateDestinationUrl } from './urls.js';
+import { ALL_COINS, createGate } from './gate.js';
 
+const NIL_UUID = '00000000-0000-0000-0000-000000000000';   // challenge owner for the pre-login coin ritual (nobody is signed in yet)
+const OWNER_TABLE_MISSING = /PGRST205|42P01|Could not find the table|does not exist/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLOT_RE = /^[1-5]$/;
 const SESSION_PURPOSES = ['init', 'coin_security', 'security'];
@@ -45,6 +48,9 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
   const canonicalHost = publicUrl ? new URL(publicUrl).host.toLowerCase() : '';
   const ready = { keyring: keyring.ready, webauthn: !!(rpId && origins.length), publicUrl: !!publicUrl };
   const allowedHosts = parseHostList(env.YN_CORE_ALLOWED_HOSTS);
+  // 'gate' (default): a tap is one step of the five-coin ritual and always leads to /yn-core. 'redirect': the old behaviour (coin -> destination).
+  const coinMode = /^(redirect|links?)$/i.test(String(env.YN_CORE_COIN_MODE || '').trim()) ? 'redirect' : 'gate';
+  const gate = createGate({ keyring, env, now, publicUrl });
   const recoveryDelayMin = Math.min(Math.max(Number(env.YN_CORE_RECOVERY_DELAY_MIN ?? 30) || 30, 1), 1440);
   const recoveryWindowMin = Math.min(Math.max(Number(env.YN_CORE_RECOVERY_WINDOW_MIN ?? 15) || 15, 1), 60);
   const SESSION_MS = 5 * MIN, CHALLENGE_MS = 90000;
@@ -195,6 +201,19 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
         sb(`yn_core_destinations?slot=eq.${tok.slot}&active=eq.true&select=*`),
       ]);
       if (!coin || coin.status !== 'active') { logTap(tok.slot, tok.id, coin?.status === 'paused' ? 'paused' : 'revoked'); return neutral404(res); }
+      if (coinMode === 'gate') {
+        // Link previews, crawlers and HEAD probes must not advance the ritual (and learn nothing).
+        if (head || bot) { logTap(tok.slot, tok.id, 'bot'); return neutral404(res); }
+        const t = gate.addTap(req, res, tok.slot);
+        logTap(tok.slot, tok.id, 'redirected');
+        sb(`yn_core_coin_tokens?id=eq.${tok.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ last_used_at: iso(now()), ...(tok.key_id !== keyring.currentId ? { token_hmac: keyring.current('token', token), key_id: keyring.currentId } : {}) }) }).catch(() => {});
+        if (!coin.written_verified_at) sb(`yn_core_coins?slot=eq.${coin.slot}&written_verified_at=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ written_verified_at: iso(now()) }) }).catch(() => {});
+        const n = [1, 2, 3, 4, 5].filter(i => t.mask & (1 << (i - 1))).length;
+        const where = (hdr(req, 'cf-ipcountry').slice(0, 2).toUpperCase() || 'unknown country');
+        alertAdmin(`YN CORE: coin 0${coin.slot} tapped (${n}/5)`, `Coin 0${coin.slot} was tapped from ${where}. If this was not you, open YN CORE > Security and revoke the coin.`);
+        res.setHeader('Cache-Control', 'no-store, private'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+        return res.redirect(302, '/yn-core');
+      }
       const dest = pickDestination(coin, dests || [], new Date(now()));
       if (!dest) { logTap(tok.slot, tok.id, 'no_destination'); return neutral404(res); }
       logTap(tok.slot, tok.id, coin.policy === 'interstitial' ? 'interstitial' : 'redirected', dest.id);
@@ -240,7 +259,7 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
         generation: cur?.generation ?? null, graceUntil: grace?.grace_until ?? null, lastUsedAt: cur?.last_used_at ?? null, taps7d: t.length, lastTapAt: t[0]?.ts ?? null };
     });
     send(res, 200, {
-      ready, initLocked: isLocked(state), finalLock: !!state?.init_locked, recoveryWindowUntil: state?.recovery_window_until || null,
+      ready, gate: { enforce: gate.enforce, coinMode }, initLocked: isLocked(state), finalLock: !!state?.init_locked, recoveryWindowUntil: state?.recovery_window_until || null,
       coins: out, passkeys: creds.length, recoveryCodesLeft: (codes || []).length, pendingRecovery: pending?.[0] || null,
     });
   }
@@ -590,6 +609,128 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
     send(res, 200, { ok: true, until: r.until });
   }
 
+  /* ------------------------------------------------------------------ the five-coin ritual: Face ID unlock (public: nobody is signed in yet) */
+  async function gateState(req, res) {
+    if (!enabled || !keyring.ready) throw new HttpError(404, 'Not found');
+    const taps = gate.readTaps(req), un = gate.readUnlock(req);
+    send(res, 200, { taps: gate.tapsArray(taps ? taps.mask : 0), expiresAt: taps ? iso(taps.exp) : null, windowSeconds: Math.round(gate.tapWindowMs / 1000),
+      unlockedUntil: un ? iso(un.until) : null, enforce: gate.enforce, coinMode, passkeyReady: ready.webauthn });
+  }
+  const needAllCoins = req => {
+    const t = gate.readTaps(req);
+    if (!t || t.mask !== ALL_COINS) throw new HttpError(403, 'Scan all five coins first.', { code: 'need_coins' });
+    return t;
+  };
+  async function gateOptions(req, res) {
+    needReady({ webauthn: true }); needCanonicalHost(req);
+    needAllCoins(req);
+    const any = await sb('yn_core_admin_credentials?revoked_at=is.null&select=id&limit=1');
+    if (!any?.length) throw new HttpError(409, 'No passkey is registered yet. Add one in YN CORE > Security first.', { code: 'no_passkey' });
+    const { id, challenge } = await newChallenge(NIL_UUID, 'gate', null);
+    // allowCredentials stays empty on purpose: the phone offers the passkey it holds for this site (Face ID / Touch ID), no user name needed.
+    send(res, 200, { challengeId: id, publicKey: { challenge, rpId, timeout: 60000, userVerification: 'required', allowCredentials: [] } });
+  }
+  async function gateVerify(req, res) {
+    needReady({ webauthn: true }); needCanonicalHost(req);
+    needAllCoins(req);
+    const b = body(req);
+    const { challenge } = await takeChallenge(b.challengeId, NIL_UUID, 'gate', b.credential);
+    const rawId = typeof b.credential?.rawId === 'string' ? b.credential.rawId : '';
+    const cred = rawId ? (await sb(`yn_core_admin_credentials?credential_id=eq.${enc(rawId)}&revoked_at=is.null&select=*&limit=1`))?.[0] : null;
+    const deny = why => {
+      gate.clearTaps(res);   // one wrong attempt costs you the five taps: scan the coins again
+      shield?.strike?.(req.sec?.ip || 'unknown', 'core_auth_fail', 3, { method: req.method, path: '/api/core-gate/auth/verify', ua: hdr(req, 'user-agent'), details: { why } });
+      audit(null, 'gate.unlock', null, 'denied', { why }, req);
+      alertAdmin('YN CORE: unlock FAILED', 'Five coins were scanned but the Face ID / passkey check failed. If this was not you, revoke the coins from YN CORE > Security.');
+      throw new HttpError(401, 'Face ID check failed. Scan the coins again.', { code: 'gate_denied' });
+    };
+    if (!cred) return deny('unknown credential');
+    let out;
+    try { out = verifyAssertion({ credential: b.credential, expectedChallenge: challenge, rpId, origins, stored: { publicKey: cred.public_key, signCount: cred.sign_count } }); }
+    catch (e) { if (e instanceof WebAuthnError) return deny(e.message); throw e; }
+    await sb(`yn_core_admin_credentials?id=eq.${cred.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ sign_count: out.signCount, last_used_at: iso(now()), backed_up: out.backedUp }) });
+    gate.clearTaps(res);
+    const until = gate.setUnlock(res);
+    audit(cred.user_id, 'gate.unlock', null, 'ok', { nickname: cred.nickname || null }, req);
+    alertAdmin('YN CORE: admin unlocked', `Five coins and a passkey ("${cred.nickname || 'passkey'}") opened the admin area until ${iso(until)}.`);
+    send(res, 200, { ok: true, until: iso(until), enforce: gate.enforce });
+  }
+  async function gateLock(req, res) {
+    if (!enabled) throw new HttpError(404, 'Not found');
+    gate.clearTaps(res); gate.clearUnlock(res);
+    send(res, 200, { ok: true });
+  }
+
+  /* ------------------------------------------------------------------ owners ("big boss") and the Admins page */
+  // The owner list is the table yn_core_owners (filled by hand in the Supabase SQL editor, never from the website).
+  // Owners alone may open YN CORE / YN EMERGENCY and appoint or remove admins. Everyone else with role 'admin' keeps the normal admin.
+  // Upgrade-friendly: while the table is missing or EMPTY nobody is an owner yet, and YN CORE keeps working for admins exactly as before;
+  // appointing admins stays off until an owner exists. Any other database error fails closed.
+  async function ownerState(uid) {
+    try {
+      const rows = (await sb('yn_core_owners?select=user_id&limit=50')) || [];
+      if (!rows.length) return { owner: false, bootstrap: true, ids: [] };
+      const ids = rows.map(r => String(r.user_id).toLowerCase());
+      return { owner: ids.includes(String(uid).toLowerCase()), bootstrap: false, ids };
+    } catch (e) {
+      if (OWNER_TABLE_MISSING.test(String(e?.message || ''))) return { owner: false, bootstrap: true, missing: true, ids: [] };
+      throw e;
+    }
+  }
+  /** Express middleware: only owners (or everyone with admin while no owner is set yet) pass. Others see a plain 404. */
+  async function ownerGate(req, res, next) {
+    if (req.method === 'OPTIONS') return next();
+    try {
+      const uid = req.admin?.id;
+      if (!UUID_RE.test(String(uid || ''))) return send(res, 401, { error: 'Sign in required.' });
+      const st = await ownerState(uid);
+      if (st.owner || st.bootstrap) { req.ownerState = st; return next(); }
+      return send(res, 404, { error: 'Not found' });
+    } catch (e) { log.error?.('[yn-core] owner check', String(e?.message || e).slice(0, 160)); return send(res, 503, { error: 'Could not check permissions. Try again.' }); }
+  }
+  const needOwner = req => {
+    if (!req.ownerState?.owner) throw new HttpError(409, 'No owner is set yet. Add yourself as owner in the Supabase SQL editor first (docs/setup/YN-CORE-OWNER.md).', { code: 'no_owner' });
+  };
+
+  async function meOwner(req, res) {
+    if (!enabled) throw new HttpError(404, 'Not found');
+    const st = await ownerState(uidOf(req));
+    send(res, 200, { owner: st.owner, bootstrap: st.bootstrap });
+  }
+  async function ownerOverview(req, res) {
+    needReady();
+    const st = req.ownerState;
+    const admins = (await sb('profiles?role=eq.admin&select=user_id,name,email&order=email&limit=500')) || [];
+    send(res, 200, { owner: st.owner, bootstrap: st.bootstrap, tableMissing: !!st.missing, me: uidOf(req),
+      admins: admins.map(a => ({ userId: a.user_id, name: a.name || '', email: a.email || '', isOwner: st.ids.includes(String(a.user_id).toLowerCase()) })) });
+  }
+  async function ownerSearch(req, res) {
+    needReady(); needOwner(req);
+    const q = String(req.query?.q || '').trim().slice(0, 60).replace(/[^\p{L}\p{N}@._+\- ]/gu, '');
+    if (q.length < 2) return send(res, 200, { results: [] });
+    const rows = (await sb(`profiles?or=(email.ilike.*${enc(q)}*,name.ilike.*${enc(q)}*)&select=user_id,name,email,role&order=email&limit=10`)) || [];
+    send(res, 200, { results: rows.map(r => ({ userId: r.user_id, name: r.name || '', email: r.email || '', role: r.role || 'customer' })) });
+  }
+  /* Appoint / remove: owner only, behind the five-coin gate (when on), and EVERY change needs its own fresh Face ID / passkey session. */
+  const changeRole = (to, label) => async (req, res) => {
+    needReady({ webauthn: true }); needOwner(req);
+    const uid = uidOf(req), target = String(body(req).user_id || '').toLowerCase();
+    if (!UUID_RE.test(target)) throw new HttpError(400, 'Invalid account.');
+    if (!isToken(hdr(req, 'x-yn-emergency'))) throw sessionError();
+    if (req.ownerState.ids.includes(target)) throw new HttpError(409, 'An owner cannot be changed from the website.');
+    const prof = (await sb(`profiles?user_id=eq.${target}&select=user_id,name,email,role&limit=1`))?.[0];
+    if (!prof) throw new HttpError(404, 'Account not found.');
+    const from = to === 'admin' ? 'customer' : 'admin';
+    if (to === 'admin' && prof.role === 'admin') throw new HttpError(409, 'This account is already an admin.');
+    if (to === 'customer' && prof.role !== 'admin') throw new HttpError(409, 'This account is not an admin.');
+    if (!(await takeSession(req, 'security', null))) throw sessionError();    // single use: one Face ID per change
+    const rows = await sb(`profiles?user_id=eq.${target}&role=eq.${enc(prof.role)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ role: to }) });
+    if (!rows?.length) throw new HttpError(409, 'The account changed while you were confirming. Reload and try again.');
+    audit(uid, `admin.${label}`, null, 'ok', { target, email: prof.email || null, from, to }, req);
+    alertAdmin(`YN CORE: admin ${label === 'grant' ? 'appointed' : 'removed'}`, `${prof.email || target} was ${label === 'grant' ? 'made an admin' : 'removed as admin'} by the owner.`, '/admin/owner');
+    send(res, 200, { ok: true, userId: target, role: to, sessionEnded: true });
+  };
+
   /* ------------------------------------------------------------------ page gate + wiring */
   /** /admin/emergency[/...] : once locked the page does not exist (404), even for a direct visit. The source stays in the build. */
   async function pageGate(req, res, next) {
@@ -610,7 +751,7 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
   }
   const offGate = (req, res, next) => (enabled ? next() : send(res, 404, { error: 'Not found' }));
 
-  const A = '/api/admin/core', E = '/api/emergency';
+  const A = '/api/admin/core', E = '/api/emergency', G = '/api/core-gate', O = '/api/admin/owner';
   const routes = [
     { method: 'get', path: '/nfc/:token', handler: resolveTap, limit: ['nfc', 60] },
     { method: 'get', path: `${A}/overview`, handler: wrap('overview', overview) },
@@ -640,17 +781,28 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
     { method: 'post', path: `${E}/lock`, handler: wrap('lock', manualLock) },
     { method: 'post', path: `${E}/recovery/start`, handler: wrap('recovery.start', recoveryStart), body: true },
     { method: 'post', path: `${E}/recovery/open`, handler: wrap('recovery.open', recoveryOpen), body: true },
+    { method: 'get', path: '/api/admin/me-owner', handler: wrap('me.owner', meOwner) },
+    { method: 'get', path: `${O}/overview`, handler: wrap('owner.overview', ownerOverview) },
+    { method: 'get', path: `${O}/search`, handler: wrap('owner.search', ownerSearch), limit: ['owner-search', 30] },
+    { method: 'post', path: `${O}/grant`, handler: wrap('owner.grant', changeRole('admin', 'grant')), body: true, limit: ['owner-change', 10] },
+    { method: 'post', path: `${O}/revoke`, handler: wrap('owner.revoke', changeRole('customer', 'revoke')), body: true, limit: ['owner-change', 10] },
+    { method: 'get', path: `${G}/state`, handler: wrap('gate.state', gateState), limit: ['gate', 90] },
+    { method: 'post', path: `${G}/auth/options`, handler: wrap('gate.options', gateOptions), body: true, limit: ['gate-auth', 20] },
+    { method: 'post', path: `${G}/auth/verify`, handler: wrap('gate.verify', gateVerify), body: true, limit: ['gate-auth', 20] },
+    { method: 'post', path: `${G}/lock`, handler: wrap('gate.lock', gateLock), limit: ['gate', 30] },
   ];
 
   /** Registers everything on an Express app. Call it AFTER the `/api/admin` default-deny middleware and BEFORE static files / the SPA catch-all. */
   function mount(app, { json, express }) {
     app.use('/admin/emergency', (req, res, next) => pageGate(req, res, next).catch(() => { res.status(404).type('text/plain').send('Not found'); }));
-    app.use(A, offGate, originGate);
+    app.use(A, offGate, originGate, ownerGate);
+    app.use(O, offGate, originGate, ownerGate);
+    app.use(G, offGate, originGate);
     app.use(E, offGate, originGate, async (req, res, next) => {
       if (req.method === 'OPTIONS') return next();
       if (!requireAdmin) return send(res, 503, { error: 'Admin check unavailable.' });
       const admin = await requireAdmin(req, res);
-      if (admin) { req.admin = admin; next(); }
+      if (admin) { req.admin = admin; return ownerGate(req, res, next); }
     });
     for (const r of routes) {
       const mw = [];
@@ -669,5 +821,5 @@ export function createCore({ sb, shield = null, store = null, requireAdmin = nul
   }
   const stop = () => { timers.forEach(t => { clearInterval(t); clearTimeout(t); }); timers = []; };
 
-  return { enabled, ready, keyring, routes, mount, start, stop, getState, isLocked, pageGate, originGate, config: { rpId, origins, publicUrl, recoveryDelayMin, recoveryWindowMin } };
+  return { enabled, ready, keyring, gate, ownerState, guard: gate.guard, coinMode, routes, mount, start, stop, getState, isLocked, pageGate, originGate, config: { rpId, origins, publicUrl, recoveryDelayMin, recoveryWindowMin } };
 }
