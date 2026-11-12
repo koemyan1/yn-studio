@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Check, Copy, ExternalLink, FileText, Heart, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
+  Check, Copy, Download, ExternalLink, FileText, Heart, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
   Printer, Send, Smartphone, Trash2, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -261,6 +261,17 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
             <p>{tr('Pick a design, add your info in English or Khmer, pay and download your CV as a PDF.', 'ជ្រើសរើសគំរូ បញ្ចូលព័ត៌មានជាអង់គ្លេស ឬខ្មែរ ទូទាត់ ហើយទាញយក CV ជា PDF។')}</p>
             <ul className="svcTags">{(isKm() ? ['១៣ គំរូ', 'អង់គ្លេស / ខ្មែរ', 'PDF', '$3'] : ['13 designs', 'English / Khmer', 'PDF', '$3']).map(t => <li key={t}>{t}</li>)}</ul>
             <button type="button" className="svcAsk" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
+          </div>
+        </article>
+        <div style={{ height: 22 }} />
+
+        <article className="svcCard" data-rv style={{ ['--svc' as any]: '#0a84e8', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
+          <div className="svcInk"><Download /></div>
+          <div className="svcBody">
+            <h3>{tr('Software downloads', 'ទាញយកកម្មវិធី')}</h3>
+            <p>{tr('Pick a program, pay $1 and download it. Watch a short video if you need help.', 'ជ្រើសរើសកម្មវិធី បង់ $1 ហើយទាញយក។ មើលវីដេអូខ្លីប្រសិនបើត្រូវការជំនួយ។')}</p>
+            <ul className="svcTags">{(isKm() ? ['$1 ក្នុងមួយឯកសារ', 'វីដេអូណែនាំ', 'ទាញយកភ្លាមៗ'] : ['$1 per file', 'Video guide', 'Instant']).map(t => <li key={t}>{t}</li>)}</ul>
+            <button type="button" className="svcAsk" onClick={() => nav('/services/software')}>{tr('Browse software', 'មើលកម្មវិធី')}</button>
           </div>
         </article>
         <div style={{ height: 22 }} />

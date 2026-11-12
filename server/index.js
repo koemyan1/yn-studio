@@ -10,12 +10,12 @@ import { createAdminApi } from './security/adminApi.js';
 import { auditEnv, logEnvAudit } from './security/env.js';
 import { createIntegrity } from './security/integrity.js';
 import { createServiceShop } from './serviceShop.js';
+import { createSoftwareShop } from './softwareShop.js';
 import { createIntel } from './security/intel.js';
 import { createGeoLookup } from './security/geo.js';
 import { createPresence } from './presence.js';
 import fsp from 'node:fs/promises';
 import { createPreviewPages } from './ogPreview.js';
-import { createCore } from './core/index.js';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -116,11 +116,6 @@ const secAlerts = createAlerts({ notify: (title, message, link) => notifyAdmin(t
 shield = createShield({ store: secStore, alerts: secAlerts, intel: secIntel });
 const integrity = createIntegrity({ sb, store: secStore, alerts: secAlerts });
 const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
-// YN CORE is created here (not further down) so its five-coin gate can sit in front of EVERYTHING under /admin and /api/admin, including
-// the routes registered just below. The gate does nothing until YN_CORE_GATE=on (docs/setup/YN-CORE-GATE.md); core.mount() further down
-// registers its routes.
-const core = createCore({ sb, shield, store: secStore, requireAdmin: adminApi.requireAdmin, notify: (t, m, l) => notifyAdmin(t, m, l), env });
-app.use(core.guard);
 // Default-deny: EVERYTHING under /api/admin needs a signed-in user whose profiles.role is 'admin' (checked in the database,
 // cached 60 s). A route added here later is protected automatically; it cannot be forgotten.
 app.use('/api/admin', async (req, res, next) => { if (req.method === 'OPTIONS') return next(); const admin = await adminApi.requireAdmin(req, res); if (admin) { req.admin = admin; next(); } });
@@ -133,11 +128,6 @@ app.post('/api/presence', shield.limiter('presence', 30), express.json({ limit: 
 app.get('/api/admin/live', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(presence.snapshot()); });
 logEnvAudit(console);
 app.post('/api/security/csp-report', shield.limiter('csp-report', 30), express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '20kb' }), adminApi.cspReport);
-// YN CORE (NFC coins, YN EMERGENCY, passkeys). OFF unless YN_CORE=on; see docs/setup/YN-CORE-SETUP.md. Mounted here so it sits behind the
-// shield and the /api/admin default-deny above, and BEFORE static files and the SPA catch-all (the /nfc/<token> route and the
-// /admin/emergency page lock must win over the catch-all).
-core.mount(app, { json: express.json({ limit: '30kb' }), express });
-core.start();
 const ORDER_CHECK_MSG = 'We could not verify this order\'s price. Please go back to your cart and place the order again.';
 
 const toAmount = total => {
@@ -583,6 +573,7 @@ app.post('/api/bakong/sync', jsonBody, async (req, res) => {
     const cvs = await sb(`cv_orders?user_id=eq.${user.id}&status=eq.pending&created_at=gte.${since}&select=${CV_FIELDS}&order=created_at.desc&limit=5`).catch(() => []);
     for (const c of cvs || []) if (await verifyBakongCv(c)) updated++;
     updated += await serviceShop.syncForUser(user.id, since);   // pay-first services (supabase-service-shop.sql)
+    updated += await softwareShop.syncForUser(user.id, since);  // software downloads (supabase-software-downloads.sql)
     res.json({ updated });
   } catch (e) {
     console.error('bakong sync', e);
@@ -748,6 +739,11 @@ app.post('/api/bakong/cv/status', jsonBody, async (req, res) => {
  *  Quote -> order (awaiting_payment + KHQR) -> status. Prices are always recomputed here from the admin's catalog.
  * ------------------------------------------------------------------ */
 const serviceShop = createServiceShop({
+  app, sb, SB, BK, userFromToken, shield, limited, bakongEnabled, makeBakongQr, findBakongPayment, bakongDelayed, notifyAdmin, jsonBody,
+});
+
+/* Paid software downloads ($1 per file by default): server/softwareShop.js, supabase-software-downloads.sql */
+const softwareShop = createSoftwareShop({
   app, sb, SB, BK, userFromToken, shield, limited, bakongEnabled, makeBakongQr, findBakongPayment, bakongDelayed, notifyAdmin, jsonBody,
 });
 

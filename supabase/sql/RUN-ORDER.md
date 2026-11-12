@@ -109,6 +109,7 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 47 | `yn-studio-feature-fix.sql` | inferred (no dependency found; grouped by topic) |
 | 47b | `supabase-product-reviews.sql` | NEW: product reviews + star ratings (only customers who bought can review); needs the baseline `products`, `orders`, `order_items`, `profiles` tables; creates the `review-photos` bucket |
 | 47c | `supabase-service-shop.sql` | NEW: pay-first services (Printing, Copy, Social post, Poster, Logo): admin-set prices, options, orders, private file buckets. Needs `profiles`, `notifications`, `delivery_settings` (+ `store_map_url`), `supabase-bakong.sql` and `supabase-services.sql` first. Safe to re-run; services start switched OFF |
+| 47d | `supabase-software-downloads.sql` | NEW: paid software downloads ($1 per file by default): file catalog, private file locations, purchases, a private `software-files` bucket and a public `software-guides` bucket for how-to videos. Needs `profiles`, `notifications` and `supabase-bakong.sql` first (`supabase-service-shop.sql` is not required: the admin check is created here too). Safe to re-run; files start switched ON only when you tick it |
 | 47d | `supabase-review-photos-gallery.sql` | NEW: up to 3 photos per review + "Customer photos" strip; needs `supabase-product-reviews.sql` first; adds `extra_photo_urls` and `set_review_extra_photos()`, limits the public `review-photos` bucket to images (8 MB) |
 | 47e | `supabase-wedding.sql` | NEW: wedding invitation (`/wedding`) tables `rsvps` + `wishes` and the Admin -> Wedding page: guests can only add; only admins read RSVPs or delete; needs the baseline `profiles` table |
 
@@ -120,10 +121,4 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 49 | `supabase-security-hardening.sql` | must come after supabase-wallet-order-payment.sql: both define pay_order_with_wallet and the later one wins |
 | 50 | `supabase-server-side-order.sql` | NEW: server-side pricing; needs supabase-security-hardening.sql (uses its settings/log helpers) |
 | 51 | `supabase-security-audit.sql` | (run again) |
-
-## 9. YN CORE (NFC coins + YN EMERGENCY)
-
-| # | File | Why here |
-|---|---|---|
-| 52 | `supabase-yn-core.sql` | NEW: tables `yn_core_*` + server-only functions for the five NFC coins, passkeys, emergency sessions, recovery and the audit log. Creates only new objects; idempotent. Needs nothing from the baseline. Read `docs/setup/YN-CORE-SETUP.md` before enabling `YN_CORE=on`. |
-| 53 | `supabase-yn-core-owner.sql` | NEW: owner list `yn_core_owners` + the profile guard now blocks admins from changing `profiles.role` from the browser. Needs supabase-security-hardening.sql and supabase-yn-core.sql first. After it, add yourself as owner (see the header of the file). |
+| 52 | `supabase-guest-browse.sql` | NEW: lets visitors who are not signed in browse the marketplace (read-only on published products, categories, photos, options). Needs the baseline tables. |

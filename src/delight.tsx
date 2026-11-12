@@ -6,6 +6,7 @@
    Everything is skipped when the device asks for "reduce motion". No libraries, no cost. */
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
+import { guestCount } from './guestCart';
 
 const reduced = () =>
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -92,7 +93,7 @@ export function useCartCount() {
       const put = (n: number) => { if (alive && my === seq) { lastCount = n; setCount(n); } };
       try {
         const u = (await supabase.auth.getSession()).data.session?.user?.id;
-        if (!u) return put(0);
+        if (!u) return put(guestCount());
         const c = await supabase.from('carts').select('id').eq('user_id', u);
         if (c.error) return;
         const ids = (c.data || []).map((x: any) => x.id);

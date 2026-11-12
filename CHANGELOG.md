@@ -2,7 +2,16 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
-## Unreleased: YN CORE (NFC coins, passkeys, YN EMERGENCY)
+## Unreleased: Software downloads ($1 per file)
+- **New customer page `/services/software`** (a new "Software downloads" card on the Services page): animated download dock, Pick / Pay $1 / Download steps, platform filter, one card per file with a "How to" video button. Pay with Bakong KHQR, then download as often as you like. Moving effects stop for people who turn on "reduce motion".
+- **New admin page `/admin/software`** (sidebar: Inbox, Software downloads): add a file (upload up to 50 MB with a progress bar, or paste a Google Drive / Mega link for any size), a short text in English + Khmer, platform, version, price ($1.00 by default), and an optional how-to video (upload MP4/WebM or paste a YouTube link). Switch on/off, reorder, edit, delete (blocked once a file has buyers), sales totals and recent sales.
+- **Safe by design.** The price is read from the database on the server; the browser only sends a file id. The file location lives in an admin-only table and a private bucket; the server hands out a 2-minute link only after it has seen the Bakong payment. One paid purchase per customer per file.
+- New SQL `supabase/sql/supabase-software-downloads.sql`, new `server/softwareShop.js` (3 routes, also re-checked by `/api/bakong/sync`), new `src/Software.tsx` + `src/software.css`, small edits in `src/main.tsx` (pay popup, routes, admin menu) and `src/Services.tsx`. Tests: `tests/software-shop.test.mjs`.
+- Setup: [`docs/setup/SOFTWARE-DOWNLOADS-SETUP.md`](docs/setup/SOFTWARE-DOWNLOADS-SETUP.md). Redeploy the Node server.
+
+## Unreleased: REMOVED - YN CORE, its Admins page and YN EMERGENCY were deleted from the code (the notes below are history). Existing `yn_core_*` database tables are untouched.
+
+## Previously: YN CORE (NFC coins, passkeys, YN EMERGENCY)
 - **Automatic coin writing (new, Android Chrome).** Activating a coin, or pressing Regenerate URL, now opens the one-time screen already writing: hold a blank sticker to the phone and the address goes straight onto it, is read back and compared, and the "written" box ticks itself. You never see, copy or type the URL (show / copy / QR stay under "Other ways"; iPhone and desktop keep the manual route). New page `/admin/core/write` (boss-only, same gate): one button per coin, "New address & write" (passkey, then new address, then sticker), plus a paste-your-own fallback and a stand-alone Check sticker. The address stays in memory only, is cleared after 3-5 minutes, and no sticker is ever locked. New/changed: `src/core/nfcWrite.ts`, `src/core/TokenReveal.tsx`, `src/core/WriteCoin.tsx`, `shared/coinUrl.js`, `tests/core-write.test.mjs`. No SQL, no server change.
 
 - **New, on by default (`YN_CORE=off` switches it off; fails closed without its key).** Five NFC coins with permanent random URLs (`/nfc/<256-bit token>`), server-side destination rotation, per-coin pause / regenerate / revoke, analytics and tap log. Admin pages `/admin/core`; initialization at `/admin/emergency`.
@@ -10,7 +19,7 @@ Newest first. Versioned releases (v3 to v22) are included in full below. Smaller
 - New SQL `supabase/sql/supabase-yn-core.sql` (new `yn_core_*` tables only). New server folder `server/core/`; the shield's event log now redacts `/nfc/<token>`.
 - **Owner + Admins page (new).** One "big boss" (listed in the new table `yn_core_owners`, filled only in the SQL editor) sees the **Admins** page and YN CORE; admins they appoint do not. Appointing or removing an admin needs the five-coin gate (when on) plus a fresh single-use Face ID per change, and is audited. `supabase-yn-core-owner.sql` also stops admins from changing `profiles.role` straight from the browser (they could before). The gate now guards only the boss-only pages by default (`YN_CORE_GATE_SCOPE=all` for the old whole-admin behaviour). Upgrade-safe: with no owner set yet, YN CORE works as before. New: `src/core/OwnerAdmin.tsx`, `src/core/useOwner.tsx`, `tests/core-owner.test.mjs`, `docs/setup/YN-CORE-OWNER.md`.
 - **Five-coin gate (new).** A tap on any active coin now opens `/yn-core`: five slowly turning 3D coins that light up as you tap them. After all five (within 5 minutes) it asks for Face ID / Touch ID; a passed check opens the admin for 20 minutes (slides while in use, hard stop 2 h). Enforcement is OFF until `YN_CORE_GATE=on`. `YN_CORE_COIN_MODE=redirect` brings the old coin -> destination behaviour back. New: `server/core/gate.js`, `src/core/CoreGate.tsx`, `src/core/gate.css`, `tests/core-gate.test.mjs`, `docs/setup/YN-CORE-GATE.md`. No new SQL.
-- Setup: [`docs/setup/YN-CORE-SETUP.md`](docs/setup/YN-CORE-SETUP.md). Tests: `tests/core.test.mjs`.
+- Setup: `docs/setup/YN-CORE-SETUP.md` (removed). Tests: `tests/core.test.mjs`.
 
 ## Unreleased: Wedding invitation + admin Wedding page
 
