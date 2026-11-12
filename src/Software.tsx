@@ -190,7 +190,7 @@ export default function SoftwarePage({ Top, Nav, api, bakongOn, PayModal }: Chro
 
         <div className="swList">
           {shown.map((f, i) => {
-            const P = plat(f.platform), mine = owned.has(f.id), st = dl?.id === f.id ? dl.state : null;
+            const P = plat(f.platform), mine = owned.has(f.id), st = dl && dl.id === f.id ? dl.state : null;
             return (
               <article key={f.id} className="swCard" data-owned={mine ? '1' : undefined} data-rv style={{ ['--sw' as any]: P.ink, ['--sw-fg' as any]: P.fg, ['--i' as any]: i % 6 }}>
                 <div className="swIcon"><P.Icon />{mine && <span className="swOwn"><Check /></span>}</div>
@@ -324,7 +324,7 @@ function Editor({ d0, src0, onClose, onSaved }: { d0: Draft; src0: any; onClose:
         ? await supabase.from('software_files').insert({ id: d.id, ...row, sort_order: 0 })
         : await supabase.from('software_files').update(row).eq('id', d.id);
       if (r.error) throw r.error;
-      const srcRow = d.srcKind === 'link'
+      const srcRow: any = d.srcKind === 'link'
         ? { file_id: d.id, kind: 'link', file_path: null, external_url: d.link.trim() }
         : file_path ? { file_id: d.id, kind: 'upload', file_path, external_url: null } : null;
       if (srcRow) { const s = await supabase.from('software_sources').upsert(srcRow); if (s.error) throw s.error; }
