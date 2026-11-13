@@ -194,12 +194,16 @@ export function BookCoverHome({ Top, Nav }: Chrome) {
   const price = designs && designs.length ? Math.min(...designs.map(d => d.price_per_page)) : DEFAULT_PRICE_PER_PAGE;
   return (
     <>
-      <main className="shop cvmPage bcPage">
+      <main className="shop cvmPage bcPage bcHome">
         <Top title={tr('Book cover', 'គម្របសៀវភៅ')} back />
-        <section className="cvmHero">
+        <section className="cvmHero bcHero">
           <span className="cvmPrice">{riel(price)}<small> / {tr('page', 'ទំព័រ')}</small></span>
-          <h1>{tr('Pick a book cover design', 'ជ្រើសរើសគំរូគម្របសៀវភៅ')}</h1>
-          <p>{tr('Choose one or more designs, type your name and subject, pay once, then move the text exactly where you want it. We print it for you.', 'ជ្រើសរើសគំរូមួយ ឬច្រើន វាយឈ្មោះ និងមុខវិជ្ជា ទូទាត់តែម្តង រួចអូសអក្សរទៅកន្លែងដែលអ្នកចង់បាន។ យើងបោះពុម្ពឲ្យអ្នក។')}</p>
+          <h1>{tr('Book covers', 'គម្របសៀវភៅ')}</h1>
+          <ol className="bcHow">
+            <li><i>1</i>{tr('Pick', 'ជ្រើស')}</li>
+            <li><i>2</i>{tr('Add your name', 'ដាក់ឈ្មោះ')}</li>
+            <li><i>3</i>{tr('Pay · place text', 'បង់ · រៀបអក្សរ')}</li>
+          </ol>
         </section>
 
         {designs === null && <p className="cvmHint center">{tr('Loading…', 'កំពុងផ្ទុក…')}</p>}
@@ -208,12 +212,12 @@ export function BookCoverHome({ Top, Nav }: Chrome) {
         {basket.length > 0 && (
           <div className="bcBasketBar" role="status">
             <span className="bcBasketIcon"><Layers /></span>
-            <span><b>{basket.length} {tr('design(s) waiting in your order', 'គំរូកំពុងរង់ចាំក្នុងការបញ្ជាទិញ')}</b><small>{tr('You can order more than one design at once.', 'អ្នកអាចបញ្ជាទិញគំរូច្រើនក្នុងពេលតែមួយ។')}</small></span>
+            <span><b>{basket.length} {tr('in your order', 'ក្នុងការបញ្ជាទិញ')}</b></span>
             <button type="button" className="cvmSmall" onClick={() => nav('/services/book-cover/' + basket[0].design_id, { state: { step: 'basket' } })}>{tr('Review order', 'មើលការបញ្ជាទិញ')}</button>
             <button type="button" className="cvmLink" aria-label={tr('Start over', 'ចាប់ផ្តើមឡើងវិញ')} onClick={() => { clearBasket(me); setBasket([]); }}><X size={16} /></button>
           </div>
         )}
-        <div className="cvmGrid">
+        <div className="cvmGrid bcShelf">
           {(designs || []).map((d, i) => <DesignCard key={d.id} d={d} i={i} taken={basket.some(b => b.design_id === d.id)} onPick={() => nav('/services/book-cover/' + d.id)} />)}
         </div>
 

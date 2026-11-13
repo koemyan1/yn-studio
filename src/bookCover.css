@@ -209,3 +209,45 @@
   .bcShine,.bcBurst,.bcAddDesign::after{display:none}
   .bcDeckCard{transition:none}
 }
+
+/* =====================================================================================================================
+   Gallery page ("Pick a book cover design"): a dark hero, a three-step strip, and covers standing on a shelf.
+   Everything is scoped to .bcHome so the other steps are untouched.
+   ===================================================================================================================== */
+.bcHome .bcHero{padding:24px 22px 20px;border:0;color:#fff;overflow:hidden;
+  background:radial-gradient(120% 90% at 100% 0%,#e5007d66,transparent 60%),radial-gradient(90% 80% at 0% 100%,#7c3aed88,transparent 60%),#1d1233;
+  box-shadow:0 22px 44px -22px #1d1233}
+.bcHome .bcHero::after{content:"";position:absolute;right:-46px;bottom:-70px;width:130px;height:170px;border-radius:6px 12px 12px 6px;transform:rotate(14deg);
+  background:linear-gradient(90deg,#00000055 0 9%,#ffffff22 9% 11%,transparent 11%),linear-gradient(160deg,#ff5db4,#7c3aed);opacity:.4;pointer-events:none}
+.bcHome .bcHero h1{color:#fff;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-weight:800;letter-spacing:-.03em;max-width:11em;text-wrap:balance;position:relative}
+.bcHome .bcHero p{color:#d9cdf0;position:relative}
+.bcKicker{display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;padding:4px 11px;border-radius:99px;background:#ffffff1a;border:1px solid #ffffff2e;font-size:12px;font-weight:800;letter-spacing:.02em;color:#ffd6ee;position:relative}
+.bcHome .cvmPrice{background:#e5007d;box-shadow:0 10px 22px #e5007d66;z-index:1}
+.bcHow{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;position:relative}
+.bcHow li{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:99px;background:#ffffff14;border:1px solid #ffffff26;font-size:13px;font-weight:700;color:#fff}
+.bcHow i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#fff;color:#1d1233;font-style:normal;font-size:12px;font-weight:900}
+
+.bcShelfTitle{display:flex;align-items:center;gap:10px;margin:6px 2px 14px!important;font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:20px;font-weight:800;letter-spacing:-.02em}
+.bcShelfTitle small{font-family:inherit;font-size:12px;font-weight:900;padding:2px 9px;border-radius:99px;background:var(--soft);color:var(--purple)}
+.bcShelfTitle::after{content:"";flex:1;height:1.5px;background:var(--line)}
+
+/* covers stand on the shelf: no white card, a soft floor shadow, the title and price underneath */
+.bcHome .bcShelf{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 18px;padding:4px 2px}
+@media(min-width:620px){.bcHome .bcShelf{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}
+.bcHome .bcCard{padding:0;background:none;border:0;border-radius:0;box-shadow:none;gap:0;text-align:center;cursor:pointer}
+.bcHome .bcCard:hover{transform:none;box-shadow:none}
+.bcHome .bcCard .bcTilt{border-radius:4px 8px 8px 4px;box-shadow:0 2px 3px #24184033,0 16px 28px -10px #24184066}
+.bcHome .bcCard:hover .bcTilt{box-shadow:0 2px 3px #24184033,0 26px 38px -12px #241840aa}
+.bcHome .bcTilt::before{width:11px;border-radius:4px 0 0 4px;background:linear-gradient(90deg,#00000050,#ffffff40 35%,#00000010 70%,#0000001c)}
+.bcHome .bcShine{border-radius:4px 8px 8px 4px}
+.bcHome .bcCard::before{content:"";position:absolute;left:8%;right:8%;top:calc(100% - 66px);height:10px;border-radius:50%;background:#24184033;filter:blur(7px);pointer-events:none;z-index:0}
+.bcHome .cvmCardName{margin-top:16px;font-size:14px;font-weight:800;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.bcHome .bcCard .bcCardPrice{display:inline-block;justify-self:center;margin-top:7px;padding:3px 11px;border-radius:99px;background:var(--soft);font-size:12px;font-weight:800;color:var(--purple)}
+.bcHome .bcCard:hover .bcCardPrice{background:var(--purple);color:#fff}
+.bcHome .bcTaken{top:8px;right:8px}
+.bcHome .bcCard:focus-visible{outline:3px solid var(--purple);outline-offset:6px;border-radius:8px}
+
+.bcHome .bcBasketBar{background:#fff;border:1.5px solid #e1d2f7;box-shadow:0 14px 30px -20px #7c3aed99}
+.bcHome .cvmMine h2{font-family:var(--yn-display,Outfit,Inter,sans-serif);font-size:20px;font-weight:800;letter-spacing:-.02em}
+.bcHome .cvmMine li{border-radius:18px;box-shadow:0 8px 20px -16px #48237866}
+@media(prefers-reduced-motion:reduce){.bcHome .bcCard{animation:none!important}}
