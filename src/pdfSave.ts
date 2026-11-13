@@ -30,7 +30,44 @@ export async function canvasToPdfBlob(canvas: HTMLCanvasElement, quality = 0.92)
   return new Blob(chunks as BlobPart[], { type: 'application/pdf' });
 }
 
-function downloadBlob(blob: Blob, filename: string) {
+/** A4 PDF with one page per canvas (each image fills its page). Used by the book cover service to print many covers at once. */
+export async function canvasesToPdfBlob(canvases: HTMLCanvasElement[], quality = 0.92): Promise<Blob> {
+  if (!canvases.length) throw new Error('Nothing to save');
+  const jpgs: Uint8Array[] = [];
+  for (const c of canvases) {
+    const b: Blob = await new Promise((res, rej) => c.toBlob(x => (x ? res(x) : rej(new Error('Could not make the picture'))), 'image/jpeg', quality));
+    jpgs.push(new Uint8Array(await b.arrayBuffer()));
+  }
+  const W = 595.28, H = 841.89;   // A4 in points
+  const enc = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  const offs: number[] = [];
+  let len = 0;
+  const push = (b: Uint8Array | string) => { const u = typeof b === 'string' ? enc.encode(b) : b; chunks.push(u); len += u.length; };
+  const obj = (n: number, body: () => void) => { offs[n] = len; push(`${n} 0 obj\n`); body(); push('endobj\n'); };
+  const N = canvases.length;
+  // object numbers: 1 catalog, 2 pages, then for page i: 3+3i page, 4+3i image, 5+3i content
+  push('%PDF-1.4\n');
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>\n'));
+  obj(2, () => push(`<< /Type /Pages /Kids [${canvases.map((_, i) => `${3 + 3 * i} 0 R`).join(' ')}] /Count ${N} >>\n`));
+  canvases.forEach((c, i) => {
+    const content = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+    obj(3 + 3 * i, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${4 + 3 * i} 0 R >> >> /Contents ${5 + 3 * i} 0 R >>\n`));
+    obj(4 + 3 * i, () => {
+      push(`<< /Type /XObject /Subtype /Image /Width ${c.width} /Height ${c.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpgs[i].length} >>\nstream\n`);
+      push(jpgs[i]); push('\nendstream\n');
+    });
+    obj(5 + 3 * i, () => push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream\n`));
+  });
+  const total = 3 + 3 * N;
+  const xref = len;
+  push(`xref\n0 ${total}\n0000000000 65535 f \n`);
+  for (let n = 1; n < total; n++) push(String(offs[n]).padStart(10, '0') + ' 00000 n \n');
+  push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(chunks as BlobPart[], { type: 'application/pdf' });
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.rel = 'noopener';

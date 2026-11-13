@@ -11,6 +11,7 @@ import { auditEnv, logEnvAudit } from './security/env.js';
 import { createIntegrity } from './security/integrity.js';
 import { createServiceShop } from './serviceShop.js';
 import { createSoftwareShop } from './softwareShop.js';
+import { createBookCoverShop } from './bookCover.js';
 import { createIntel } from './security/intel.js';
 import { createGeoLookup } from './security/geo.js';
 import { createPresence } from './presence.js';
@@ -574,6 +575,7 @@ app.post('/api/bakong/sync', jsonBody, async (req, res) => {
     for (const c of cvs || []) if (await verifyBakongCv(c)) updated++;
     updated += await serviceShop.syncForUser(user.id, since);   // pay-first services (supabase-service-shop.sql)
     updated += await softwareShop.syncForUser(user.id, since);  // software downloads (supabase-software-downloads.sql)
+    updated += await bookCoverShop.syncForUser(user.id, since); // book covers, paid in riel (supabase-book-covers.sql)
     res.json({ updated });
   } catch (e) {
     console.error('bakong sync', e);
@@ -745,6 +747,11 @@ const serviceShop = createServiceShop({
 /* Paid software downloads ($1 per file by default): server/softwareShop.js, supabase-software-downloads.sql */
 const softwareShop = createSoftwareShop({
   app, sb, SB, BK, userFromToken, shield, limited, bakongEnabled, makeBakongQr, findBakongPayment, bakongDelayed, notifyAdmin, jsonBody,
+});
+
+/* Book covers (250 riel per page by default): server/bookCover.js, supabase-book-covers.sql */
+const bookCoverShop = createBookCoverShop({
+  app, sb, SB, BK, userFromToken, shield, limited, bakongEnabled, makeBakongQr, findBakongPayment, bakongDelayed, notifyAdmin, jsonBody: express.json({ limit: '300kb' }),
 });
 
 /* Diagnose "the QR shows but never gets approved": open /api/bakong/health in the browser.

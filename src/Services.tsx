@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Check, Copy, Download, ExternalLink, FileText, Heart, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
+  BookOpen, Check, Copy, Download, ExternalLink, FileText, Heart, ImagePlus, LayoutTemplate, Lightbulb, PenTool,
   Printer, Send, Smartphone, Trash2, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -261,6 +261,17 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
             <p>{tr('Pick a design, add your info in English or Khmer, pay and download your CV as a PDF.', 'ជ្រើសរើសគំរូ បញ្ចូលព័ត៌មានជាអង់គ្លេស ឬខ្មែរ ទូទាត់ ហើយទាញយក CV ជា PDF។')}</p>
             <ul className="svcTags">{(isKm() ? ['១៣ គំរូ', 'អង់គ្លេស / ខ្មែរ', 'PDF', '$3'] : ['13 designs', 'English / Khmer', 'PDF', '$3']).map(t => <li key={t}>{t}</li>)}</ul>
             <button type="button" className="svcAsk" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
+          </div>
+        </article>
+        <div style={{ height: 22 }} />
+
+        <article className="svcCard" data-rv style={{ ['--svc' as any]: '#e5007d', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
+          <div className="svcInk"><BookOpen /></div>
+          <div className="svcBody">
+            <h3>{tr('Book cover', 'គម្របសៀវភៅ')}</h3>
+            <p>{tr('Pick a cover design, add your name and subjects, pay and place the text where you want it. We print it for you.', 'ជ្រើសរើសគំរូគម្រប បញ្ចូលឈ្មោះ និងមុខវិជ្ជា ទូទាត់ ហើយរៀបអក្សរតាមចិត្ត។ យើងបោះពុម្ពឲ្យអ្នក។')}</p>
+            <ul className="svcTags">{(isKm() ? ['ច្រើនគំរូ', 'ច្រើនមុខវិជ្ជា', '២៥០ ៛ / ទំព័រ'] : ['Many designs', 'Several subjects', '250 ៛ / page']).map(t => <li key={t}>{t}</li>)}</ul>
+            <button type="button" className="svcAsk" onClick={() => nav('/services/book-cover')}>{tr('Make my book cover', 'បង្កើតគម្របសៀវភៅ')}</button>
           </div>
         </article>
         <div style={{ height: 22 }} />

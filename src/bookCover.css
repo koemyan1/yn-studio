@@ -1,0 +1,211 @@
+/* Book cover service. The steps bar, form, price badge and bottom bar reuse the CV maker classes (cv.css); this file adds the cover sheet and the new parts. */
+
+/* ---------- the cover sheet: one A4 page, 794 x 1123 px ---------- */
+.bcSheet{position:relative;overflow:hidden;background:#fff;user-select:none;-webkit-user-select:none;flex:none}
+.bcSheetImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.bcText{position:absolute;transform:translate(-50%,-50%);text-align:center;width:max-content;line-height:1.18;white-space:normal;word-break:break-word;padding:2px 6px}
+.bcSheet.drag .bcText{cursor:grab;touch-action:none}
+.bcSheet.drag .bcText:active{cursor:grabbing}
+.bcText.frame{outline:3px dashed rgba(124,58,237,.5);outline-offset:6px;border-radius:3px}
+.bcText.sel{outline:4px solid #7c3aed;outline-offset:6px;border-radius:3px;background:rgba(124,58,237,.08)}
+.bcScaled{position:relative;width:100%;aspect-ratio:794/1123;overflow:hidden;border-radius:10px;background:#fff;border:1px solid #0001}
+.bcScaledIn{position:absolute;left:0;top:0;width:794px;height:1123px;transform-origin:0 0}
+
+/* ---------- gallery ---------- */
+.bcPage .cvmPrice small{font-size:11px;font-weight:800;opacity:.85}
+.bcCard .bcCardPrice{text-align:center;font-weight:800;color:var(--purple)}
+.bcRm{width:38px;height:38px;padding:0;border-radius:12px}
+
+/* ---------- info + subjects ---------- */
+.bcLive{width:min(260px,62%);margin:0 auto 18px;box-shadow:0 18px 40px #48237822;border-radius:10px}
+.bcReq{color:#bd3552}
+.bcYesNo{margin-bottom:16px}
+.bcThumbs{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 12px;margin-bottom:6px;scrollbar-width:thin}
+.bcThumbs figure{margin:0;flex:0 0 78px;display:grid;gap:4px;justify-items:center}
+.bcThumbs figcaption{font-size:12px;font-weight:800;color:var(--muted)}
+.bcTotal{margin:16px 0 6px;text-align:center;font-size:15px;color:var(--muted)}
+.bcTotal b{color:var(--purple);font-size:20px}
+
+/* ---------- pay ---------- */
+.bcContact{margin-top:16px}
+.bcContact textarea{resize:vertical}
+.bcGps{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.bcPinned{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#16834e}
+.bcPinned a{color:var(--purple)}
+.bcPinned .cvmLink{padding:2px}
+
+/* ---------- place the text ---------- */
+.bcPills{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin-bottom:4px;scrollbar-width:thin}
+.bcPills button{flex:none;background:#fff;color:var(--ink);border:1px solid var(--line);padding:9px 14px;border-radius:99px;font-size:13px;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.bcPills button.on{background:var(--purple);color:#fff;border-color:transparent}
+.bcStage{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:22px;align-items:start;justify-content:center}
+.bcPaper{border-radius:6px;overflow:hidden;box-shadow:0 22px 50px #24184033;width:100%}
+.bcPaper .bcScaled{border-radius:0;border:0}
+.bcTools{display:grid;gap:12px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:20px}
+.bcChips{display:flex;flex-wrap:wrap;gap:8px}
+.bcChips button{background:var(--soft);color:var(--purple);border:2px solid transparent;padding:8px 12px;border-radius:12px;font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.bcChips button.on{border-color:var(--purple);background:#fff}
+.bcSel{display:grid;gap:10px;padding:12px;border-radius:14px;background:#faf8ff;border:1px solid var(--line)}
+.bcRange{display:grid;gap:6px;font-size:13px}
+.bcRange input[type=range]{padding:0;border:0;box-shadow:none;accent-color:var(--purple)}
+.bcNudge{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bcNudge button{padding:10px 0;background:#fff;color:var(--purple);border:1px solid #dfd2f4;font-size:18px}
+.bcReset{justify-self:start}
+.bcToolRow{display:flex;flex-wrap:wrap;gap:8px}
+.bcOk,.cvmOk{display:flex;gap:8px;align-items:center;padding:12px 14px;border-radius:14px;background:#e7f8ef;color:#16834e;font-weight:800;margin:14px 0}
+@media(max-width:760px){.bcStage{grid-template-columns:1fr}.bcPaper{max-width:420px;margin:0 auto}}
+
+/* ---------- admin ---------- */
+.bcaTabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.bcaTabs button{background:#fff;color:var(--ink);border:1px solid var(--line);display:inline-flex;align-items:center;gap:8px}
+.bcaTabs button.on{background:var(--purple);color:#fff;border-color:transparent}
+.bcaTabs em{font-style:normal;background:#e5007d;color:#fff;border-radius:99px;font-size:11px;padding:2px 7px;font-weight:900}
+.bcaHead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.bcaGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.bcaDesign{display:grid;gap:10px;padding:12px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:20px}
+.bcaDesign.off{opacity:.65}
+.bcaDesign b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcaDesign small{display:block}
+.bcaRow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bcaRow button{padding:8px 11px;font-size:13px;border-radius:11px}
+.bcaEdit{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:20px;align-items:start}
+.bcaPreview{position:sticky;top:12px;display:grid;gap:8px}
+.bcaPreview .bcPaper{max-width:430px}
+.bcaForm{display:grid;gap:14px;min-width:0}
+.bcaField{display:grid;gap:10px;padding:14px;border:2px solid var(--line);border-radius:16px;background:#fff;cursor:pointer}
+.bcaField.sel{border-color:var(--purple);box-shadow:0 0 0 4px #7c3aed1a}
+.bcaField header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bcaField header b{font-size:14px}
+.bcaFieldGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.bcaChecks{display:flex;flex-wrap:wrap;gap:14px}
+.bcaChecks label{display:flex;grid-template-columns:none;align-items:center;gap:8px;font-weight:700;font-size:13px}
+.bcaChecks input{width:auto}
+.bcaPresets{display:flex;flex-wrap:wrap;gap:8px}
+.bcaPresets button{background:#fff;color:var(--purple);border:1px dashed #cdb8f0;font-size:13px;padding:8px 12px}
+.bcaOrders{display:grid;gap:14px}
+.bcaOrder{display:grid;gap:12px;padding:16px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:22px}
+.bcaOrder>header{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.bcaWho{display:grid;gap:3px;font-size:14px}
+.bcaWho a{color:var(--purple);font-weight:800}
+.bcaThumbs{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+.bcaThumbs figure{margin:0;flex:0 0 96px;display:grid;gap:4px;justify-items:center}
+.bcaThumbs figcaption{font-size:11px;color:var(--muted);max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcaFoot{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bcaFoot select{width:auto;padding:10px 12px}
+.bcaFoot .grow{flex:1}
+.bcaBadge{display:inline-flex;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:900;background:#f1edf7;color:#625772}
+.bcaBadge.paid,.bcaBadge.submitted{background:#fff4dc;color:#a66a00}
+.bcaBadge.printed,.bcaBadge.delivered{background:#e7f8ef;color:#16834e}
+.bcaBadge.cancelled{background:#ffe9ed;color:#bd3552}
+.bcaBadge.pending{background:#eef1f7;color:#55607a}
+.bcaDrop{display:grid;place-items:center;gap:6px;text-align:center;padding:18px;border:2px dashed #d9c8ef;border-radius:16px;color:var(--muted);cursor:pointer}
+.bcaDrop svg{color:var(--purple);width:30px;height:30px}
+@media(max-width:900px){.bcaEdit{grid-template-columns:1fr}.bcaPreview{position:static}}
+.admin-dark .bcaDesign,.admin-dark .bcaOrder,.admin-dark .bcaField,.admin-dark .bcaTabs button,.admin-dark .bcaPresets button{background:#1b1426;border-color:#34284a;color:#eee7fb}
+.admin-dark .bcaField.sel{border-color:#a78bfa}
+.admin-dark .bcaTabs button.on{background:#7c3aed;color:#fff}
+.admin-dark .bcaBadge{background:#2a2038;color:#d6c9ec}
+
+/* =====================================================================================================================
+   Several designs in one order + the moving parts.
+   Rules of the road: nothing here puts a transform / filter on an element that holds the fixed bottom bar (that would pull the bar
+   out of place), and everything that moves is switched off for people who asked for reduced motion (last block of this file).
+   ===================================================================================================================== */
+
+/* ---------- each step slides up, one block after the other ---------- */
+.bcStep>*:not(.cvmBar){animation:bcRise .5s cubic-bezier(.2,.8,.2,1) both}
+.bcStep>*:nth-child(2){animation-delay:.05s}
+.bcStep>*:nth-child(3){animation-delay:.1s}
+.bcStep>*:nth-child(4){animation-delay:.15s}
+.bcStep>*:nth-child(n+5){animation-delay:.2s}
+.bcStep>.cvmBar{animation:bcFade .4s .2s both}
+@keyframes bcRise{from{opacity:0;transform:translateY(16px)}}
+@keyframes bcFade{from{opacity:0}}
+@keyframes bcSlide{from{opacity:0;transform:translateX(-22px)}}
+@keyframes bcPop{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.14)}100%{opacity:1;transform:scale(1)}}
+
+/* ---------- gallery: a cover that tilts like a book in your hand, with a spine and a moving shine ---------- */
+.bcCard{perspective:800px}
+.bcTilt{position:relative;display:block;border-radius:10px;transform-style:preserve-3d;transform:perspective(700px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s cubic-bezier(.2,.9,.3,1.2),box-shadow .25s;box-shadow:0 10px 24px #24184024}
+.bcCard:hover .bcTilt{transition:transform .16s ease-out,box-shadow .25s;box-shadow:0 22px 38px #2418403a}
+.bcTilt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:9px;z-index:3;border-radius:10px 0 0 10px;background:linear-gradient(90deg,#00000042,#ffffff30 55%,#0000000d);pointer-events:none}
+.bcShine{position:absolute;inset:0;z-index:4;border-radius:10px;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(circle at var(--mx,50%) var(--my,30%),#ffffffb0,#ffffff00 55%)}
+.bcCard:hover .bcShine{opacity:.55}
+.bcTaken{position:absolute;top:14px;right:14px;z-index:5;display:inline-flex;align-items:center;gap:4px;background:#16834e;color:#fff;font-size:11px;font-weight:800;padding:4px 8px;border-radius:99px;box-shadow:0 4px 10px #16834e55;animation:bcPop .45s cubic-bezier(.2,1.6,.4,1) both}
+
+/* a waiting order, shown on the gallery */
+.bcBasketBar{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 16px;background:linear-gradient(135deg,#f5efff,#fff0f8);border:1px solid #e1d2f7;border-radius:18px;animation:bcSlide .5s both}
+.bcBasketBar>span:nth-child(2){flex:1;display:grid;gap:2px;min-width:0}
+.bcBasketBar small{color:var(--muted)}
+.bcBasketIcon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:12px;background:var(--purple);color:#fff;animation:bcPulse 2.4s ease-in-out infinite}
+.bcBasketIcon svg{width:20px;height:20px}
+@keyframes bcPulse{0%,100%{box-shadow:0 0 0 0 #7c3aed55}50%{box-shadow:0 0 0 9px #7c3aed00}}
+
+/* ---------- info / subjects: which design is this, and the running total (it pops when a design is added) ---------- */
+.bcWhich{display:inline-block;margin:6px 0 0;padding:4px 12px;border-radius:99px;background:var(--soft);color:var(--purple);font-weight:800;font-size:13px}
+.bcCount{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 13px;border-radius:99px;background:#fff;border:1px solid #e1d2f7;font-size:13px;font-weight:700;color:var(--muted);animation:bcPop .5s cubic-bezier(.2,1.6,.4,1) both}
+.bcCount b{color:var(--purple)}
+
+/* ---------- your order: the designs fanned like a hand of cards; a new one is dealt in from above ---------- */
+.bcDeckWrap{overflow:hidden;padding:18px 0 30px;margin:0 -8px}
+.bcDeck{position:relative;width:min(190px,48%);aspect-ratio:794/1123;margin:0 auto}
+.bcDeckCard{--off:calc(var(--k) - (var(--n) - 1) / 2);position:absolute;inset:0;z-index:calc(var(--k) + 1);border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 14px 30px #2418402e,0 2px 6px #24184022;transform-origin:50% 100%;
+  transform:translateX(calc(var(--off) * (34% - var(--n) * 4%))) rotate(calc(var(--off) * 7deg));transition:scale .25s;
+  animation:bcDeal .8s cubic-bezier(.2,.9,.3,1.15) calc(var(--k) * 120ms) both,bcFloat 5s ease-in-out calc(.9s + var(--k) * 180ms) infinite}
+.bcDeckCard:hover{scale:1.05;z-index:9}
+.bcDeckCard.fresh{animation:bcDeal .8s cubic-bezier(.2,.9,.3,1.15) calc(var(--k) * 120ms) both,bcFloat 5s ease-in-out calc(.9s + var(--k) * 180ms) infinite,bcGlow 1.5s .55s ease-out 1 both}
+@keyframes bcDeal{from{opacity:0;transform:translate(0,-170px) rotate(-26deg) scale(1.2)}}
+@keyframes bcFloat{0%,100%{translate:0 0}50%{translate:0 -7px}}
+@keyframes bcGlow{from{box-shadow:0 0 0 0 #7c3aedaa,0 14px 30px #2418402e}to{box-shadow:0 0 0 26px #7c3aed00,0 14px 30px #2418402e}}
+.bcDeckCard .bcScaled{border-radius:0;border:0}
+.bcSumDeck{flex:none;width:112px;overflow:hidden}
+.bcSumDeck .bcDeckWrap{padding:6px 0 10px;margin:0}
+.bcSumDeck .bcDeck{width:62px}
+
+.bcItems{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px}
+.bcItem{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:16px;transition:box-shadow .2s,border-color .2s;animation:bcSlide .5s calc(.25s + var(--i) * 80ms) cubic-bezier(.2,.8,.2,1) both}
+.bcItem:hover{box-shadow:0 10px 26px #48237818;border-color:#cdb8f0}
+.bcItem.bad{border-color:#e8a3b3;background:#fff8fa}
+.bcItemThumb{flex:0 0 46px;border-radius:6px;overflow:hidden;box-shadow:0 4px 12px #24184028}
+.bcItemThumb .bcScaled{border-radius:0;border:0}
+.bcItemText{flex:1;min-width:0;display:grid;gap:2px}
+.bcItemText b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcItemText small{color:var(--muted)}
+.bcItem.bad .bcItemText small{color:#bd3552;font-weight:800}
+.bcEdit{display:inline-flex;align-items:center;gap:6px}
+.bcAddDesign{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;position:relative;overflow:hidden}
+.bcAddDesign:not(:disabled)::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,#7c3aed26 50%,transparent 65%);transform:translateX(-120%);animation:bcSweep 3.2s 1s ease-in-out infinite}
+.bcAddDesign svg{transition:transform .3s}
+.bcAddDesign:hover svg{transform:rotate(90deg) scale(1.15)}
+@keyframes bcSweep{to{transform:translateX(120%)}}
+
+/* ---------- "Add another design": a sheet that slides up over the page ---------- */
+.bcPick{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:#1b123066;backdrop-filter:blur(4px);animation:bcFade .25s both}
+.bcPickBox{width:min(720px,100%);max-height:86vh;overflow:auto;background:#fff;border-radius:26px 26px 0 0;padding:16px 16px 28px;box-shadow:0 -20px 60px #24184040;animation:bcSheet .42s cubic-bezier(.2,.9,.25,1) both}
+.bcPickBox header{display:flex;align-items:center;justify-content:space-between;position:sticky;top:-16px;z-index:2;background:#fff;padding:10px 0 12px;font-size:17px}
+.bcPickBox header .cvmLink{padding:6px}
+.bcPickGrid{margin-top:6px}
+@keyframes bcSheet{from{transform:translateY(60px);opacity:0}}
+@media(min-width:760px){.bcPick{align-items:center}.bcPickBox{border-radius:26px}}
+
+/* ---------- confetti when the payment arrives and when the covers are sent to print ---------- */
+.bcBurst{position:fixed;left:50%;top:40%;width:0;height:0;z-index:80;pointer-events:none}
+.bcBurst i{position:absolute;left:0;top:0;width:var(--w);height:calc(var(--w) * 1.7);background:var(--c);border-radius:2px;animation:bcConfetti 1.5s cubic-bezier(.12,.75,.3,1) var(--d) both}
+@keyframes bcConfetti{0%{opacity:1;transform:translate(0,0) rotate(0) scale(.3)}15%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),calc(var(--dy) + 190px)) rotate(var(--r)) scale(1)}}
+.bcOk{animation:bcPop .55s cubic-bezier(.2,1.6,.4,1) both}
+
+/* ---------- admin: an order with several designs ---------- */
+.bcaGroup{display:grid;gap:6px}
+.bcaGroupName{font-weight:800;color:var(--purple)}
+.bcaBadge.multi{background:#efe7ff;color:#5b21b6;margin-left:6px}
+.admin-dark .bcaBadge.multi{background:#2f2150;color:#d6c9ec}
+
+@media(max-width:520px){.bcSumDeck{width:84px}.bcSumDeck .bcDeck{width:48px}.bcBasketBar{flex-wrap:wrap}}
+
+/* ---------- reduced motion: everything above stands still (the page still works and looks the same) ---------- */
+@media(prefers-reduced-motion:reduce){
+  .bcPage *,.bcPick,.bcPickBox{animation:none!important}
+  .bcTilt{transform:none!important;transition:none}
+  .bcShine,.bcBurst,.bcAddDesign::after{display:none}
+  .bcDeckCard{transition:none}
+}
