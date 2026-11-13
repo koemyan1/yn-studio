@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, BookOpen, Download, Eye, EyeOff, FileDown, ImagePlus, MapPin, Pencil, Phone, Plus, Printer, Save, Trash2, X } from 'lucide-react';
 import { supabase } from './supabase';
 import { BookCoverSheet, Scaled, downloadOrderPdf, downloadOrderPngs, ensureBcFonts, labelOf, printOrder } from './bookCoverSheet';
-import { DEFAULT_PRICE_PER_PAGE, FONTS, MAX_FIELDS, ORDER_STATUSES, bcNo, cleanFields, cleanPricePerPage, defaultSpot, itemsPages, orderItems } from '../shared/bookCoverMath.js';
+import { DEFAULT_PRICE_PER_PAGE, FONTS, KHMER_FONTS, MAX_FIELDS, ORDER_STATUSES, bcNo, cleanFields, cleanPricePerPage, defaultSpot, itemsPages, orderItems } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField, BcItem } from '../shared/bookCoverMath.js';
 import './bookCover.css';
 
@@ -185,7 +185,7 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
   const [busy, setBusy] = useState('');
   const who = o.contact_name || 'Customer';
   const file = `${bcNo(o.id)} - ${who}`;
-  const exp = useMemo(() => ({ id: o.id, items: o.items.map(it => ({ design_image: it.design_image, design_fields: it.design_fields, covers: it.covers })) }), [o]);
+  const exp = useMemo(() => ({ id: o.id, items: o.items.map(it => ({ design_id: it.design_id, design_image: it.design_image, design_fields: it.design_fields, covers: it.covers })) }), [o]);
   const run = (label: string, fn: (p: (n: number, t: number) => void) => Promise<void>) => async () => {
     if (busy) return;
     setBusy(label + '…'); onError('');
@@ -217,7 +217,7 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
         <div key={k} className="bcaGroup">
           {o.items.length > 1 && <small className="bcaGroupName">{k + 1}. {it.design_name || 'Design ' + (k + 1)} · {it.covers.length} page{it.covers.length === 1 ? '' : 's'}</small>}
           <div className="bcaThumbs">
-            {it.covers.map((c, i) => (<figure key={i}><Scaled><BookCoverSheet design={{ image: it.design_image, fields: it.design_fields }} cover={c} /></Scaled><figcaption>{i + 1}{subjectOf(it, c) ? ' · ' + subjectOf(it, c) : ''}</figcaption></figure>))}
+            {it.covers.map((c, i) => (<figure key={i}><Scaled><BookCoverSheet design={{ id: it.design_id, image: it.design_image, fields: it.design_fields }} cover={c} /></Scaled><figcaption>{i + 1}{subjectOf(it, c) ? ' · ' + subjectOf(it, c) : ''}</figcaption></figure>))}
           </div>
         </div>
       ))}
@@ -251,7 +251,7 @@ function DesignEditor({ draft, onChange, count, onClose, onSaved, onError }: { d
     if (draft.fields.length >= MAX_FIELDS) { onError(`A design can have up to ${MAX_FIELDS} questions.`); return; }
     const key = newKey(new Set(draft.fields.map(f => f.key)), pr.id);
     const spot = defaultSpot(draft.fields.length);
-    const f: BcField = { key, label_en: pr.en, label_km: pr.km, hint_en: '', hint_km: '', required: pr.required !== false, per_subject: !!pr.per, x: spot.x, y: spot.y, size: pr.size, color: '#1b1b1b', font: 'Poppins', bold: !!pr.bold, max: pr.id === 'school' ? 70 : 50 };
+    const f: BcField = { key, label_en: pr.en, label_km: pr.km, hint_en: '', hint_km: '', required: pr.required !== false, per_subject: !!pr.per, x: spot.x, y: spot.y, size: pr.size, color: '#1b1b1b', font: 'Poppins', font_km: 'Noto Sans Khmer', bold: !!pr.bold, max: pr.id === 'school' ? 70 : 50 };
     set({ fields: [...draft.fields, f] }); setSel(key);
   }
   const removeField = (key: string) => { set({ fields: draft.fields.filter(f => f.key !== key) }); if (sel === key) setSel(null); };
@@ -360,6 +360,7 @@ function DesignEditor({ draft, onChange, count, onClose, onSaved, onError }: { d
               </div>
               <div className="bcaFieldGrid">
                 <label>Font<select value={f.font} onChange={e => setField(f.key, { font: e.target.value })}>{FONTS.map(x => <option key={x}>{x}</option>)}</select></label>
+                <label>Khmer font<select value={f.font_km} onChange={e => setField(f.key, { font_km: e.target.value })} style={{ fontFamily: `'${f.font_km}', 'Noto Sans Khmer', sans-serif` }}>{KHMER_FONTS.map(x => <option key={x} style={{ fontFamily: `'${x}', 'Noto Sans Khmer', sans-serif` }}>{x}</option>)}</select></label>
                 <label>Size<input type="number" min={10} max={160} value={f.size} onChange={e => setField(f.key, { size: num(e.target.value, f.size) })} /></label>
                 <label>Colour<input type="color" value={f.color} onChange={e => setField(f.key, { color: e.target.value })} style={{ padding: 4, height: 46 }} /></label>
                 <label>Max letters<input type="number" min={1} max={120} value={f.max} onChange={e => setField(f.key, { max: num(e.target.value, f.max) })} /></label>

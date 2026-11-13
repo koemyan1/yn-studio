@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { SHEET_H, SHEET_W } from '../shared/bookCoverMath.js';
+import { CUSTOM_BOX, DEFAULT_KHMER_FONT, KHMER_FONTS, SHEET_H, SHEET_W, hasKhmer, isCustomId } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField, BcPos } from '../shared/bookCoverMath.js';
 import { canvasesToPdfBlob, downloadBlob } from './pdfSave';
 
@@ -11,17 +11,27 @@ import { canvasesToPdfBlob, downloadBlob } from './pdfSave';
    full-size copy that is turned into a PDF. The same component is used by the customer (preview + drag) and the admin (print).
    --------------------------------------------------------------------------------------------- */
 
-export type BcDesignLike = { image: string; fields: BcField[] };
+/** `id` starting with "custom-" = the customer's own picture: a white rectangle is laid over it for the text. */
+export type BcDesignLike = { image: string; fields: BcField[]; id?: string | null };
 
 export function ensureBcFonts() {
-  if (document.getElementById('bc-fonts')) return;
-  const l = document.createElement('link');
-  l.id = 'bc-fonts'; l.rel = 'stylesheet';
-  l.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&family=Anton&family=Playfair+Display:wght@400;700&family=Lato:wght@400;700&family=Noto+Sans+Khmer:wght@400;700&family=Battambang:wght@400;700&family=Moul&family=Koulen&family=Hanuman:wght@400;700&display=swap';
-  document.head.appendChild(l);
+  const add = (id: string, href: string) => {
+    if (document.getElementById(id)) return;
+    const l = document.createElement('link');
+    l.id = id; l.rel = 'stylesheet'; l.href = href;
+    document.head.appendChild(l);
+  };
+  add('bc-fonts', 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&family=Anton&family=Playfair+Display:wght@400;700&family=Lato:wght@400;700&family=Noto+Sans+Khmer:wght@400;700&family=Battambang:wght@400;700&family=Moul&family=Koulen&family=Hanuman:wght@400;700&display=swap');
+  // the extra Khmer fonts the admin can pick; kept in their own file so one slow font can never hold back the rest
+  add('bc-fonts-km', 'https://fonts.googleapis.com/css2?family=Content:wght@400;700&family=Nokora:wght@400;700&family=Siemreap&family=Bayon&family=Bokor&family=Dangrek&family=Angkor&family=Moulpali&family=Taprom&family=Fasthand&display=swap');
 }
 
-const fontStack = (f: string) => `'${f}', 'Noto Sans Khmer', 'Battambang', system-ui, sans-serif`;
+/** Khmer text uses the field's Khmer font first, everything else its normal font first; the other one is the fallback. */
+const fontStack = (f: BcField, text: string) => {
+  const km = KHMER_FONTS.includes(f.font_km) ? f.font_km : DEFAULT_KHMER_FONT;
+  const first = hasKhmer(text) ? [km, f.font] : [f.font, km];
+  return [...first, 'Noto Sans Khmer', 'Battambang'].map(x => `'${x}'`).join(', ') + ', system-ui, sans-serif';
+};
 
 /** Where one text sits: the customer's own spot when there is one, else the spot the admin chose for that question. */
 export function spotOf(f: BcField, pos?: Record<string, BcPos>): BcPos & { color: string } {
@@ -73,6 +83,7 @@ export const BookCoverSheet = React.forwardRef<HTMLDivElement, SheetProps>(funct
   return (
     <div ref={setRef} className={'bcSheet' + (onMove ? ' drag' : '')} style={{ width: SHEET_W, height: SHEET_H }} onPointerDown={() => onSelect?.(null)}>
       <img className="bcSheetImg" src={imgSrc || design.image} alt="" draggable={false} />
+      {isCustomId(design.id) && <div className="bcBox" style={{ left: CUSTOM_BOX.left + '%', top: CUSTOM_BOX.top + '%', right: CUSTOM_BOX.right + '%', bottom: CUSTOM_BOX.bottom + '%' }} />}
       {design.fields.map(f => {
         const text = sample ? labelOf(f, km) : (cover?.values?.[f.key] || '');
         if (!text) return null;
@@ -81,7 +92,7 @@ export const BookCoverSheet = React.forwardRef<HTMLDivElement, SheetProps>(funct
           <div
             key={f.key}
             className={'bcText' + (selected === f.key ? ' sel' : '') + (frame && onMove ? ' frame' : '')}
-            style={{ left: s.x + '%', top: s.y + '%', fontSize: s.size, color: s.color, fontFamily: fontStack(f.font), fontWeight: f.bold ? 700 : 400, maxWidth: SHEET_W * 0.9 }}
+            style={{ left: s.x + '%', top: s.y + '%', fontSize: s.size, color: s.color, fontFamily: fontStack(f, text), fontWeight: f.bold ? 700 : 400, maxWidth: SHEET_W * 0.9 }}
             onPointerDown={e => down(e, f)} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
           >{text}</div>
         );
@@ -136,7 +147,7 @@ async function coverCanvas(design: BcDesignLike, cover: BcCover, imgSrc: string,
   } finally { root.unmount(); host.remove(); }
 }
 
-export type ExportItem = { design_image: string; design_fields: BcField[]; covers: BcCover[] };
+export type ExportItem = { design_id?: string | null; design_image: string; design_fields: BcField[]; covers: BcCover[] };
 /** An order to print: one entry per design, each with its own pages. */
 export type ExportOrder = { id: string; items: ExportItem[] };
 const safeName = (s: string) => (s || 'book-cover').replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'book-cover';
@@ -147,7 +158,7 @@ async function canvasesFor(o: ExportOrder, ratio: number, onProgress?: (n: numbe
   const total = o.items.reduce((n, it) => n + it.covers.length, 0);
   const out: HTMLCanvasElement[] = [];
   for (const it of o.items) {
-    const design: BcDesignLike = { image: it.design_image, fields: it.design_fields };
+    const design: BcDesignLike = { id: it.design_id, image: it.design_image, fields: it.design_fields };
     const img = await toDataUrl(it.design_image);
     for (const c of it.covers) { onProgress?.(out.length, total); out.push(await coverCanvas(design, c, img, ratio)); }
   }

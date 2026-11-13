@@ -11,6 +11,31 @@ export const DEFAULT_PRICE_PER_PAGE = 250;  // riel
 export const MIN_PRICE_PER_PAGE = 100;
 export const MAX_PRICE_PER_PAGE = 100000;
 export const FONTS = ['Poppins', 'Montserrat', 'Playfair Display', 'Anton', 'Lato', 'Noto Sans Khmer', 'Battambang', 'Moul', 'Koulen', 'Hanuman'];
+/** Fonts the admin can pick for KHMER text (used whenever the customer's text contains Khmer letters). */
+export const KHMER_FONTS = ['Noto Sans Khmer', 'Battambang', 'Hanuman', 'Content', 'Nokora', 'Siemreap', 'Moul', 'Koulen', 'Bayon', 'Bokor', 'Dangrek', 'Angkor', 'Moulpali', 'Taprom', 'Fasthand'];
+export const DEFAULT_KHMER_FONT = 'Noto Sans Khmer';
+/** Does this text contain Khmer letters? Then the field's Khmer font is used instead of its normal font. */
+export const hasKhmer = text => /[\u1780-\u17FF\u19E0-\u19FF]/.test(String(text ?? ''));
+
+/* ---- a customer's OWN design: they upload a picture, we lay a white rectangle over it for the text (like the admin's framed designs) ---- */
+export const CUSTOM_BUCKET = 'book-cover-uploads';
+export const CUSTOM_NAME_EN = 'My own design';
+export const CUSTOM_NAME_KM = 'គំរូផ្ទាល់ខ្លួន';
+/** The white rectangle, as % of the sheet measured from each edge. */
+export const CUSTOM_BOX = { left: 10, top: 12, right: 10, bottom: 9 };
+const CUSTOM_ID_RE = /^custom-[a-z0-9]{6,32}$/;
+export const isCustomId = id => CUSTOM_ID_RE.test(String(id ?? ''));
+export const newCustomId = () => 'custom-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+/**
+ * The picture a customer uploaded, or '' when it is not one of THEIR files in OUR bucket. The browser says where the picture is,
+ * so the server only accepts https://<supabase>/storage/v1/object/public/book-cover-uploads/<this user's id>/<name>.jpg|png|webp
+ */
+export function customImageUrl(supabaseUrl, userId, url) {
+  const base = `${String(supabaseUrl || '').replace(/\/$/, '')}/storage/v1/object/public/${CUSTOM_BUCKET}/${userId}/`;
+  const u = String(url || '');
+  if (!supabaseUrl || !userId || !u.startsWith(base)) return '';
+  return /^[A-Za-z0-9._-]{1,80}\.(jpe?g|png|webp)$/i.test(u.slice(base.length)) ? u : '';
+}
 
 const KEY_RE = /^[a-z][a-z0-9_]{0,23}$/;
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
@@ -40,6 +65,7 @@ export function cleanFields(raw) {
       size: clamp(f.size, 10, 160, 36),        // text size in sheet pixels (794 px wide)
       color: HEX_RE.test(String(f.color || '')) ? String(f.color) : '#1b1b1b',
       font: FONTS.includes(f.font) ? f.font : 'Poppins',
+      font_km: KHMER_FONTS.includes(f.font_km) ? f.font_km : DEFAULT_KHMER_FONT,   // used instead of `font` when the text is Khmer
       bold: !!f.bold,
       max: Math.round(clamp(f.max, 1, 120, 60)),
     });
@@ -51,6 +77,17 @@ export function cleanFields(raw) {
 /** Where a new question starts: in the middle band of the cover, stacked one under the other. The customer can still move it. */
 export function defaultSpot(index) {
   return { x: 50, y: Math.min(86, 38 + index * 9) };
+}
+
+/** The questions every customer-made design asks, stacked inside the white rectangle. */
+export function customFields() {
+  const mk = (key, en, km, y, size, o = {}) => ({ key, label_en: en, label_km: km, required: true, per_subject: false, x: 50, y, size, color: '#1b1b1b', font: 'Poppins', bold: false, max: 60, ...o });
+  return cleanFields([
+    mk('subject', 'Subject', 'មុខវិជ្ជា', 38, 58, { per_subject: true, bold: true }),
+    mk('name', 'Student name', 'ឈ្មោះសិស្ស', 49, 40),
+    mk('class', 'Class', 'ថ្នាក់', 58, 34),
+    mk('school', 'School', 'សាលា', 66, 34, { max: 70 }),
+  ]);
 }
 
 /** Does this design have a question that changes from subject to subject? Only then is the "other subjects" step shown. */

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Check, Crosshair, Layers, MapPin, Pencil, Plus, RotateCcw, Send, Sparkles, Trash2, Wallet, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Crosshair, ImagePlus, Layers, MapPin, Pencil, Plus, RotateCcw, Send, Sparkles, Trash2, Wallet, X } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
 import { BookCoverSheet, Scaled, ensureBcFonts, labelOf, spotOf } from './bookCoverSheet';
-import { DEFAULT_PRICE_PER_PAGE, MAX_COVERS, MAX_ITEMS, bcNo, cleanFields, hasSubjectFields, orderItems, orderTotal, validateContact } from '../shared/bookCoverMath.js';
+import { CUSTOM_BUCKET, CUSTOM_NAME_EN, CUSTOM_NAME_KM, DEFAULT_PRICE_PER_PAGE, MAX_COVERS, MAX_ITEMS, bcNo, cleanFields, customFields, hasSubjectFields, isCustomId, newCustomId, orderItems, orderTotal, validateContact } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField } from '../shared/bookCoverMath.js';
 import './cv.css';
 import './bookCover.css';
@@ -32,7 +32,7 @@ type Draft = { values: Record<string, string> }[];
 type Step = 'info' | 'subjects' | 'basket' | 'pay' | 'layout';
 /** One design in the order, with the pages the customer is filling in for it. */
 type Item = { design: Design; draft: Draft };
-type SavedBasket = { design_id: string; draft: Draft }[];
+type SavedBasket = { design_id: string; draft: Draft; image?: string }[];
 /** Quick colours for the text; the round picker beside them allows any colour. */
 const TEXT_COLORS = ['#1b1b1b', '#ffffff', '#c1121f', '#e5007d', '#7c3aed', '#1d4ed8', '#0f8a5f', '#f59e0b'];
 const DESIGN_COLS = 'id,name_en,name_km,image_url,price_per_page,fields';
@@ -59,6 +59,33 @@ const STATUS_TXT: Record<string, [string, string]> = {
 export const statusTxt = (s: string) => { const x = STATUS_TXT[s] || STATUS_TXT.pending; return tr(x[0], x[1]); };
 
 const toDesign = (d: any): Design => ({ id: d.id, name_en: d.name_en, name_km: d.name_km || '', image: d.image_url, price_per_page: Number(d.price_per_page) || DEFAULT_PRICE_PER_PAGE, fields: cleanFields(d.fields) });
+/** The customer's OWN picture as a design: the standard questions, the default price, and (drawn by the sheet) a white rectangle for the text. */
+const customDesign = (image: string, id = newCustomId()): Design => ({ id, name_en: CUSTOM_NAME_EN, name_km: CUSTOM_NAME_KM, image, price_per_page: DEFAULT_PRICE_PER_PAGE, fields: customFields() });
+
+/** A phone photo becomes a JPEG of at most 1800 x 2550 px (about A4 at 220 dpi). Throws a readable message when it is not a picture. */
+async function shrinkPicture(file: File): Promise<Blob> {
+  if (!/^image\//.test(file.type) || file.size > 25_000_000) throw new Error(tr('Please choose a picture (JPG or PNG) under 25 MB.', 'សូមជ្រើសរើសរូបភាព (JPG ឬ PNG) ក្រោម 25 MB។'));
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, 1800 / bmp.width, 2550 / bmp.height);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+  const g = c.getContext('2d'); if (!g) throw new Error('canvas');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise<Blob | null>(r => c.toBlob(r, 'image/jpeg', 0.9));
+  if (!blob) throw new Error('jpeg');
+  return blob;
+}
+/** Uploads the picture into the customer's own folder and returns it as a design. */
+async function uploadOwnDesign(file: File): Promise<Design> {
+  const u = await uid(); if (!u) throw new Error(tr('Please sign in again.', 'សូមចូលគណនីម្ដងទៀត។'));
+  const blob = await shrinkPicture(file);
+  const path = `${u}/${crypto.randomUUID()}.jpg`;
+  const up = await supabase.storage.from(CUSTOM_BUCKET).upload(path, blob, { upsert: false, cacheControl: '31536000', contentType: 'image/jpeg' });
+  if (up.error) throw new Error(tr('Could not upload your picture. Please try again.', 'មិនអាចផ្ទុករូបភាពឡើងបានទេ។ សូមព្យាយាមម្ដងទៀត។'));
+  return customDesign(supabase.storage.from(CUSTOM_BUCKET).getPublicUrl(path).data.publicUrl);
+}
+
 const designName = (d: { name_en: string; name_km: string }) => tr(d.name_en, d.name_km || d.name_en);
 
 /* The unfinished order lives in this browser until it is saved (one basket per signed-in customer). */
@@ -103,6 +130,31 @@ function DesignCard({ d, i, onPick, taken }: { d: Design; i: number; onPick: () 
       <small className="bcCardPrice">{riel(d.price_per_page)} / {tr('page', 'ទំព័រ')}</small>
       {taken && <span className="bcTaken"><Check size={13} /> {tr('In your order', 'ក្នុងការបញ្ជាទិញ')}</span>}
     </button>
+  );
+}
+
+/** "My own design": the customer picks a picture from their phone. It looks like the other cards, with a white rectangle where the text will go. */
+function UploadTile({ i, onDesign }: { i: number; onDesign: (d: Design) => void }) {
+  const input = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  async function chosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (!f || busy) return;
+    setBusy(true); setErr('');
+    try { onDesign(await uploadOwnDesign(f)); } catch (x: any) { setErr(x?.message || tr('Could not upload your picture.', 'មិនអាចផ្ទុករូបភាពឡើងបានទេ។')); }
+    setBusy(false);
+  }
+  return (
+    <div className="bcOwnWrap" style={{ ['--i' as any]: i }}>
+      <button type="button" className="cvmCard bcCard bcOwn" disabled={busy} onClick={() => input.current?.click()} aria-label={tr('Use my own design', 'ប្រើគំរូផ្ទាល់ខ្លួន')}>
+        <span className="bcOwnArt"><span className="bcOwnBox" /><span className="bcOwnPlus"><ImagePlus /></span></span>
+        <span className="cvmCardName">{busy ? tr('Uploading…', 'កំពុងផ្ទុកឡើង…') : tr('My own design', 'គំរូផ្ទាល់ខ្លួន')}</span>
+        <small className="bcCardPrice">{riel(DEFAULT_PRICE_PER_PAGE)} / {tr('page', 'ទំព័រ')}</small>
+      </button>
+      <input ref={input} type="file" accept="image/*" hidden onChange={chosen} />
+      {err && <p className="cvmErr" role="alert">{err}</p>}
+    </div>
   );
 }
 
@@ -155,7 +207,7 @@ function Picker({ taken, onPick, onClose }: { taken: Set<string>; onPick: (d: De
         {list === null && <p className="cvmHint center">{tr('Loading…', 'កំពុងផ្ទុក…')}</p>}
         {err && <p className="cvmWarn" role="alert">{err}</p>}
         {list && rest.length === 0 && !err && <p className="cvmHint center">{tr('You have already added every design.', 'អ្នកបានបន្ថែមគំរូទាំងអស់ហើយ។')}</p>}
-        <div className="cvmGrid bcPickGrid">{rest.map((d, i) => <DesignCard key={d.id} d={d} i={i} onPick={() => onPick(d)} />)}</div>
+        <div className="cvmGrid bcPickGrid"><UploadTile i={0} onDesign={onPick} />{rest.map((d, i) => <DesignCard key={d.id} d={d} i={i} onPick={() => onPick(d)} />)}</div>
       </div>
     </div>
   );
@@ -215,11 +267,12 @@ export function BookCoverHome({ Top, Nav }: Chrome) {
           <div className="bcBasketBar" role="status">
             <span className="bcBasketIcon"><Layers /></span>
             <span><b>{basket.length} {tr('in your order', 'ក្នុងការបញ្ជាទិញ')}</b></span>
-            <button type="button" className="cvmSmall" onClick={() => nav('/services/book-cover/' + basket[0].design_id, { state: { step: 'basket' } })}>{tr('Review order', 'មើលការបញ្ជាទិញ')}</button>
+            <button type="button" className="cvmSmall" onClick={() => { const b = basket[0]; if (isCustomId(b.design_id) && b.image) nav('/services/book-cover/custom', { state: { step: 'basket', custom: customDesign(b.image, b.design_id) } }); else nav('/services/book-cover/' + b.design_id, { state: { step: 'basket' } }); }}>{tr('Review order', 'មើលការបញ្ជាទិញ')}</button>
             <button type="button" className="cvmLink" aria-label={tr('Start over', 'ចាប់ផ្តើមឡើងវិញ')} onClick={() => { clearBasket(me); setBasket([]); }}><X size={16} /></button>
           </div>
         )}
         <div className="cvmGrid bcShelf">
+          <UploadTile i={0} onDesign={d => nav('/services/book-cover/custom', { state: { custom: d } })} />
           {(designs || []).map((d, i) => <DesignCard key={d.id} d={d} i={i} taken={basket.some(b => b.design_id === d.id)} onPick={() => nav('/services/book-cover/' + d.id)} />)}
         </div>
 
@@ -317,14 +370,21 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
           setContact(c => ({ ...c, name: o.contact_name || '', phone: o.phone || '', address: o.address || '', notes: o.notes || '', lat: o.lat, lng: o.lng }));
           setStep(o.status === 'pending' ? 'pay' : 'layout');
         } else {
-          const r = await supabase.from('book_cover_designs').select(DESIGN_COLS).eq('id', designId || '').eq('enabled', true).single();
-          if (r.error) throw r.error;
-          const d = toDesign(r.data);
+          let d: Design;
+          if (designId === 'custom') {                         // the customer's own picture, just uploaded (it travels in the page state)
+            const c = (loc.state as any)?.custom;
+            if (!c || !isCustomId(c.id) || typeof c.image !== 'string') throw new Error('custom');
+            d = customDesign(c.image, c.id);
+          } else {
+            const r = await supabase.from('book_cover_designs').select(DESIGN_COLS).eq('id', designId || '').eq('enabled', true).single();
+            if (r.error) throw r.error;
+            d = toDesign(r.data);
+          }
           if (!live) return;
           // an unfinished order saved in this browser: the designs picked earlier come back, and this design joins them
           const savedB = readBasket(u);
           const byId = new Map<string, Design>([[d.id, d]]);
-          const need = savedB.map(x => x.design_id).filter(id => id !== d.id);
+          const need = savedB.map(x => x.design_id).filter(id => id !== d.id && !isCustomId(id));
           if (need.length) {
             const rr = await supabase.from('book_cover_designs').select(DESIGN_COLS).in('id', need).eq('enabled', true);
             for (const x of ((rr.data as any[]) || [])) { const dd = toDesign(x); if (dd.fields.length) byId.set(dd.id, dd); }
@@ -332,7 +392,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
           if (!live) return;
           const list: Item[] = [];
           for (const sv of savedB) {
-            const dd = byId.get(sv.design_id);
+            const dd = isCustomId(sv.design_id) ? (sv.image ? customDesign(sv.image, sv.design_id) : undefined) : byId.get(sv.design_id);
             if (!dd || list.some(i => i.design.id === dd.id)) continue;
             const draft = sv.draft.slice(0, MAX_COVERS).map((c: any) => ({ values: { ...blankCover(dd.fields).values, ...(c?.values || {}) } }));
             list.push({ design: dd, draft: draft.length ? draft : [blankCover(dd.fields)] });
@@ -354,7 +414,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
     const t = window.setTimeout(() => {
       try {
         const keep = items.filter(it => it.design.id && hasText(it));
-        if (keep.length) localStorage.setItem(basketKey(me), JSON.stringify(keep.map(it => ({ design_id: it.design.id, draft: it.draft }))));
+        if (keep.length) localStorage.setItem(basketKey(me), JSON.stringify(keep.map(it => ({ design_id: it.design.id, draft: it.draft, ...(isCustomId(it.design.id) ? { image: it.design.image } : {}) }))));
         else localStorage.removeItem(basketKey(me));
       } catch { /* full */ }
     }, 400);
@@ -410,7 +470,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
   async function saveOrder(): Promise<boolean> {
     setBusy(true); setErr('');
     try {
-      const j = await api('/api/bookcover/save', { order_id: orderId, items: items.map((it, i) => ({ design_id: it.design.id, covers: merged[i].map(c => ({ values: c.values })) })) });
+      const j = await api('/api/bookcover/save', { order_id: orderId, items: items.map((it, i) => ({ design_id: it.design.id, ...(isCustomId(it.design.id) ? { image: it.design.image } : {}), covers: merged[i].map(c => ({ values: c.values })) })) });
       if (!orderId) clearBasket(me);                       // from now on the saved order is the source, not the browser's basket
       setOrderId(j.id); setStatus(j.status); setTotals({ pages: j.pages, total: j.total });
       setLayout(merged);

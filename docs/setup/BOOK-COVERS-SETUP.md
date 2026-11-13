@@ -12,6 +12,7 @@ admin:    Orders -> Download PDF / Print / Pictures -> Mark printed -> Mark deli
 1. **Bakong must already work** ([BAKONG-SETUP](BAKONG-SETUP.md)). Your Bakong account must accept **riel (KHR)** QR codes: book covers are paid in riel.
 2. **Supabase -> SQL Editor:** run `supabase/sql/supabase-book-covers.sql` once (safe to run again). It creates the designs, the orders and a public bucket `book-covers` for the cover pictures. **Already ran it before multi-design orders?** Run it again: it adds the `items` column that lets one order hold several designs. Old orders keep working and need no conversion.
 2b. **Optional, for wallet payment:** run `supabase/sql/supabase-book-cover-wallet.sql` once (after `supabase-wallet-separate-riel.sql`). Customers can then pay from their **riel wallet balance** instead of KHQR. Without it the Wallet button shows an error and KHQR still works.
+2c. **Optional, for "My own design":** run `supabase/sql/supabase-book-cover-uploads.sql` once. Customers can then upload their own cover picture (a **white rectangle** is laid over it for their text, 250 riel per page, standard questions: subject, student name, class, school). Without it the upload shows an error and the normal designs still work.
 3. **Deploy** the new code on Render (no new environment variables, no new packages).
 4. **Admin -> Inbox -> Book covers -> Designs -> Add design** (see below).
 5. Have a Khmer speaker read the Khmer text on the customer pages (it was machine-written).
@@ -20,7 +21,7 @@ admin:    Orders -> Download PDF / Print / Pictures -> Mark printed -> Mark deli
 
 1. **Upload the blank cover**: an A4 portrait picture (JPG, PNG or WebP; about 2480 x 3508 px prints best). Larger pictures are shrunk to that size in your browser.
 2. Give it a **name** and a **price per page** (250 riel by default, minimum 100).
-3. **What should the customer fill in?** Press the buttons (Subject, Student name, Class, School, Teacher, School year, Other text). For each question you can set the Khmer wording, a hint, Required, **Changes for each subject**, Bold, font, size, colour and the maximum number of letters.
+3. **What should the customer fill in?** Press the buttons (Subject, Student name, Class, School, Teacher, School year, Other text). For each question you can set the Khmer wording, a hint, Required, **Changes for each subject**, Bold, font, **Khmer font** (used whenever the customer's text contains Khmer letters), size, colour and the maximum number of letters.
    - Tick **Changes for each subject** on the question that is different on every page (normally *Subject*). When a customer has more subjects, only those questions are asked again; everything else (name, class, school...) is copied to every page. If no question has this tick, the "other subjects" step is skipped.
 4. **Drag each text on the cover** to where it should start. New questions start stacked in the middle of the cover. The customer can still move their text later.
 5. Keep **Show on the Services page** ticked and press **Add design**.

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBookCoverShop } from '../server/bookCover.js';
-import { buildCovers, buildOrder, cleanFields, cleanLayout, defaultSpot, itemsPages, itemsTotal, orderItems, orderTotal, validateContact, hasSubjectFields, MAX_COVERS, MAX_ITEMS } from '../shared/bookCoverMath.js';
+import { buildCovers, buildOrder, cleanFields, cleanLayout, defaultSpot, itemsPages, itemsTotal, orderItems, orderTotal, validateContact, hasSubjectFields, hasKhmer, isCustomId, customFields, customImageUrl, KHMER_FONTS, MAX_COVERS, MAX_ITEMS } from '../shared/bookCoverMath.js';
 
 const quiet = { warn() {}, error() {}, log() {} };
 const U1 = '11111111-1111-4111-8111-111111111111', U2 = '22222222-2222-4222-8222-222222222222';
@@ -271,4 +271,44 @@ test('layout: the customer can pick a text colour (#rrggbb only), nothing else i
   assert.deepEqual(out[0].name, { x: 10, y: 20, size: 40, color: '#ff00aa' }, 'a valid colour is kept (lower-cased)');
   assert.deepEqual(out[1].name, { x: 10, y: 20, size: 40 }, 'a colour name is dropped');
   assert.equal('color' in out[2].name, false, 'anything that is not #rrggbb is dropped');
+});
+
+const MINE = 'https://sb.test/storage/v1/object/public/book-cover-uploads/' + U1 + '/a1b2.jpg';
+const OTHERS = 'https://sb.test/storage/v1/object/public/book-cover-uploads/' + U2 + '/a1b2.jpg';
+const mineCovers = [{ values: { subject: 'Math', name: 'Sok Dara', class: '5A', school: 'ABC' } }];
+
+test('own design: only the customer\'s own picture is accepted; questions and price are the server\'s', async () => {
+  const { call, db } = makeShop();
+  assert.equal(isCustomId('custom-abc12345'), true); assert.equal(isCustomId(D1), false); assert.equal(isCustomId('custom-'), false);
+  // somebody else's file, another website, a path trick, a missing picture: all refused
+  for (const image of [OTHERS, 'https://evil.test/a.jpg', MINE.replace('a1b2.jpg', '../' + U2 + '/x.jpg'), MINE + '?x=1', '', undefined]) {
+    const r = await call('/api/bookcover/save', { items: [{ design_id: 'custom-abc12345', image, covers: mineCovers }] });
+    assert.equal(r.status, 400, String(image)); assert.equal(r.body.code, 'custom_image');
+  }
+  assert.equal(db.orders.length, 0);
+  // the customer's own picture works; a price and questions sent by the browser are ignored
+  const r = await call('/api/bookcover/save', { items: [{ design_id: 'custom-abc12345', image: MINE, price_per_page: 1, fields: [], covers: [{ values: { subject: 'Math', name: 'Sok Dara', class: '5A', school: 'ABC' } }, { values: { subject: 'Khmer' } }] }] });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.price_per_page, 250); assert.equal(r.body.total, 500);
+  const o = db.orders[0];
+  assert.equal(o.design_id, null, 'the old single-design column only takes a real design id');
+  assert.equal(o.items[0].design_id, 'custom-abc12345'); assert.equal(o.items[0].design_image, MINE);
+  assert.deepEqual(o.items[0].design_fields.map(f => f.key), customFields().map(f => f.key));
+  assert.equal(o.items[0].covers[1].values.name, 'Sok Dara', 'shared answers follow page 1');
+});
+
+test('own design: can sit next to a normal design, and keeps its picture when the order is saved again', async () => {
+  const { call, db } = makeShop();
+  const r = await call('/api/bookcover/save', { items: [{ design_id: D1, covers: covers3.slice(0, 1) }, { design_id: 'custom-abc12345', image: MINE, covers: mineCovers }, { design_id: 'custom-zzz98765', image: MINE, covers: mineCovers }] });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.total, 750, 'two own designs and one normal one, 250 each');
+  // saved again with no picture sent: the frozen copy is used
+  const again = await call('/api/bookcover/save', { order_id: r.body.id, items: [{ design_id: D1, covers: covers3.slice(0, 1) }, { design_id: 'custom-abc12345', covers: mineCovers }, { design_id: 'custom-zzz98765', covers: mineCovers }] });
+  assert.equal(again.status, 200, JSON.stringify(again.body)); assert.equal(db.orders[0].items[1].design_image, MINE);
+  assert.equal(customImageUrl('https://sb.test', U1, MINE), MINE); assert.equal(customImageUrl('https://sb.test', U1, OTHERS), '');
+});
+
+test('khmer font: each text can have its own Khmer font; unknown ones fall back', () => {
+  const f = cleanFields([{ key: 'a', label_en: 'A', font: 'Poppins', font_km: 'Moul' }, { key: 'b', label_en: 'B', font_km: 'Comic Sans' }, { key: 'c', label_en: 'C' }]);
+  assert.deepEqual(f.map(x => x.font_km), ['Moul', 'Noto Sans Khmer', 'Noto Sans Khmer']);
+  assert.ok(KHMER_FONTS.includes('Moul') && KHMER_FONTS.includes('Battambang'));
+  assert.equal(hasKhmer('សួស្តី'), true); assert.equal(hasKhmer('Hello 123'), false); assert.equal(hasKhmer('Sok សុខ'), true);
 });

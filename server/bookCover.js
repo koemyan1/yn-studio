@@ -1,4 +1,5 @@
 // Book cover service (250 riel per page by default). Setup: docs/setup/BOOK-COVERS-SETUP.md
+// A customer can also upload their OWN cover picture (id "custom-xxxx"): the server checks the file is theirs, uses the standard questions and the default price.
 //
 //   POST /api/bookcover/save     { order_id?, items:[{ design_id, covers:[{values}] }] } -> creates / updates the UNPAID order, price computed here
 //                                (one order can hold several DIFFERENT designs, each with its own pages; the old { design_id, covers } shape still works)
@@ -10,7 +11,7 @@
 // The browser is never trusted for money: it sends a design id and the texts. The price is read from book_cover_designs with the
 // service-role key (and frozen on the order), the amount Bakong must confirm is that exact riel amount, and the admin is told only then.
 import { isUuid } from '../shared/serviceMath.js';
-import { bcNo, buildOrder, cleanFields, cleanLayout, cleanPricePerPage, designsLabel, orderItems, validateContact, MAX_ITEMS } from '../shared/bookCoverMath.js';
+import { bcNo, buildOrder, cleanFields, cleanLayout, cleanPricePerPage, customFields, customImageUrl, designsLabel, isCustomId, orderItems, validateContact, CUSTOM_NAME_EN, DEFAULT_PRICE_PER_PAGE, MAX_ITEMS } from '../shared/bookCoverMath.js';
 
 const OPEN_UNPAID_MAX = 10;
 const FIELDS = 'id,user_id,design_id,design_name,design_image,design_fields,covers,items,pages,price_per_page,total,status,phone,address,bakong_md5s,created_at';
@@ -94,6 +95,13 @@ export function createBookCoverShop(deps) {
         if (known.has(id)) continue;
         const snap = own.find(x => String(x.design_id || '') === id);
         if (snap) { known.set(id, { id: snap.design_id, name: snap.design_name, image: snap.design_image, price_per_page: snap.price_per_page, fields: snap.design_fields }); continue; }
+        if (isCustomId(id)) {
+          // The customer's OWN picture: it must be a file THEY uploaded to our bucket. The questions and the price are ours, not the browser's.
+          const img = customImageUrl(SB.url, user.id, r?.image);
+          if (!img) return res.status(400).json({ error: 'Please upload your design again.', code: 'custom_image' });
+          known.set(id, { id, name: CUSTOM_NAME_EN, image: img, price_per_page: DEFAULT_PRICE_PER_PAGE, fields: customFields() });
+          continue;
+        }
         if (!isUuid(id)) return res.status(400).json({ error: 'Invalid design.' });
         const d = (await sb(`book_cover_designs?id=eq.${id}&enabled=eq.true&select=id,name_en,image_url,price_per_page,fields&limit=1`))?.[0];
         if (!d) return res.status(404).json({ error: 'This design is not available right now.' });
@@ -104,7 +112,7 @@ export function createBookCoverShop(deps) {
       const { items, pages, total } = built;                // total = sum over designs of pages x that design's price
       const first = items[0];
       // The old single-design columns mirror the first design so nothing that still reads them breaks.
-      const mirror = { design_id: first.design_id, design_name: designsLabel(items), design_image: first.design_image, design_fields: first.design_fields, covers: first.covers, price_per_page: first.price_per_page };
+      const mirror = { design_id: isUuid(first.design_id) ? first.design_id : null, design_name: designsLabel(items), design_image: first.design_image, design_fields: first.design_fields, covers: first.covers, price_per_page: first.price_per_page };
       const summary = items.map(it => ({ design_id: it.design_id, name: it.design_name, pages: it.covers.length, price_per_page: it.price_per_page }));
       if (order) {
         await sb(`book_cover_orders?id=eq.${order.id}&status=eq.pending`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...mirror, items, pages, total, updated_at: new Date().toISOString() }) });

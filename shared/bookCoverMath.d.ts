@@ -7,12 +7,23 @@ export const DEFAULT_PRICE_PER_PAGE: number;
 export const MIN_PRICE_PER_PAGE: number;
 export const MAX_PRICE_PER_PAGE: number;
 export const FONTS: string[];
+export const KHMER_FONTS: string[];
+export const DEFAULT_KHMER_FONT: string;
+export const CUSTOM_BUCKET: string;
+export const CUSTOM_NAME_EN: string;
+export const CUSTOM_NAME_KM: string;
+export const CUSTOM_BOX: { left: number; top: number; right: number; bottom: number };
+export function hasKhmer(text: unknown): boolean;
+export function isCustomId(id: unknown): boolean;
+export function newCustomId(): string;
+export function customImageUrl(supabaseUrl: string, userId: string, url: unknown): string;
+export function customFields(): BcField[];
 export const ORDER_STATUSES: string[];
 
 export type BcField = {
   key: string; label_en: string; label_km: string; hint_en: string; hint_km: string;
   required: boolean; per_subject: boolean;
-  x: number; y: number; size: number; color: string; font: string; bold: boolean; max: number;
+  x: number; y: number; size: number; color: string; font: string; font_km: string; bold: boolean; max: number;
 };
 export type BcPos = { x: number; y: number; size: number; color?: string };
 export type BcCover = { values: Record<string, string>; pos: Record<string, BcPos> };
