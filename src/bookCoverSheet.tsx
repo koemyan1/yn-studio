@@ -24,9 +24,9 @@ export function ensureBcFonts() {
 const fontStack = (f: string) => `'${f}', 'Noto Sans Khmer', 'Battambang', system-ui, sans-serif`;
 
 /** Where one text sits: the customer's own spot when there is one, else the spot the admin chose for that question. */
-export function spotOf(f: BcField, pos?: Record<string, BcPos>): BcPos {
+export function spotOf(f: BcField, pos?: Record<string, BcPos>): BcPos & { color: string } {
   const p = pos?.[f.key];
-  return { x: p?.x ?? f.x, y: p?.y ?? f.y, size: p?.size ?? f.size };
+  return { x: p?.x ?? f.x, y: p?.y ?? f.y, size: p?.size ?? f.size, color: p?.color || f.color };   // colour: the customer's pick, else the admin's
 }
 
 export const labelOf = (f: BcField, km: boolean) => (km && f.label_km ? f.label_km : f.label_en);
@@ -81,7 +81,7 @@ export const BookCoverSheet = React.forwardRef<HTMLDivElement, SheetProps>(funct
           <div
             key={f.key}
             className={'bcText' + (selected === f.key ? ' sel' : '') + (frame && onMove ? ' frame' : '')}
-            style={{ left: s.x + '%', top: s.y + '%', fontSize: s.size, color: f.color, fontFamily: fontStack(f.font), fontWeight: f.bold ? 700 : 400, maxWidth: SHEET_W * 0.9 }}
+            style={{ left: s.x + '%', top: s.y + '%', fontSize: s.size, color: s.color, fontFamily: fontStack(f.font), fontWeight: f.bold ? 700 : 400, maxWidth: SHEET_W * 0.9 }}
             onPointerDown={e => down(e, f)} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
           >{text}</div>
         );

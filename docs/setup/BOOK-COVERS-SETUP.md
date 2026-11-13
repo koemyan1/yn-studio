@@ -11,6 +11,7 @@ admin:    Orders -> Download PDF / Print / Pictures -> Mark printed -> Mark deli
 
 1. **Bakong must already work** ([BAKONG-SETUP](BAKONG-SETUP.md)). Your Bakong account must accept **riel (KHR)** QR codes: book covers are paid in riel.
 2. **Supabase -> SQL Editor:** run `supabase/sql/supabase-book-covers.sql` once (safe to run again). It creates the designs, the orders and a public bucket `book-covers` for the cover pictures. **Already ran it before multi-design orders?** Run it again: it adds the `items` column that lets one order hold several designs. Old orders keep working and need no conversion.
+2b. **Optional, for wallet payment:** run `supabase/sql/supabase-book-cover-wallet.sql` once (after `supabase-wallet-separate-riel.sql`). Customers can then pay from their **riel wallet balance** instead of KHQR. Without it the Wallet button shows an error and KHQR still works.
 3. **Deploy** the new code on Render (no new environment variables, no new packages).
 4. **Admin -> Inbox -> Book covers -> Designs -> Add design** (see below).
 5. Have a Khmer speaker read the Khmer text on the customer pages (it was machine-written).

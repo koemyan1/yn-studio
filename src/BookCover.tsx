@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Check, Crosshair, Layers, MapPin, Pencil, Plus, RotateCcw, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Crosshair, Layers, MapPin, Pencil, Plus, RotateCcw, Send, Sparkles, Trash2, Wallet, X } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
@@ -33,6 +33,8 @@ type Step = 'info' | 'subjects' | 'basket' | 'pay' | 'layout';
 /** One design in the order, with the pages the customer is filling in for it. */
 type Item = { design: Design; draft: Draft };
 type SavedBasket = { design_id: string; draft: Draft }[];
+/** Quick colours for the text; the round picker beside them allows any colour. */
+const TEXT_COLORS = ['#1b1b1b', '#ffffff', '#c1121f', '#e5007d', '#7c3aed', '#1d4ed8', '#0f8a5f', '#f59e0b'];
 const DESIGN_COLS = 'id,name_en,name_km,image_url,price_per_page,fields';
 
 export const riel = (n: number) => Math.round(Number(n) || 0).toLocaleString('en-US') + ' ៛';
@@ -275,6 +277,8 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
   const [sel, setSel] = useState<string | null>(null);
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sent, setSent] = useState(false);
+  const [method, setMethod] = useState<'khqr' | 'wallet'>('khqr');
+  const [bal, setBal] = useState<number | null>(null);      // riel wallet balance (null = unknown)
 
   useEffect(() => { ensureBcFonts(); }, []);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [step]);
@@ -370,6 +374,14 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
     })().catch(() => {});
   }, [me]);
 
+  const loadBal = useCallback(async () => {
+    if (!me) return;
+    const r = await supabase.from('wallets').select('balance_khr').eq('user_id', me).maybeSingle();
+    setBal(r.error ? null : Number((r.data as any)?.balance_khr || 0));
+  }, [me]);
+  useEffect(() => { loadBal(); }, [loadBal]);
+  useEffect(() => { if (bkOn === false) setMethod('wallet'); }, [bkOn]);
+
   const editActive = (fn: (d: Draft) => Draft) => setItems(L => L.map((it, k) => (k === active ? { ...it, draft: fn(it.draft) } : it)));
   const setVal = (i: number, key: string, v: string) => editActive(d => d.map((c, j) => (j === i ? { values: { ...c.values, [key]: v } } : c)));
 
@@ -427,7 +439,14 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
     setBusy(true); setErr('');
     try {
       await api('/api/bookcover/contact', { order_id: orderId, ...contact });
-      setPayOpen(true);
+      if (method === 'wallet') {
+        const r = await supabase.rpc('pay_book_cover_with_wallet', { p_order_id: orderId });
+        if (r.error) throw new Error(/pay_book_cover_with_wallet|schema cache/i.test(r.error.message) ? tr('Wallet payment is not available right now.', 'ការទូទាត់ពីកាបូបមិនអាចប្រើបានទេឥឡូវនេះ។') : r.error.message);
+        loadBal();
+        await afterPaid();
+      } else {
+        setPayOpen(true);
+      }
     } catch (e: any) { setErr(e?.message || tr('Could not start the payment.', 'មិនអាចចាប់ផ្តើមការទូទាត់បានទេ។')); }
     setBusy(false);
   }
@@ -457,9 +476,10 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
   const patchCover = (fn: (c: BcCover) => BcCover) => setLayout(L => L.map((cs, a) => (a !== here.it ? cs : cs.map((c, b) => (b === here.ci ? fn(c) : c)))));
   const move = (key: string, x: number, y: number) => {
     if (locked) return;
-    patchCover(c => { const f = lFields.find(z => z.key === key); if (!f) return c; const s = spotOf(f, c.pos); return { ...c, pos: { ...c.pos, [key]: { x, y, size: s.size } } }; });
+    patchCover(c => { const f = lFields.find(z => z.key === key); if (!f) return c; const s = spotOf(f, c.pos); return { ...c, pos: { ...c.pos, [key]: { ...c.pos[key], x, y, size: s.size } } }; });
   };
-  const setSize = (key: string, size: number) => patchCover(c => { const f = lFields.find(z => z.key === key); if (!f) return c; const s = spotOf(f, c.pos); return { ...c, pos: { ...c.pos, [key]: { x: s.x, y: s.y, size } } }; });
+  const setSize = (key: string, size: number) => patchCover(c => { const f = lFields.find(z => z.key === key); if (!f) return c; const s = spotOf(f, c.pos); return { ...c, pos: { ...c.pos, [key]: { ...c.pos[key], x: s.x, y: s.y, size } } }; });
+  const setColor = (key: string, color: string) => patchCover(c => { const f = lFields.find(z => z.key === key); if (!f) return c; const s = spotOf(f, c.pos); return { ...c, pos: { ...c.pos, [key]: { x: s.x, y: s.y, size: s.size, color } } }; });
   const resetOne = (key: string) => patchCover(c => { const p = { ...c.pos }; delete p[key]; return { ...c, pos: p }; });
   const resetPage = () => patchCover(c => ({ ...c, pos: {} }));
   // "all pages" means all pages of THIS design: another design has other questions
@@ -503,6 +523,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
   const perSubjectFields = fields.filter(f => f.per_subject);
   const selField = lFields.find(f => f.key === sel) || null;
   const selSpot = selField && curCover ? spotOf(selField, curCover.pos) : null;
+  const walletLow = bal === null || bal + 1e-6 < (totals?.total ?? total);
   const km = isKm();
   const topTitle = tr('Book cover', 'គម្របសៀវភៅ');
   const runningTotal = items.length > 1 && (
@@ -589,6 +610,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
                 </div>
               )}
 
+              <button type="button" className="cvmAdd bcAddDesign" disabled={full || busy || !firstOkOf(cur) || !extrasOkOf(cur)} onClick={() => setPicker(true)}><Plus />{tr('Add another design', 'បន្ថែមគំរូមួយទៀត')}</button>
               <p className="bcTotal">{cur.draft.length} {tr('page(s)', 'ទំព័រ')} × {riel(cur.design.price_per_page)} = <b>{riel(orderTotal(cur.draft.length, cur.design.price_per_page))}</b></p>
               {err && <p className="cvmErr" role="alert">{err}</p>}
               {!extrasOkOf(cur) && <p className="cvmHint center">{tr('Fill in the fields marked * for every subject.', 'សូមបំពេញចន្លោះដែលមាន * សម្រាប់មុខវិជ្ជានីមួយៗ។')}</p>}
@@ -663,17 +685,22 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
               <Field label={tr('Note for us (optional)', 'កំណត់ចំណាំ (ស្រេចចិត្ត)')}><input value={contact.notes} maxLength={200} onChange={e => setContact({ ...contact, notes: e.target.value })} /></Field>
             </fieldset>
 
-            <div className="cvmPayOpts"><div className="cvmPayOpt on" role="note">
-              <span className="cvmPayBadge">KHQR</span><span><b>KHQR</b><small>{tr('Any Bakong banking app · paid in riel', 'កម្មវិធីធនាគារ Bakong ណាមួយ · បង់ជារៀល')}</small></span><i className="cvmRadio" />
-            </div>
-              {bkOn === false && <p className="cvmHint">{tr('KHQR is not available right now. Please try again later.', 'KHQR មិនអាចប្រើបានទេឥឡូវនេះ។ សូមព្យាយាមម្ដងទៀតពេលក្រោយ។')}</p>}
+            <div className="cvmPayOpts" role="radiogroup" aria-label={tr('Payment method', 'វិធីទូទាត់')}>
+              <button type="button" role="radio" aria-checked={method === 'khqr'} className={'cvmPayOpt' + (method === 'khqr' ? ' on' : '')} disabled={bkOn === false} onClick={() => setMethod('khqr')}>
+                <span className="cvmPayBadge">KHQR</span><span><b>KHQR</b><small>{tr('Any Bakong banking app · paid in riel', 'កម្មវិធីធនាគារ Bakong ណាមួយ · បង់ជារៀល')}</small></span><i className="cvmRadio" />
+              </button>
+              <button type="button" role="radio" aria-checked={method === 'wallet'} className={'cvmPayOpt' + (method === 'wallet' ? ' on' : '')} disabled={bal === null || walletLow} onClick={() => setMethod('wallet')}>
+                <span className="cvmPayBadge w"><Wallet /></span>
+                <span><b>{tr('Wallet', 'កាបូប')}</b><small>{bal === null ? tr('Balance unavailable', 'មិនអាចមើលសមតុល្យបាន') : <>{tr('Riel balance', 'សមតុល្យរៀល')} {riel(bal)}{walletLow && <> · {tr('not enough', 'មិនគ្រប់គ្រាន់')}</>}</>}</small></span><i className="cvmRadio" />
+              </button>
+              {bkOn === false && <p className="cvmHint">{tr('KHQR is not available right now. You can still pay from your wallet.', 'KHQR មិនអាចប្រើបានទេឥឡូវនេះ។ អ្នកនៅតែអាចទូទាត់ពីកាបូបបាន។')}</p>}
             </div>
             {err && <p className="cvmErr" role="alert">{err}</p>}
             {!contactCheck.ok && (contact.phone || contact.address) && <p className="cvmHint center">{contactCheck.error}</p>}
             <div className="cvmBar two">
               <button type="button" className="cvmBack" onClick={() => { setErr(''); setStep('basket'); }}><ArrowLeft />{tr('Back', 'ត្រឡប់')}</button>
-              <button type="button" className="cvmGo pay" disabled={busy || !orderId || !contactCheck.ok || bkOn === false || !PayModal} onClick={startPay}>
-                {busy ? tr('Please wait…', 'សូមរង់ចាំ…') : <>{tr('Pay with KHQR', 'ទូទាត់តាម KHQR')} · {riel(totals?.total ?? total)}</>}
+              <button type="button" className="cvmGo pay" disabled={busy || !orderId || !contactCheck.ok || (method === 'khqr' ? bkOn === false || !PayModal : walletLow)} onClick={startPay}>
+                {busy ? tr('Please wait…', 'សូមរង់ចាំ…') : <>{method === 'wallet' ? tr('Pay with Wallet', 'ទូទាត់ពីកាបូប') : tr('Pay with KHQR', 'ទូទាត់តាម KHQR')} · {riel(totals?.total ?? total)}</>}
               </button>
             </div>
           </>
@@ -720,6 +747,15 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
                     <b>{labelOf(selField, km)}</b>
                     <label className="bcRange"><span>{tr('Text size', 'ទំហំអក្សរ')} · {Math.round(selSpot.size)}</span>
                       <input type="range" min={10} max={160} value={selSpot.size} disabled={locked} onChange={e => setSize(selField.key, Number(e.target.value))} /></label>
+                    <div className="bcColors" role="group" aria-label={tr('Text color', 'ពណ៌អក្សរ')}>
+                      <span>{tr('Text color', 'ពណ៌អក្សរ')}</span>
+                      <div className="bcSwatches">
+                        {TEXT_COLORS.map(c => (
+                          <button type="button" key={c} className={'bcSwatch' + (selSpot.color.toLowerCase() === c ? ' on' : '')} style={{ background: c }} aria-label={c} aria-pressed={selSpot.color.toLowerCase() === c} disabled={locked} onClick={() => setColor(selField.key, c)} />
+                        ))}
+                        <label className="bcSwatch custom" title={tr('Any color', 'ពណ៌ផ្សេងទៀត')}><input type="color" value={/^#[0-9a-f]{6}$/i.test(selSpot.color) ? selSpot.color : '#1b1b1b'} disabled={locked} onChange={e => setColor(selField.key, e.target.value)} /></label>
+                      </div>
+                    </div>
                     <div className="bcNudge" role="group" aria-label={tr('Fine move', 'ផ្លាស់ទីតិចៗ')}>
                       {([['←', -0.5, 0], ['↑', 0, -0.5], ['↓', 0, 0.5], ['→', 0.5, 0]] as const).map(([t, dx, dy]) => (
                         <button type="button" key={t} disabled={locked} onClick={() => move(selField.key, Math.min(100, Math.max(0, selSpot.x + dx)), Math.min(100, Math.max(0, selSpot.y + dy)))}>{t}</button>

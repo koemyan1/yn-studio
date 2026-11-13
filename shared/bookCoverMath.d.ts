@@ -14,7 +14,7 @@ export type BcField = {
   required: boolean; per_subject: boolean;
   x: number; y: number; size: number; color: string; font: string; bold: boolean; max: number;
 };
-export type BcPos = { x: number; y: number; size: number };
+export type BcPos = { x: number; y: number; size: number; color?: string };
 export type BcCover = { values: Record<string, string>; pos: Record<string, BcPos> };
 export type BcItem = { design_id: string | null; design_name: string; design_image: string; design_fields: BcField[]; price_per_page: number; covers: BcCover[] };
 export type BcDesignSource = { id?: string | null; name: string; image: string; price_per_page: number; fields: unknown };

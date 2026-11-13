@@ -264,3 +264,11 @@ test('buildOrder maths', () => {
   assert.equal(buildOrder([{ design_id: 'unknown', covers: A }], look).code, 'design');
   assert.equal(MAX_COVERS, 20);
 });
+
+test('layout: the customer can pick a text colour (#rrggbb only), nothing else is kept', () => {
+  const f = cleanFields([{ key: 'name', label_en: 'Name', x: 50, y: 50, size: 30, color: '#111111' }]);
+  const out = cleanLayout(f, [{ pos: { name: { x: 10, y: 20, size: 40, color: '#FF00AA' } } }, { pos: { name: { x: 10, y: 20, size: 40, color: 'red' } } }, { pos: { name: { x: 1, y: 2, size: 20, color: 'url(javascript:alert(1))' } } }], 3);
+  assert.deepEqual(out[0].name, { x: 10, y: 20, size: 40, color: '#ff00aa' }, 'a valid colour is kept (lower-cased)');
+  assert.deepEqual(out[1].name, { x: 10, y: 20, size: 40 }, 'a colour name is dropped');
+  assert.equal('color' in out[2].name, false, 'anything that is not #rrggbb is dropped');
+});

@@ -170,7 +170,7 @@ export function buildOrder(rawItems, lookup) {
   return { items, pages, total };
 }
 
-/** The positions the customer chose, cleaned, one entry per cover. Unknown keys are dropped. */
+/** The positions (and optional text colour) the customer chose, cleaned, one entry per cover. Unknown keys are dropped. */
 export function cleanLayout(fields, raw, count) {
   const out = [];
   for (let i = 0; i < count; i++) {
@@ -180,6 +180,7 @@ export function cleanLayout(fields, raw, count) {
       const p = src[f.key];
       if (!p || typeof p !== 'object') continue;
       pos[f.key] = { x: Math.round(clamp(p.x, 0, 100, f.x) * 100) / 100, y: Math.round(clamp(p.y, 0, 100, f.y) * 100) / 100, size: Math.round(clamp(p.size, 10, 160, f.size)) };
+      if (HEX_RE.test(String(p.color || ''))) pos[f.key].color = String(p.color).toLowerCase();   // the customer's own text colour (#rrggbb only)
     }
     out.push(pos);
   }
