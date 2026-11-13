@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CUSTOM_BOX, DEFAULT_KHMER_FONT, KHMER_FONTS, SHEET_H, SHEET_W, hasKhmer, isCustomId } from '../shared/bookCoverMath.js';
+import { CUSTOM_BOX, DEFAULT_KHMER_FONT, KHMER_FONTS, SHEET_H, SHEET_W, coverText, hasKhmer, isCustomId } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField, BcPos } from '../shared/bookCoverMath.js';
 import { canvasesToPdfBlob, downloadBlob } from './pdfSave';
 
@@ -85,7 +85,7 @@ export const BookCoverSheet = React.forwardRef<HTMLDivElement, SheetProps>(funct
       <img className="bcSheetImg" src={imgSrc || design.image} alt="" draggable={false} />
       {isCustomId(design.id) && <div className="bcBox" style={{ left: CUSTOM_BOX.left + '%', top: CUSTOM_BOX.top + '%', right: CUSTOM_BOX.right + '%', bottom: CUSTOM_BOX.bottom + '%' }} />}
       {design.fields.map(f => {
-        const text = sample ? labelOf(f, km) : (cover?.values?.[f.key] || '');
+        const text = sample ? labelOf(f, km) : coverText(f, cover?.values?.[f.key] || '');
         if (!text) return null;
         const s = spotOf(f, cover?.pos);
         return (

@@ -251,7 +251,7 @@ function DesignEditor({ draft, onChange, count, onClose, onSaved, onError }: { d
     if (draft.fields.length >= MAX_FIELDS) { onError(`A design can have up to ${MAX_FIELDS} questions.`); return; }
     const key = newKey(new Set(draft.fields.map(f => f.key)), pr.id);
     const spot = defaultSpot(draft.fields.length);
-    const f: BcField = { key, label_en: pr.en, label_km: pr.km, hint_en: '', hint_km: '', required: pr.required !== false, per_subject: !!pr.per, x: spot.x, y: spot.y, size: pr.size, color: '#1b1b1b', font: 'Poppins', font_km: 'Noto Sans Khmer', bold: !!pr.bold, max: pr.id === 'school' ? 70 : 50 };
+    const f: BcField = { key, label_en: pr.en, label_km: pr.km, hint_en: '', hint_km: '', required: pr.required !== false, per_subject: !!pr.per, x: spot.x, y: spot.y, size: pr.size, color: '#1b1b1b', font: 'Poppins', font_km: 'Noto Sans Khmer', bold: !!pr.bold, show_label: true, max: pr.id === 'school' ? 70 : 50 };
     set({ fields: [...draft.fields, f] }); setSel(key);
   }
   const removeField = (key: string) => { set({ fields: draft.fields.filter(f => f.key !== key) }); if (sel === key) setSel(null); };
@@ -357,6 +357,7 @@ function DesignEditor({ draft, onChange, count, onClose, onSaved, onError }: { d
                 <label><input type="checkbox" checked={f.required} onChange={e => setField(f.key, { required: e.target.checked })} />Required</label>
                 <label><input type="checkbox" checked={f.per_subject} onChange={e => setField(f.key, { per_subject: e.target.checked })} />Changes for each subject</label>
                 <label><input type="checkbox" checked={f.bold} onChange={e => setField(f.key, { bold: e.target.checked })} />Bold</label>
+                <label><input type="checkbox" checked={f.show_label !== false} onChange={e => setField(f.key, { show_label: e.target.checked })} />Print name (e.g. “School: …”)</label>
               </div>
               <div className="bcaFieldGrid">
                 <label>Font<select value={f.font} onChange={e => setField(f.key, { font: e.target.value })}>{FONTS.map(x => <option key={x}>{x}</option>)}</select></label>

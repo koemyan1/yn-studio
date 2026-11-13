@@ -17,6 +17,14 @@ export const DEFAULT_KHMER_FONT = 'Noto Sans Khmer';
 /** Does this text contain Khmer letters? Then the field's Khmer font is used instead of its normal font. */
 export const hasKhmer = text => /[\u1780-\u17FF\u19E0-\u19FF]/.test(String(text ?? ''));
 
+/** The text printed on the cover: the question's name + the answer ("School: Hello High"). Khmer answers get the Khmer name when there is one. */
+export function coverText(f, value) {
+  const v = String(value ?? '');
+  if (!v || f.show_label === false) return v;
+  const label = hasKhmer(v) && f.label_km ? f.label_km : f.label_en;
+  return label ? `${label}: ${v}` : v;
+}
+
 /* ---- a customer's OWN design: they upload a picture, we lay a white rectangle over it for the text (like the admin's framed designs) ---- */
 export const CUSTOM_BUCKET = 'book-cover-uploads';
 export const CUSTOM_NAME_EN = 'My own design';
@@ -67,6 +75,7 @@ export function cleanFields(raw) {
       font: FONTS.includes(f.font) ? f.font : 'Poppins',
       font_km: KHMER_FONTS.includes(f.font_km) ? f.font_km : DEFAULT_KHMER_FONT,   // used instead of `font` when the text is Khmer
       bold: !!f.bold,
+      show_label: f.show_label !== false,      // true = the cover prints the question's name before the answer ("School: Hello High")
       max: Math.round(clamp(f.max, 1, 120, 60)),
     });
     if (out.length >= MAX_FIELDS) break;

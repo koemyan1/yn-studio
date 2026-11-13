@@ -23,7 +23,7 @@ export const ORDER_STATUSES: string[];
 export type BcField = {
   key: string; label_en: string; label_km: string; hint_en: string; hint_km: string;
   required: boolean; per_subject: boolean;
-  x: number; y: number; size: number; color: string; font: string; font_km: string; bold: boolean; max: number;
+  x: number; y: number; size: number; color: string; font: string; font_km: string; bold: boolean; show_label: boolean; max: number;
 };
 export type BcPos = { x: number; y: number; size: number; color?: string };
 export type BcCover = { values: Record<string, string>; pos: Record<string, BcPos> };
@@ -46,3 +46,5 @@ export function cleanPricePerPage(v: unknown): number;
 export function cleanLayout(fields: BcField[], raw: unknown, count: number): Record<string, BcPos>[];
 export function validateContact(c: any): { ok: true; contact: BcContact } | { ok: false; code: string; error: string };
 export function bcNo(id: string): string;
+
+export function coverText(f: { label_en: string; label_km: string; show_label?: boolean }, value: string): string;
