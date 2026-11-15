@@ -2,6 +2,9 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: YN Vision (search by photo, $0)
+- Camera button inside the home search bar; take or upload a photo and see visually similar products (glass sheet, HarmonyOS-style motion, reduced-motion respected). Free open-source CLIP model runs in the browser: no paid API, no server cost. Text search unchanged. Details in README. Needs one `npm install`.
+
 ## Unreleased: Fluid sizing + cart that fits the phone, no zoom
 - **`src/fluid.css` (last import in `main.tsx`)**: sizes, spacing, the product grid (2 columns on a phone, more on wider screens) and headings now flow with the screen width. No colours or looks changed, works with every theme, admin skipped.
 - **Cart page** always fits the phone: the picture, name, price, quantity pill and delete button share the row at any width from 320px up (the quantity pill no longer drops under the price), and the page has room under it for the checkout bar and the bottom bar.

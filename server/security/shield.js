@@ -50,7 +50,7 @@ export function securityHeaders(env = process.env) {
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob: https:",
-    `connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.open-meteo.com https://geocoding-api.open-meteo.com https://cdn.jsdelivr.net ${extraConnect}`.trim(),
+    `connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.open-meteo.com https://geocoding-api.open-meteo.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co ${extraConnect}`.trim(),
     `frame-src 'self' https://challenges.cloudflare.com https://maps.google.com https://www.google.com https://www.youtube.com https://www.youtube-nocookie.com ${payway}`,
     "worker-src 'self' blob:",
     "object-src 'none'",
