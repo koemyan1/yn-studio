@@ -2,12 +2,10 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
-## Unreleased: Customer side restyled - minimal and fluid
-- **One new stylesheet, `src/minimal.css`, loaded last in `src/main.tsx`.** Quiet monochrome (white, soft grey, one ink accent), flat hairline cards, round ink buttons, photo-first product grid, a floating pill bottom bar whose active tab grows smoothly, and a dark wallet / debt card. The old purple gradients, glows and shine sweeps on customer screens are cleared.
-- **Less text:** eyebrow labels, page intro lines, hero sub-text, payment hints and the login tagline are hidden on customer screens (the text is still in the code, nothing was deleted).
-- **Fluid:** page padding, type sizes, the product grid (auto-fills 2 to 6 columns), hero and cards scale with the screen width (`clamp()`), soft ease-out transitions on press / focus / tab change, one calm fade when a page opens. All motion stops for people who chose reduced motion.
-- **Scope:** customer screens in normal mode only. The admin panel (`html.yn-admin-page`) and unlocked Secret Code themes (Chiikawa / Coraline / Spidey) are not touched. To go back, delete the `import'./minimal.css'` line in `src/main.tsx`.
-- Edit `src/minimal.src.css`, then run `python3 tools/minimal/build_css.py` (it only expands the `@S` scope macro). First-paint splash and browser bar colour (`index.html`, `manifest.webmanifest`) now match.
+## Unreleased: Fluid sizing + cart that fits the phone, no zoom
+- **`src/fluid.css` (last import in `main.tsx`)**: sizes, spacing, the product grid (2 columns on a phone, more on wider screens) and headings now flow with the screen width. No colours or looks changed, works with every theme, admin skipped.
+- **Cart page** always fits the phone: the picture, name, price, quantity pill and delete button share the row at any width from 320px up (the quantity pill no longer drops under the price), and the page has room under it for the checkout bar and the bottom bar.
+- **No zoom:** `index.html` viewport locked to scale 1 (`maximum-scale=1, user-scalable=no`), double-tap zoom off, iOS pinch gestures blocked in `public/preload.js`, and phone inputs use 16px text so focusing a field does not zoom the page.
 
 ## Unreleased: Book cover - more than one design per order, with animation
 - **One order can now hold several different designs** (up to 6 designs and 20 pages in all). A new **Your order** step sits between *Subjects* and *Pay*: it lists every design with its pages and price, and has **Add another design** (a sheet slides up with the gallery; designs already in the order are hidden), **Edit** and **Remove**. Each design keeps its own subjects. One KHQR pays for everything: the sum of pages x each design's own price. In **Place text**, the page tabs run through every design (the name is shown) and *Use this layout on all pages* applies to the pages of the current design.

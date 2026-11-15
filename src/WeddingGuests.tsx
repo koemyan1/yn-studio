@@ -92,11 +92,11 @@ export default function WeddingGuests({ invite }: { invite: SentInvite }) {
       </div>
       <p className="wgNote">{pv
         ? tr(`The cover greets “${pv}”.`, `មុខសំបុត្របង្ហាញ “${pv}”។`)
-        : tr('Type a name and it appears on the cover.', 'វាយឈ្មោះ ហើយវានឹងបង្ហាញលើមុខសំបុត្រ។')}</p>
+        : tr('Type a name.', 'វាយឈ្មោះ។')}</p>
     </div>}
 
     <h4 className="wgH"><Users /> {tr('Guests', 'ភ្ញៀវ')} <span>({guests.length})</span></h4>
-    {guests.length === 0 ? <p className="wgNote">{tr('No guests yet. Add a name above to get that guest’s personal link.', 'មិនទាន់មានភ្ញៀវ។ បន្ថែមឈ្មោះខាងលើ ដើម្បីទទួលបានតំណផ្ទាល់ខ្លួន។')}</p> :
+    {guests.length === 0 ? <p className="wgNote">{tr('No guests yet.', 'មិនទាន់មានភ្ញៀវ។')}</p> :
       <ul className="wgList">{guests.map(g => <li key={g.id} className={sel === g.id ? 'on' : ''}>
         <button type="button" className="wgName" onClick={() => setSel(g.id)} aria-pressed={sel === g.id}>
           <b>{g.name}</b>{g.opened_at && <small className="wgOpened"><Check /> {tr('Opened', 'បានបើក')}</small>}</button>

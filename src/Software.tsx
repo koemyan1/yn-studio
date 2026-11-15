@@ -74,7 +74,6 @@ function Hero({ count }: { count: number }) {
         <span className="swTag">$1</span>
       </div>
       <h1 id="swTitle">{tr('Software. $1 a file.', 'កម្មវិធី។ $1 ក្នុងមួយឯកសារ។')}</h1>
-      <p>{count ? tr('Pick it, pay, download. Yours to keep.', 'ជ្រើសរើស ទូទាត់ ទាញយក។ ជារបស់អ្នកជារៀងរហូត។') : tr('New files are coming soon.', 'ឯកសារថ្មីៗនឹងមកដល់ឆាប់ៗនេះ។')}</p>
     </section>
   );
 }
@@ -183,9 +182,9 @@ export default function SoftwarePage({ Top, Nav, api, bakongOn, PayModal }: Chro
         )}
 
         {files === null && <div className="swSkel" aria-hidden="true"><i /><i /></div>}
-        {broken && <p className="swEmpty">{tr('Software downloads are not set up yet.', 'ការទាញយកកម្មវិធីមិនទាន់រៀបចំនៅឡើយទេ។')}</p>}
+        {broken && <p className="swEmpty">{tr('Unavailable right now.', 'មិនអាចប្រើបានទេពេលនេះ។')}</p>}
         {files && !broken && files.length === 0 && (
-          <div className="swEmpty" data-rv><Sparkles /><b>{tr('Nothing here yet', 'មិនទាន់មានអ្វីនៅទីនេះទេ')}</b><small>{tr('Check back soon.', 'សូមត្រឡប់មកវិញឆាប់ៗ។')}</small></div>
+          <div className="swEmpty" data-rv><Sparkles /><b>{tr('Nothing here yet', 'មិនទាន់មានអ្វីនៅទីនេះទេ')}</b></div>
         )}
 
         <div className="swList">
@@ -196,7 +195,6 @@ export default function SoftwarePage({ Top, Nav, api, bakongOn, PayModal }: Chro
                 <div className="swIcon"><P.Icon />{mine && <span className="swOwn"><Check /></span>}</div>
                 <div className="swBody">
                   <h3>{pick(f.title_en, f.title_km)}</h3>
-                  {(f.desc_en || f.desc_km) && <p>{pick(f.desc_en, f.desc_km)}</p>}
                   <ul className="swMeta">
                     <li>{tr(P.en, P.km)}</li>
                     {f.version && <li>v{f.version}</li>}

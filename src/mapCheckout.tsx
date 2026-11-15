@@ -105,7 +105,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
     setLocBusy(true);
     navigator.geolocation.getCurrentPosition(
       pos => { setLocBusy(false); goTo({ lat: pos.coords.latitude, lng: pos.coords.longitude }, 18); },
-      () => { setLocBusy(false); setMsg(tr('Location permission was denied. Search for your address or move the map instead.', 'មិនបានអនុញ្ញាតទីតាំង។ សូមស្វែងរកអាសយដ្ឋាន ឬរំកិលផែនទី។')); },
+      () => { setLocBusy(false); setMsg(tr('Location not allowed. Search or move the map.', 'មិនបានអនុញ្ញាតទីតាំង។ សូមស្វែងរក ឬរំកិលផែនទី។')); },
       { enableHighAccuracy: true, timeout: 15000 }
     );
   }
@@ -114,7 +114,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
   const feeOf = (f: number) => (adjustFee ? adjustFee(f) : f);
 
   async function confirm() {
-    if (!form.phone.trim()) { setMsg(tr('Please enter your phone number so the driver can call you.', 'សូមបញ្ចូលលេខទូរស័ព្ទ ដើម្បីឱ្យអ្នកដឹកទាក់ទងអ្នក។')); return; }
+    if (!form.phone.trim()) { setMsg(tr('Enter your phone number.', 'សូមបញ្ចូលលេខទូរស័ព្ទ។')); return; }
     setBusy(true); setMsg('');
     const address = (label || `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`);
     const notes = [form.notes.trim(), note.trim()].filter(Boolean).join(' · ');
@@ -132,11 +132,10 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
     return (
       <div className="panel checkoutDelivery ynMapConfirmed">
         <div className="line">
-          <div><span className="eyebrow">{tr('DELIVER TO', 'ដឹកជញ្ជូនទៅ')}</span><h2>{pin.label}</h2><p className="muted">{form.name || tr('Customer', 'អតិថិជន')} · {form.phone}</p></div>
+          <div><h2>{pin.label}</h2><p className="muted">{form.name || tr('Customer', 'អតិថិជន')} · {form.phone}</p></div>
           <MapPin />
         </div>
         {store && <p className="ynMapMeta">{calcFee(cfg, store, pin).km.toFixed(1)} km · ${feeOf(calcFee(cfg, store, pin).fee).toFixed(2)} {tr('delivery', 'ដឹកជញ្ជូន')}</p>}
-        {!hideTrackNote && <p className="muted ynMapNote">{tr('After you order, you can watch the driver arrive live on the map in Orders.', 'បន្ទាប់ពីបញ្ជាទិញ អ្នកអាចតាមដានអ្នកដឹកផ្ទាល់នៅលើផែនទីក្នុងការបញ្ជាទិញ។')}</p>}
         <button type="button" className="secondary" onClick={onEdit}><Pencil />{tr('Change location', 'ផ្លាស់ប្តូរទីតាំង')}</button>
       </div>
     );
@@ -145,7 +144,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
   return (
     <div className="panel checkoutDelivery ynMapPanel">
       <div className="line">
-        <div><span className="eyebrow">{tr('DELIVERY LOCATION', 'ទីតាំងដឹកជញ្ជូន')}</span><h2>{tr('Where should the driver go?', 'តើអ្នកដឹកត្រូវទៅទីណា?')}</h2></div>
+        <div><h2>{tr('Delivery location', 'ទីតាំងដឹកជញ្ជូន')}</h2></div>
         <MapPin />
       </div>
       <div className="locationPicker">
@@ -163,7 +162,7 @@ export function MapDeliveryPanel({ store, cfg, initial, form, setForm, makeDefau
           <div ref={el} className="locationMap" />
           <div className={'ynPickPin' + (moving ? ' moving' : '')}><span>📍</span><i /></div>
         </div>
-        <p className="mapHint">{tr('Move the map so the pin sits on your door.', 'រំកិលផែនទីដើម្បីឱ្យម្ជុលនៅត្រង់ទីតាំងរបស់អ្នក។')}</p>
+        <p className="mapHint">{tr('Move the map to set the pin.', 'រំកិលផែនទីដើម្បីកំណត់ម្ជុល។')}</p>
       </div>
       <div className="ynPickInfo">
         <b>{moving ? tr('Moving…', 'កំពុងរំកិល…') : (label || tr('Finding address…', 'កំពុងរកអាសយដ្ឋាន…'))}</b>

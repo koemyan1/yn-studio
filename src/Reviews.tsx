@@ -247,7 +247,7 @@ function ReviewForm({ productId, initial, onDone, onCancel }: { productId: strin
       const x = await supabase.rpc('set_review_extra_photos', { p_product_id: productId, p_urls: photos.slice(1) });
       if (x.error && photos.length > 1) {
         setBusy(false);
-        setErr(tr('Your review was saved, but the extra photos could not be added. Ask the shop to run supabase-review-photos-gallery.sql.', 'ការវាយតម្លៃត្រូវបានរក្សាទុក ប៉ុន្តែមិនអាចបន្ថែមរូបភាពបន្ថែមបានទេ។'));
+        setErr(tr('Review saved, but the extra photos could not be added.', 'ការវាយតម្លៃត្រូវបានរក្សាទុក ប៉ុន្តែមិនអាចបន្ថែមរូបភាពបន្ថែមបានទេ។'));
         return;
       }
     }
@@ -435,7 +435,7 @@ export function ProductReviews({ productId }: { productId: string }) {
           </div>
         </div>
       ) : (
-        <p className="reviewsEmpty">{tr('No reviews yet. Be the first to review this product.', 'មិនទាន់មានការវាយតម្លៃនៅឡើយទេ។ ក្លាយជាអ្នកទីមួយដែលវាយតម្លៃផលិតផលនេះ។')}</p>
+        <p className="reviewsEmpty">{tr('No reviews yet.', 'មិនទាន់មានការវាយតម្លៃទេ។')}</p>
       )}
 
       {gallery.length > 0 && (
@@ -464,10 +464,7 @@ export function ProductReviews({ productId }: { productId: string }) {
           <Lock />
           <div>
             <b>{me ? tr('Only buyers can review', 'មានតែអ្នកទិញប៉ុណ្ណោះដែលអាចវាយតម្លៃបាន') : tr('Please sign in first', 'សូមចូលគណនីជាមុនសិន')}</b>
-            <p>{me
-              ? tr('Only customers who bought this product can write a review. Once your order is paid, you can rate it here or from your Orders page.', 'មានតែអតិថិជនដែលបានទិញផលិតផលនេះប៉ុណ្ណោះដែលអាចសរសេរការវាយតម្លៃបាន។ នៅពេលការបញ្ជាទិញរបស់អ្នកត្រូវបានទូទាត់ហើយ អ្នកអាចវាយតម្លៃនៅទីនេះ ឬនៅទំព័រការបញ្ជាទិញ។')
-              : tr('Sign in to write a review.', 'ចូលគណនីដើម្បីសរសេរការវាយតម្លៃ។')}</p>
-          </div>
+            </div>
           <button type="button" className="reviewsWhyClose" aria-label={tr('Close', 'បិទ')} onClick={() => setWhy(false)}><X /></button>
         </div>
       )}

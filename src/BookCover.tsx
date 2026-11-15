@@ -206,7 +206,7 @@ function Picker({ taken, onPick, onClose }: { taken: Set<string>; onPick: (d: De
         <header><b>{tr('Pick another design', 'ជ្រើសរើសគំរូមួយទៀត')}</b><button type="button" className="cvmLink" aria-label={tr('Close', 'បិទ')} onClick={onClose}><X /></button></header>
         {list === null && <p className="cvmHint center">{tr('Loading…', 'កំពុងផ្ទុក…')}</p>}
         {err && <p className="cvmWarn" role="alert">{err}</p>}
-        {list && rest.length === 0 && !err && <p className="cvmHint center">{tr('You have already added every design.', 'អ្នកបានបន្ថែមគំរូទាំងអស់ហើយ។')}</p>}
+        {list && rest.length === 0 && !err && <p className="cvmHint center">{tr('All designs added.', 'បានបន្ថែមគំរូទាំងអស់។')}</p>}
         <div className="cvmGrid bcPickGrid"><UploadTile i={0} onDesign={onPick} />{rest.map((d, i) => <DesignCard key={d.id} d={d} i={i} onPick={() => onPick(d)} />)}</div>
       </div>
     </div>
@@ -262,7 +262,7 @@ export function BookCoverHome({ Top, Nav }: Chrome) {
 
         {designs === null && <p className="cvmHint center">{tr('Loading…', 'កំពុងផ្ទុក…')}</p>}
         {err && <p className="cvmWarn" role="alert">{err}</p>}
-        {designs && designs.length === 0 && !err && <p className="cvmHint center">{tr('No designs yet. Please check back soon.', 'មិនទាន់មានគំរូទេ។ សូមត្រឡប់មកវិញក្រោយ។')}</p>}
+        {designs && designs.length === 0 && !err && <p className="cvmHint center">{tr('No designs yet.', 'មិនទាន់មានគំរូទេ។')}</p>}
         {basket.length > 0 && (
           <div className="bcBasketBar" role="status">
             <span className="bcBasketIcon"><Layers /></span>
@@ -524,7 +524,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
       }
       await new Promise(res => setTimeout(res, 900));
     }
-    setErr(tr('We have not received the payment yet. If you paid, wait a few seconds and press Pay again.', 'យើងមិនទាន់ទទួលបានការទូទាត់ទេ។ បើអ្នកបានបង់ហើយ សូមរង់ចាំបន្តិច រួចចុចបង់ម្ដងទៀត។'));
+    setErr(tr('Payment not received yet. Try again in a moment.', 'មិនទាន់ទទួលបានការទូទាត់ទេ។ សូមព្យាយាមម្តងទៀតបន្តិចទៀត។'));
   }
 
   /* ---------- layout: drag the text, autosave, send to print (pages of every design, one after the other) ---------- */
@@ -605,8 +605,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
         {step === 'info' && (
           <>
             <section className="cvmHero"><h1>{tr('Add your info', 'បញ្ចូលព័ត៌មានរបស់អ្នក')}</h1>
-              <p>{tr('Fill in what should be printed on your cover. You can move it later.', 'បំពេញអ្វីដែលត្រូវបោះពុម្ពលើគម្រប។ អ្នកអាចផ្លាស់ទីវាក្រោយ។')}</p>
-              {items.length > 1 && <p className="bcWhich">{tr(`Design ${active + 1} of ${items.length}`, `គំរូទី ${active + 1} ក្នុងចំណោម ${items.length}`)}</p>}
+                            {items.length > 1 && <p className="bcWhich">{tr(`Design ${active + 1} of ${items.length}`, `គំរូទី ${active + 1} ក្នុងចំណោម ${items.length}`)}</p>}
               {runningTotal}</section>
             <div className="bcLive"><Scaled><BookCoverSheet design={cur.design} cover={merged[active]?.[0]} /></Scaled></div>
             <div className="cvmForm">
@@ -634,15 +633,14 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
           return (
             <>
               <section className="cvmHero"><h1>{tr('Do you have other subjects?', 'តើអ្នកមានមុខវិជ្ជាផ្សេងទៀតទេ?')}</h1>
-                <p>{tr('Each subject gets its own cover page. Your other info is copied, you only type what changes.', 'មុខវិជ្ជានីមួយៗមានទំព័រគម្របផ្ទាល់ខ្លួន។ ព័ត៌មានផ្សេងទៀតនឹងត្រូវចម្លង អ្នកគ្រាន់តែវាយអ្វីដែលប្តូរ។')}</p>
-                {items.length > 1 && <p className="bcWhich">{designName(cur.design)}</p>}
+                                {items.length > 1 && <p className="bcWhich">{designName(cur.design)}</p>}
                 {runningTotal}</section>
               <div className="cvmLangs bcYesNo">
                 <button type="button" className={'cvmLang' + (more ? ' on' : '')} aria-pressed={more} onClick={() => editActive(d => (d.length > 1 || pages >= MAX_COVERS ? d : [...d, blankCover(fields)]))}>
-                  <b>{tr('Yes', 'មាន')}</b><small>{tr('Add more subjects', 'បន្ថែមមុខវិជ្ជា')}</small>{more && <span className="cvmTick"><Check /></span>}
+                  <b>{tr('Yes', 'មាន')}</b>{more && <span className="cvmTick"><Check /></span>}
                 </button>
                 <button type="button" className={'cvmLang' + (!more ? ' on' : '')} aria-pressed={!more} onClick={() => editActive(d => d.slice(0, 1))}>
-                  <b>{tr('No', 'គ្មាន')}</b><small>{tr('Just this one', 'តែមួយនេះប៉ុណ្ណោះ')}</small>{!more && <span className="cvmTick"><Check /></span>}
+                  <b>{tr('No', 'គ្មាន')}</b>{!more && <span className="cvmTick"><Check /></span>}
                 </button>
               </div>
 
@@ -686,7 +684,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
         {step === 'basket' && (
           <>
             <section className="cvmHero"><h1>{tr('Your order', 'ការបញ្ជាទិញរបស់អ្នក')}</h1>
-              <p>{tr('Add as many designs as you like. Each design has its own pages, and you pay once for everything.', 'បន្ថែមគំរូប៉ុន្មានក៏បាន។ គំរូនីមួយៗមានទំព័រផ្ទាល់ខ្លួន ហើយអ្នកទូទាត់តែម្តងសម្រាប់ទាំងអស់។')}</p></section>
+              </section>
             <Deck items={items} covers={merged} fresh={fresh} />
             <ul className="bcItems">
               {lines.map(l => {
@@ -703,7 +701,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
               })}
             </ul>
             <button type="button" className="cvmAdd bcAddDesign" disabled={full || busy} onClick={() => setPicker(true)}><Plus />{tr('Add another design', 'បន្ថែមគំរូមួយទៀត')}</button>
-            {full && <p className="cvmHint center">{tr(`You can add up to ${MAX_ITEMS} designs and ${MAX_COVERS} pages in one order.`, `អ្នកអាចបន្ថែមគំរូបានរហូតដល់ ${MAX_ITEMS} និង ${MAX_COVERS} ទំព័រក្នុងការបញ្ជាទិញមួយ។`)}</p>}
+            {full && <p className="cvmHint center">{tr(`Max ${MAX_ITEMS} designs · ${MAX_COVERS} pages.`, `អតិបរមា ${MAX_ITEMS} គំរូ · ${MAX_COVERS} ទំព័រ។`)}</p>}
             <p className="bcTotal">{items.length} {tr('design(s)', 'គំរូ')} · {pages} {tr('page(s)', 'ទំព័រ')} = <b>{riel(total)}</b></p>
             {err && <p className="cvmErr" role="alert">{err}</p>}
             {!allOk && <p className="cvmHint center">{tr('Finish every design to continue.', 'សូមបំពេញគំរូទាំងអស់ដើម្បីបន្ត។')}</p>}
@@ -731,7 +729,6 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
 
             <fieldset className="cvmSet bcContact">
               <legend>{tr('Phone and location', 'លេខទូរស័ព្ទ និងទីតាំង')}</legend>
-              <p className="cvmHint">{tr('We use these to reach you and to bring your printed covers. If your account does not have them yet, they are saved to it now.', 'យើងប្រើវាដើម្បីទាក់ទងអ្នក និងនាំយកគម្របដែលបានបោះពុម្ព។ បើគណនីរបស់អ្នកមិនទាន់មាន វានឹងត្រូវរក្សាទុកឥឡូវនេះ។')}</p>
               <Field label={tr('Your name', 'ឈ្មោះរបស់អ្នក')}><input value={contact.name} maxLength={60} autoComplete="name" onChange={e => setContact({ ...contact, name: e.target.value })} /></Field>
               <Field label={tr('Phone number', 'លេខទូរស័ព្ទ')} req><input type="tel" inputMode="tel" value={contact.phone} maxLength={24} autoComplete="tel" placeholder="012 345 678" onChange={e => setContact({ ...contact, phone: e.target.value })} /></Field>
               <Field label={tr('Location (city / province, village, landmark)', 'ទីតាំង (ក្រុង / ខេត្ត ភូមិ ទីសម្គាល់)')} req><textarea rows={2} value={contact.address} maxLength={200} autoComplete="street-address" placeholder={tr('e.g. Phnom Penh, Sen Sok, near the school', 'ឧ. ភ្នំពេញ សែនសុខ ជិតសាលា')} onChange={e => setContact({ ...contact, address: e.target.value })} /></Field>
@@ -747,13 +744,13 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
 
             <div className="cvmPayOpts" role="radiogroup" aria-label={tr('Payment method', 'វិធីទូទាត់')}>
               <button type="button" role="radio" aria-checked={method === 'khqr'} className={'cvmPayOpt' + (method === 'khqr' ? ' on' : '')} disabled={bkOn === false} onClick={() => setMethod('khqr')}>
-                <span className="cvmPayBadge">KHQR</span><span><b>KHQR</b><small>{tr('Any Bakong banking app · paid in riel', 'កម្មវិធីធនាគារ Bakong ណាមួយ · បង់ជារៀល')}</small></span><i className="cvmRadio" />
+                <span className="cvmPayBadge">KHQR</span><span><b>KHQR</b></span><i className="cvmRadio" />
               </button>
               <button type="button" role="radio" aria-checked={method === 'wallet'} className={'cvmPayOpt' + (method === 'wallet' ? ' on' : '')} disabled={bal === null || walletLow} onClick={() => setMethod('wallet')}>
                 <span className="cvmPayBadge w"><Wallet /></span>
                 <span><b>{tr('Wallet', 'កាបូប')}</b><small>{bal === null ? tr('Balance unavailable', 'មិនអាចមើលសមតុល្យបាន') : <>{tr('Riel balance', 'សមតុល្យរៀល')} {riel(bal)}{walletLow && <> · {tr('not enough', 'មិនគ្រប់គ្រាន់')}</>}</>}</small></span><i className="cvmRadio" />
               </button>
-              {bkOn === false && <p className="cvmHint">{tr('KHQR is not available right now. You can still pay from your wallet.', 'KHQR មិនអាចប្រើបានទេឥឡូវនេះ។ អ្នកនៅតែអាចទូទាត់ពីកាបូបបាន។')}</p>}
+              {bkOn === false && <p className="cvmHint">{tr('KHQR unavailable. Use your wallet.', 'KHQR មិនអាចប្រើបានទេ។ សូមប្រើកាបូប។')}</p>}
             </div>
             {err && <p className="cvmErr" role="alert">{err}</p>}
             {!contactCheck.ok && (contact.phone || contact.address) && <p className="cvmHint center">{contactCheck.error}</p>}
@@ -772,7 +769,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
             <div className="cvmEdHead">
               <div>
                 <span className="cvmBadgeOk"><Sparkles />{statusTxt(status)}</span>
-                <h1>{locked ? tr('Your covers', 'គម្របរបស់អ្នក') : tr('Move the text where you want it', 'ផ្លាស់ទីអក្សរទៅកន្លែងដែលអ្នកចង់បាន')}</h1>
+                <h1>{locked ? tr('Your covers', 'គម្របរបស់អ្នក') : tr('Place your text', 'រៀបអក្សររបស់អ្នក')}</h1>
                 <p className="cvmSave" data-s={saved}>{locked ? tr('This order is already printed.', 'ការបញ្ជាទិញនេះត្រូវបានបោះពុម្ពរួចហើយ។') : saved === 'saving' ? tr('Saving…', 'កំពុងរក្សាទុក…') : saved === 'saved' ? tr('All changes saved', 'បានរក្សាទុកការកែប្រែទាំងអស់') : saved === 'error' ? tr('Could not save. Check your connection.', 'មិនអាចរក្សាទុកបានទេ។ សូមពិនិត្យអ៊ីនធឺណិត។') : tr('Touch a text and drag it. Then press Send to print.', 'ប៉ះអក្សរ ហើយអូសវា។ បន្ទាប់មកចុច «ផ្ញើទៅបោះពុម្ព»។')}</p>
               </div>
             </div>
@@ -823,7 +820,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
                     </div>
                     <button type="button" className="cvmLink bcReset" disabled={locked} onClick={() => resetOne(selField.key)}><RotateCcw size={14} /> {tr('Put this text back', 'ដាក់អក្សរនេះត្រឡប់វិញ')}</button>
                   </div>
-                ) : <p className="cvmHint">{tr('Tap a text to change its size or nudge it.', 'ចុចលើអក្សរដើម្បីប្តូរទំហំ ឬរំកិលវា។')}</p>}
+                ) : null}
                 {!locked && (
                   <div className="bcToolRow">
                     <button type="button" className="cvmBtn" onClick={resetPage}><RotateCcw size={15} />{tr('Reset page', 'កំណត់ទំព័រឡើងវិញ')}</button>
@@ -833,7 +830,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
               </div>
             </div>
 
-            {sent && <p className="cvmOk bcOk" role="status"><Check /> {tr('Sent! We will print your covers. You can still move the text and press the button again.', 'បានផ្ញើហើយ! យើងនឹងបោះពុម្ពគម្របរបស់អ្នក។ អ្នកនៅតែអាចផ្លាស់ទីអក្សរ ហើយចុចប៊ូតុងម្ដងទៀតបាន។')}</p>}
+            {sent && <p className="cvmOk bcOk" role="status"><Check /> {tr('Sent!', 'បានផ្ញើហើយ!')}</p>}
             {err && <p className="cvmErr" role="alert">{err}</p>}
             <div className="cvmBar two">
               <button type="button" className="cvmBack" onClick={() => nav('/services/book-cover')}><ArrowLeft />{tr('My covers', 'គម្របរបស់ខ្ញុំ')}</button>

@@ -218,7 +218,6 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
       <div className="svcInk"><s.Icon /></div>
       <div className="svcBody">
         <h3>{shopOn(s.k) && catalog?.[s.k]?.service.name_en ? (isKm() && catalog[s.k].service.name_km ? catalog[s.k].service.name_km : catalog[s.k].service.name_en) : tr(s.en, s.km)}</h3>
-        <p>{shopOn(s.k) && catalog?.[s.k]?.service.desc_en ? (isKm() && catalog[s.k].service.desc_km ? catalog[s.k].service.desc_km : catalog[s.k].service.desc_en) : tr(s.dEn, s.dKm)}</p>
         <ul className="svcTags">{(isKm() ? s.tagsKm : s.tagsEn).map(t => <li key={t}>{t}</li>)}</ul>
         <button type="button" className="svcAsk" onClick={() => (shopOn(s.k) ? setShop(s) : setOpen(s))}>
           {shopOn(s.k) ? tr('Order now', 'បញ្ជាទិញឥឡូវនេះ') : tr('Request this', 'ស្នើសុំសេវានេះ')}
@@ -237,14 +236,12 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
           <i className="svcCrop tl" /><i className="svcCrop tr" /><i className="svcCrop bl" /><i className="svcCrop br" />
           <div className="svcDots" aria-hidden="true"><b style={{ background: '#00a3d9' }} /><b style={{ background: '#e5007d' }} /><b style={{ background: '#f2b705' }} /><b style={{ background: '#241b35' }} /></div>
           <h1 id="svcTitle">{tr('Print it. Copy it. Design it.', 'បោះពុម្ព ថតចម្លង រចនា។')}</h1>
-          <p>{ALL.some(s => shopOn(s.k)) ? tr('Choose a service, set your options, see the price and pay. We start once it is paid.', 'ជ្រើសរើសសេវា កំណត់ជម្រើស មើលតម្លៃ ហើយទូទាត់។ យើងចាប់ផ្តើមនៅពេលបានបង់ប្រាក់។') : tr('Choose a service, tell us what you need, and we will reply with a price.', 'ជ្រើសរើសសេវា ប្រាប់យើងពីអ្វីដែលអ្នកត្រូវការ ហើយយើងនឹងឆ្លើយតបជាមួយតម្លៃ។')}</p>
         </section>
 
         <article className="svcCard" data-rv style={{ ['--svc' as any]: '#b3245f', ['--svc-fg' as any]: '#fff', ['--i' as any]: 0 }}>
           <div className="svcInk"><Heart /></div>
           <div className="svcBody">
             <h3>{tr('Wedding e-invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញ')}</h3>
-            <p>{tr('A beautiful online wedding invitation. We design it and send it to you here. Then you add each guest’s name and get a personal link to share.', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍អនឡាញដ៏ស្អាត។ យើងរចនា ហើយផ្ញើមកអ្នកនៅទីនេះ។ បន្ទាប់មកអ្នកបន្ថែមឈ្មោះភ្ញៀវម្នាក់ៗ ហើយទទួលបានតំណផ្ទាល់ខ្លួនសម្រាប់ចែករំលែក។')}</p>
             <ul className="svcTags">{(isKm() ? WEDDING_SVC.tagsKm : WEDDING_SVC.tagsEn).map(t => <li key={t}>{t}</li>)}</ul>
             {invites.length > 0 && <p className="wgReady"><Heart /> {invites.length === 1 ? tr('Your invitation is ready', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ') : tr(`${invites.length} invitations are ready`, `សំបុត្រអញ្ជើញ ${invites.length} រួចរាល់ហើយ`)}</p>}
             {invites.length > 0
@@ -258,7 +255,6 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
           <div className="svcInk"><FileText /></div>
           <div className="svcBody">
             <h3>{tr('CV maker', 'បង្កើត CV')}</h3>
-            <p>{tr('Pick a design, add your info in English or Khmer, pay and download your CV as a PDF.', 'ជ្រើសរើសគំរូ បញ្ចូលព័ត៌មានជាអង់គ្លេស ឬខ្មែរ ទូទាត់ ហើយទាញយក CV ជា PDF។')}</p>
             <ul className="svcTags">{(isKm() ? ['១៣ គំរូ', 'អង់គ្លេស / ខ្មែរ', 'PDF', '$3'] : ['13 designs', 'English / Khmer', 'PDF', '$3']).map(t => <li key={t}>{t}</li>)}</ul>
             <button type="button" className="svcAsk" onClick={() => nav('/services/cv')}>{tr('Make my CV', 'បង្កើត CV របស់ខ្ញុំ')}</button>
           </div>
@@ -269,7 +265,6 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
           <div className="svcInk"><BookOpen /></div>
           <div className="svcBody">
             <h3>{tr('Book cover', 'គម្របសៀវភៅ')}</h3>
-            <p>{tr('Pick a cover design, add your name and subjects, pay and place the text where you want it. We print it for you.', 'ជ្រើសរើសគំរូគម្រប បញ្ចូលឈ្មោះ និងមុខវិជ្ជា ទូទាត់ ហើយរៀបអក្សរតាមចិត្ត។ យើងបោះពុម្ពឲ្យអ្នក។')}</p>
             <ul className="svcTags">{(isKm() ? ['ច្រើនគំរូ', 'ច្រើនមុខវិជ្ជា', '២៥០ ៛ / ទំព័រ'] : ['Many designs', 'Several subjects', '250 ៛ / page']).map(t => <li key={t}>{t}</li>)}</ul>
             <button type="button" className="svcAsk" onClick={() => nav('/services/book-cover')}>{tr('Make my book cover', 'បង្កើតគម្របសៀវភៅ')}</button>
           </div>
@@ -280,7 +275,6 @@ export default function ServicesPage({ Top, Nav, api, bakongOn, PayModal }: Chro
           <div className="svcInk"><Download /></div>
           <div className="svcBody">
             <h3>{tr('Software downloads', 'ទាញយកកម្មវិធី')}</h3>
-            <p>{tr('Pick a program, pay $1 and download it. Watch a short video if you need help.', 'ជ្រើសរើសកម្មវិធី បង់ $1 ហើយទាញយក។ មើលវីដេអូខ្លីប្រសិនបើត្រូវការជំនួយ។')}</p>
             <ul className="svcTags">{(isKm() ? ['$1 ក្នុងមួយឯកសារ', 'វីដេអូណែនាំ', 'ទាញយកភ្លាមៗ'] : ['$1 per file', 'Video guide', 'Instant']).map(t => <li key={t}>{t}</li>)}</ul>
             <button type="button" className="svcAsk" onClick={() => nav('/services/software')}>{tr('Browse software', 'មើលកម្មវិធី')}</button>
           </div>
@@ -353,7 +347,6 @@ export function WeddingServicePage({ Top, Nav }: Chrome) {
             <div className="svcInk"><Heart /></div>
             <div className="svcBody">
               <h3>{tr('No invitation yet', 'មិនទាន់មានសំបុត្រអញ្ជើញ')}</h3>
-              <p>{tr('When we finish your wedding invitation it appears right here. Then you can add your guests and copy their personal links.', 'នៅពេលយើងធ្វើសំបុត្រអញ្ជើញរបស់អ្នករួច វានឹងបង្ហាញនៅទីនេះ។ បន្ទាប់មកអ្នកអាចបន្ថែមភ្ញៀវ និងចម្លងតំណផ្ទាល់ខ្លួនរបស់ពួកគេ។')}</p>
               <button type="button" className="svcAsk" onClick={() => setAsk(true)}>{tr('Request this', 'ស្នើសុំសេវានេះ')}</button>
             </div>
           </article>
@@ -362,7 +355,6 @@ export function WeddingServicePage({ Top, Nav }: Chrome) {
             <div className="svcInk"><Heart /></div>
             <div className="svcBody">
               <h3>{w.title || tr('Your wedding invitation', 'សំបុត្រអញ្ជើញអាពាហ៍ពិពាហ៍របស់អ្នក')}</h3>
-              <p>{tr('Your invitation is ready. Type a guest name: it appears on the cover and that guest gets a personal link to send.', 'សំបុត្រអញ្ជើញរបស់អ្នករួចរាល់ហើយ។ វាយឈ្មោះភ្ញៀវ៖ ឈ្មោះនោះនឹងបង្ហាញលើមុខសំបុត្រ ហើយភ្ញៀវម្នាក់ៗទទួលបានតំណផ្ទាល់ខ្លួនសម្រាប់ផ្ញើ។')}</p>
               <button type="button" className="svcAsk" onClick={() => window.open(guestLink(w), '_blank', 'noopener')}>{tr('View invitation', 'មើលសំបុត្រអញ្ជើញ')}</button>
               <WeddingGuests invite={w} />
             </div>
@@ -428,7 +420,6 @@ function RequestSheet({ service, onClose, onSent }: { service: Service; onClose:
             <div className="svcBurst" aria-hidden="true">{Array.from({ length: 22 }, (_, k) => <i key={k} className={'b' + (k % 3)} style={{ ['--a' as any]: (k * 360 / 22) + 'deg', ['--c' as any]: ['#00a3d9', '#e5007d', '#f2b705', '#241b35', '#7c3aed'][k % 5], ['--r' as any]: (80 + (k % 4) * 20) + 'px', ['--d' as any]: (k % 4) * 35 + 'ms' }} />)}</div>
             <span className="svcDoneIcon"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="25" /><path d="M15 27l7 7 15-16" /></svg></span>
             <h3>{tr('Request sent', 'បានផ្ញើសំណើ')}</h3>
-            <p>{tr('We will review it and reply with a price. You can follow it under Your requests on this page.', 'យើងនឹងពិនិត្យ ហើយឆ្លើយតបជាមួយតម្លៃ។ អ្នកអាចតាមដានវានៅក្នុង «សំណើរបស់អ្នក» នៅលើទំព័រនេះ។')}</p>
             <button type="button" className="svcPrimary" onClick={onClose}>{tr('Done', 'រួចរាល់')}</button>
           </div>
         ) : (
@@ -447,7 +438,7 @@ function RequestSheet({ service, onClose, onSent }: { service: Service; onClose:
             </label>
             <label className={'svcFile' + (file ? ' has' : '')}>
               <ImagePlus />
-              <span><b>{file ? file.name : tr('Add a file or picture (optional)', 'បន្ថែមឯកសារ ឬរូបភាព (ស្រេចចិត្ត)')}</b><small>{tr(`Photo, PDF or sample, up to ${MAX_MB} MB`, `រូបថត PDF ឬគំរូ រហូតដល់ ${MAX_MB} MB`)}</small></span>
+              <span><b>{file ? file.name : tr('Add a file or picture (optional)', 'បន្ថែមឯកសារ ឬរូបភាព (ស្រេចចិត្ត)')}</b><small>{tr(`Up to ${MAX_MB} MB`, `រហូតដល់ ${MAX_MB} MB`)}</small></span>
               <input hidden type="file" accept="image/*,application/pdf" onChange={e => pick(e.target.files?.[0] || null)} />
             </label>
             {err && <p className="svcErr" role="alert">{err}</p>}
@@ -497,10 +488,9 @@ function ProductIdea({ onSent }: { onSent: () => void }) {
   return (
     <section className="svcIdea" data-rv aria-labelledby="svcIdeaTitle">
       <h2 id="svcIdeaTitle">{tr('Cannot find a product?', 'រកមិនឃើញផលិតផលមែនទេ?')}</h2>
-      <p>{tr('Send us a picture of what you want. If we can get it, we will add it to the shop.', 'ផ្ញើរូបភាពនៃអ្វីដែលអ្នកចង់បានមកយើង។ បើយើងរកបាន យើងនឹងដាក់វាចូលហាង។')}</p>
 
       <label className={'svcDrop' + (preview ? ' has' : '')}>
-        {preview ? <img src={preview} alt={tr('Your product picture', 'រូបភាពផលិតផលរបស់អ្នក')} /> : <><ImagePlus /><b>{tr('Add a product picture', 'បន្ថែមរូបភាពផលិតផល')}</b><small>{tr('Take a photo or choose one from your phone', 'ថតរូប ឬជ្រើសរើសពីទូរស័ព្ទ')}</small></>}
+        {preview ? <img src={preview} alt={tr('Your product picture', 'រូបភាពផលិតផលរបស់អ្នក')} /> : <><ImagePlus /><b>{tr('Add a product picture', 'បន្ថែមរូបភាពផលិតផល')}</b></>}
         <input hidden type="file" accept="image/*" onChange={e => pick(e.target.files?.[0] || null)} />
       </label>
       {preview && <button type="button" className="svcLink" onClick={() => setFile(null)}>{tr('Remove picture', 'លុបរូបភាព')}</button>}
@@ -514,7 +504,7 @@ function ProductIdea({ onSent }: { onSent: () => void }) {
         <textarea rows={3} value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder={tr('Size, colour, brand, where you saw it…', 'ទំហំ ពណ៌ ម៉ាក កន្លែងដែលអ្នកបានឃើញ…')} />
       </label>
       {err && <p className="svcErr" role="alert">{err}</p>}
-      {ok && <p className="svcOk" role="status"><Check /> {tr('Sent. Thank you, we will take a look.', 'បានផ្ញើ។ អរគុណ យើងនឹងពិនិត្យមើល។')}</p>}
+      {ok && <p className="svcOk" role="status"><Check /> {tr('Sent.', 'បានផ្ញើ។')}</p>}
       <button type="button" className="svcPrimary" disabled={busy} onClick={submit}>
         {busy ? tr('Sending…', 'កំពុងផ្ញើ…') : tr('Send picture', 'ផ្ញើរូបភាព')}
       </button>

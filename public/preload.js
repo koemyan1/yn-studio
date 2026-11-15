@@ -9,3 +9,6 @@ if(lc&&(lc.loader_image||lc.loader_text)){document.documentElement.classList.add
 if(/^https:\/\//.test(lc.loader_image||'')){var li=document.createElement('link');li.rel='preload';li.as='image';li.href=lc.loader_image;document.head.appendChild(li)}}}catch(e){}
 /* failsafe: never leave the splash up forever if the app fails to start */
 setTimeout(function(){var b=document.getElementById('ynBoot');if(b)b.classList.add('out')},9000);
+
+/* no pinch / double-tap zoom: the store always fits the phone screen (iOS ignores user-scalable=no, so block its gesture events too) */
+try{['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,function(e){e.preventDefault()},{passive:false})})}catch(e){}

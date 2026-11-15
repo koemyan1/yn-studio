@@ -135,8 +135,7 @@ function QrScanner({ onCode, onClose }: { onCode: (code: string) => void; onClos
       <div className="wqScanHead">
         <span className="wqEyebrow">{tr('SCAN TO SEND', 'ស្កេនដើម្បីផ្ញើ')}</span>
         <h2>{tr('Scan a YN Studio wallet QR', 'ស្កេន QR កាបូប YN Studio')}</h2>
-        <p>{tr('Ask the person to open their Wallet page and show their QR.', 'សូមឱ្យអ្នកទទួលបើកទំព័រកាបូប ហើយបង្ហាញ QR របស់គេ។')}</p>
-      </div>
+              </div>
       <div className="scannerViewport wqViewport">
         {error ? (
           <div className="scannerFallback">
@@ -283,7 +282,7 @@ export function TransferModal({ balances, onClose, onDone }: {
     setLooking(false);
     if (r.error) {
       setErr(/lookup_wallet_recipient|schema cache|PGRST202/i.test(r.error.message)
-        ? tr('Transfers are not set up yet. Ask the store owner to finish the setup.', 'ការផ្ទេរប្រាក់មិនទាន់ត្រូវបានរៀបចំនៅឡើយទេ។ សូមប្រាប់ម្ចាស់ហាងឱ្យបញ្ចប់ការរៀបចំ។')
+        ? tr('Transfers are unavailable right now.', 'ការផ្ទេរប្រាក់មិនអាចប្រើបានទេពេលនេះ។')
         : r.error.message);
       setStep('scan');
       return;
@@ -298,7 +297,7 @@ export function TransferModal({ balances, onClose, onDone }: {
     setBusy(false);
     if (r.error) {
       setErr(/transfer_wallet_funds|schema cache|PGRST202/i.test(r.error.message)
-        ? tr('Transfers are not set up yet. Ask the store owner to finish the setup.', 'ការផ្ទេរប្រាក់មិនទាន់ត្រូវបានរៀបចំនៅឡើយទេ។ សូមប្រាប់ម្ចាស់ហាងឱ្យបញ្ចប់ការរៀបចំ។')
+        ? tr('Transfers are unavailable right now.', 'ការផ្ទេរប្រាក់មិនអាចប្រើបានទេពេលនេះ។')
         : r.error.message);
       setStep('amount');
       return;
@@ -367,7 +366,7 @@ export function TransferModal({ balances, onClose, onDone }: {
               <div><dt>{tr('From wallet', 'ពីកាបូប')}</dt><dd>{walletName}</dd></div>
               {note.trim() && <div><dt>{tr('Note', 'កំណត់ចំណាំ')}</dt><dd>{note.trim()}</dd></div>}
             </dl>
-            <p className="wqHint">{tr('Only send money to people you know. A transfer cannot be undone.', 'ផ្ញើប្រាក់ទៅកាន់តែអ្នកដែលអ្នកស្គាល់ប៉ុណ្ណោះ។ ការផ្ទេរមិនអាចត្រឡប់វិញបានទេ។')}</p>
+            <p className="wqHint">{tr('Transfers cannot be undone.', 'ការផ្ទេរមិនអាចត្រឡប់វិញបានទេ។')}</p>
             {err && <p className="wqHint wqWarn" role="alert">{err}</p>}
             <div className="wqRow two">
               <button type="button" className="wqBtn ghost" disabled={busy} onClick={() => setStep('amount')}>{tr('Back', 'ថយក្រោយ')}</button>
@@ -425,7 +424,6 @@ function MyQrSheet({ code, img, err, onClose, onScan }: { code: string; img: str
           <div className="wqQrBox">
             {img ? <img src={img} alt={tr('Your wallet QR code', 'QR កូដកាបូបរបស់អ្នក')} /> : <div className="wqQrLoading"><QrCode /></div>}
           </div>
-          <p className="wqAbaName">{tr('Show this QR to another YN Studio customer to receive money', 'បង្ហាញ QR នេះទៅអតិថិជន YN Studio ម្នាក់ទៀត ដើម្បីទទួលប្រាក់')}</p>
           {code && <p className="wqAbaCode">{code}</p>}
           {err && <p className="wqHint wqWarn" role="alert">{err}</p>}
           <div className="wqAbaActions">

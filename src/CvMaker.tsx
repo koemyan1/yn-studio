@@ -122,7 +122,7 @@ function AiHelp({ value, title, lang, onUse }: { value: string; title: string; l
       {out && (
         <div className="cvmAiOut" role="status">
           <p>{out}</p>
-          {src === 'basic' && <small className="cvmHint">{tr('The AI is resting right now, so only spelling and spacing were tidied.', 'AI កំពុងសម្រាក ដូច្នេះគ្រាន់តែរៀបចំអក្ខរាវិរុទ្ធ និងដំណាក់កាលប៉ុណ្ណោះ។')}</small>}
+          {src === 'basic' && <small className="cvmHint">{tr('Basic cleanup only.', 'សម្អាតមូលដ្ឋានប៉ុណ្ណោះ។')}</small>}
           <div className="cvmAiAct">
             <button type="button" className="cvmAiUse" onClick={() => { onUse(out); setOut(''); }}><Check />{tr('Use this', 'ប្រើអត្ថបទនេះ')}</button>
             <button type="button" className="cvmAiNo" onClick={run} disabled={busy}>{tr('Try again', 'ព្យាយាមម្តងទៀត')}</button>
@@ -209,7 +209,7 @@ function CvForm({ tpl, data, set, lang }: { tpl: TplKey; data: CvData; set: (p: 
         </div>
       )}
       {has('experience') && !(data.expKind === 'achievements' && !has('achievements')) && (
-        <RowList title={tr('Work experience', 'បទពិសោធន៍ការងារ')} hint={tr('Newest first. Put each duty on its own line.', 'ថ្មីបំផុតមុន។ សរសេរកិច្ចការនីមួយៗលើមួយបន្ទាត់។')}
+        <RowList title={tr('Work experience', 'បទពិសោធន៍ការងារ')}
           items={data.experience} cap={CAPS.experience} blank={() => ({ period: '', company: '', role: '', desc: '' })} onChange={v => set({ experience: v })}
           render={(x, p) => <>
             <div className="cvmTwo"><Field label={tr('Company', 'ក្រុមហ៊ុន')}><input value={x.company} onChange={e => p({ company: e.target.value })} /></Field>
@@ -219,7 +219,7 @@ function CvForm({ tpl, data, set, lang }: { tpl: TplKey; data: CvData; set: (p: 
           </>} />
       )}
       {has('experience') && !has('achievements') && data.expKind === 'achievements' && (
-        <RowList title={tr('Achievements', 'សមិទ្ធផល')} hint={tr('Newest first. Awards, results, projects you are proud of.', 'ថ្មីបំផុតមុន។ ពានរង្វាន់ លទ្ធផល គម្រោងដែលអ្នកមោទនភាព។')}
+        <RowList title={tr('Achievements', 'សមិទ្ធផល')}
           items={data.achievements} cap={CAPS.achievements} blank={() => ({ period: '', title: '', text: '' })} onChange={v => set({ achievements: v })}
           render={(x, p) => <>
             <div className="cvmTwo"><Field label={tr('Title', 'ចំណងជើង')}><input value={x.title || ''} onChange={e => p({ title: e.target.value })} /></Field>
@@ -434,7 +434,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
     setPayOpen(false); setWalletDone(false);
     if (!cvId) return;
     setBusy(true);
-    if (await isPaid(cvId)) { setStep('generating'); loadMine(); } else setErr(tr('We have not received the payment yet. If you paid, wait a few seconds and press Pay again.', 'យើងមិនទាន់ទទួលបានការទូទាត់ទេ។ បើអ្នកបានបង់ហើយ សូមរង់ចាំបន្តិច រួចចុចបង់ម្ដងទៀត។'));
+    if (await isPaid(cvId)) { setStep('generating'); loadMine(); } else setErr(tr('Payment not received yet. Try again in a moment.', 'មិនទាន់ទទួលបានការទូទាត់ទេ។ សូមព្យាយាមម្តងទៀតបន្តិចទៀត។'));
     setBusy(false);
   }
   useEffect(() => {
@@ -511,7 +511,6 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
             <section className="cvmHero">
               <span className="cvmPrice">{money(PRICE)}</span>
               <h1>{tr('Pick a CV design', 'ជ្រើសរើសគំរូ CV')}</h1>
-              <p>{tr('Choose the template you like. Next you add your info, pay once, and download your CV as a PDF.', 'ជ្រើសរើសគំរូដែលអ្នកចូលចិត្ត។ បន្ទាប់មកបញ្ចូលព័ត៌មាន ទូទាត់ម្តង រួចទាញយក CV ជា PDF។')}</p>
             </section>
             <div className="cvmGrid">
               {TEMPLATES.map((t, i) => (
@@ -545,8 +544,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
         {/* ---------------- 2. language ---------------- */}
         {step === 'language' && tpl && (
           <>
-            <section className="cvmHero"><h1>{tr('Which language is your CV in?', 'CV របស់អ្នកជាភាសាអ្វី?')}</h1>
-              <p>{tr('The headings and fonts change to match. You can type your info in any language.', 'ចំណងជើង និងពុម្ពអក្សរនឹងប្តូរតាម។ អ្នកអាចសរសេរព័ត៌មានជាភាសាណាក៏បាន។')}</p></section>
+            <section className="cvmHero"><h1>{tr('Which language is your CV in?', 'CV របស់អ្នកជាភាសាអ្វី?')}</h1></section>
             <div className="cvmLangs">
               {([['en', 'English', 'Education · Skills', 'Aa'], ['km', 'ខ្មែរ', 'ការអប់រំ · ជំនាញ', 'ក']] as const).map(([k, name, sample, glyph]) => (
                 <button type="button" key={k} className={'cvmLang' + (lang === k ? ' on' : '')} onClick={() => setLang(k)} aria-pressed={lang === k}>
@@ -566,8 +564,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
         {/* ---------------- 3. info ---------------- */}
         {step === 'info' && tpl && (
           <>
-            <section className="cvmHero"><h1>{tr('Add your info', 'បញ្ចូលព័ត៌មានរបស់អ្នក')}</h1>
-              <p>{tr('Fill in what you want on your CV. After payment we place it into the design for you.', 'បំពេញអ្វីដែលអ្នកចង់បានលើ CV។ បន្ទាប់ពីទូទាត់ យើងនឹងដាក់វាចូលក្នុងគំរូឱ្យអ្នក។')}</p></section>
+            <section className="cvmHero"><h1>{tr('Add your info', 'បញ្ចូលព័ត៌មានរបស់អ្នក')}</h1></section>
             <CvForm tpl={tpl} data={data} set={set} lang={lang} />
             {err && <p className="cvmErr" role="alert">{err}</p>}
             {!canNext && <p className="cvmHint center">{tr('Add your name and job title to continue.', 'សូមបញ្ចូលឈ្មោះ និងមុខតំណែងដើម្បីបន្ត។')}</p>}
@@ -599,7 +596,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
                 <span className="cvmPayBadge w"><Wallet /></span>
                 <span><b>{tr('Wallet', 'កាបូប')}</b><small>{bal === null ? tr('Balance unavailable', 'មិនអាចមើលសមតុល្យបាន') : <>{tr('Balance', 'សមតុល្យ')} {(walletMoney || money)(bal)}{walletLow && <> · {tr('not enough', 'មិនគ្រប់គ្រាន់')}</>}</>}</small></span><i className="cvmRadio" />
               </button>
-              {bkOn === false && <p className="cvmHint">{tr('KHQR is not available right now. You can still pay from your wallet.', 'KHQR មិនអាចប្រើបានទេឥឡូវនេះ។ អ្នកនៅតែអាចទូទាត់ពីកាបូបបាន។')}</p>}
+              {bkOn === false && <p className="cvmHint">{tr('KHQR unavailable. Use your wallet.', 'KHQR មិនអាចប្រើបានទេ។ សូមប្រើកាបូប។')}</p>}
             </div>
             {err && <p className="cvmErr" role="alert">{err}</p>}
             <div className="cvmBar two">
@@ -622,7 +619,7 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
                 <p className="cvmSave" data-s={saved}>{saved === 'saving' ? tr('Saving…', 'កំពុងរក្សាទុក…') : saved === 'saved' ? tr('All changes saved', 'បានរក្សាទុកការកែប្រែទាំងអស់') : saved === 'error' ? tr('Could not save. Check your connection.', 'មិនអាចរក្សាទុកបានទេ។ សូមពិនិត្យអ៊ីនធឺណិត។') : tr('Edit anything, then save as PDF.', 'កែអ្វីក៏បាន រួចរក្សាទុកជា PDF។')}</p></div>
               <button type="button" className="cvmGo" disabled={pdfBusy} onClick={savePdf}><Download />{pdfBusy ? tr('Saving…', 'កំពុងរក្សាទុក…') : tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
             </div>
-            {overflow && <p className="cvmWarn" role="alert">{tr('This is more than fits on one page, even at the smallest text size. Remove an item so everything fits.', 'អក្សរខ្លះហួសពីបាតទំព័រ។ សូមកាត់បន្ថយអក្សរ ឬលុបធាតុមួយ ដើម្បីឱ្យចុះក្នុងទំព័រ។')}</p>}
+            {overflow && <p className="cvmWarn" role="alert">{tr('Too long for one page. Remove an item.', 'អក្សរខ្លះហួសពីបាតទំព័រ។ សូមកាត់បន្ថយអក្សរ ឬលុបធាតុមួយ ដើម្បីឱ្យចុះក្នុងទំព័រ។')}</p>}
             <div className="cvmTabs" role="tablist">
               <button type="button" role="tab" aria-selected={tab === 'preview'} className={tab === 'preview' ? 'on' : ''} onClick={() => setTab('preview')}><FileText />{tr('Preview', 'មើលជាមុន')}</button>
               <button type="button" role="tab" aria-selected={tab === 'edit'} className={tab === 'edit' ? 'on' : ''} onClick={() => setTab('edit')}><Pencil />{tr('Edit', 'កែ')}</button>
@@ -631,7 +628,6 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
               <div className="cvmEdPrev"><div className="cvmPaper"><Scaled><CvSheet tpl={tpl} data={data} km={km} onFit={setOverflow} /></Scaled></div></div>
               <div className="cvmEdForm"><CvForm tpl={tpl} data={data} set={set} lang={lang} /></div>
             </div>
-            <p className="cvmHint center">{tr('Tip: in the print window choose “Save as PDF” and set margins to “None”.', 'គន្លឹះ៖ នៅក្នុងផ្ទាំងបោះពុម្ព សូមជ្រើស «Save as PDF» ហើយកំណត់គែមទៅ «None»។')}</p>
             <div className="cvmBar two">
               <button type="button" className="cvmBack" onClick={() => { setStep('home'); setTpl(null); setCvId(null); setData(emptyCv()); try { const k = draftKey(me); if (k) localStorage.removeItem(k); } catch { /* ignore */ } loadMine(); }}><ArrowLeft />{tr('My CVs', 'CV របស់ខ្ញុំ')}</button>
               <button type="button" className="cvmGo" disabled={pdfBusy} onClick={savePdf}><Download />{pdfBusy ? tr('Saving…', 'កំពុងរក្សាទុក…') : tr('Save as PDF', 'រក្សាទុកជា PDF')}</button>
@@ -649,7 +645,6 @@ export default function CvMaker({ Top, Nav, PayModal, useWalletBalance, useBakon
             <div className="payDone k-cv" style={{ ['--tx' as any]: '2300ms' }} role="status" aria-live="polite">
               <PaymentScene kind="cv" amountText={money(price)} />
               <h3>{tr('Payment received', 'បានទទួលការទូទាត់')}</h3>
-              <p className="payDoneSub">{tr('Your CV is paid. Let us build it now!', 'CV របស់អ្នកបានទូទាត់ហើយ។ តោះបង្កើតវាឥឡូវនេះ!')}</p>
               <div className="payDoneAmt">{money(price)}</div>
               <dl className="payDoneRows">
                 <div><dt>{tr('Paid with', 'ទូទាត់ដោយ')}</dt><dd>{tr('Wallet', 'កាបូប')}</dd></div>

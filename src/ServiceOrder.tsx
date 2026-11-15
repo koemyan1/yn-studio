@@ -310,11 +310,10 @@ export function ServiceOrderSheet({ svc, cat, api, PayModal, onClose, onChanged 
           {files.length < MAX_FILES && (
             <label className="svcFile">
               <ImagePlus />
-              <span><b>{upBusy ? tr('Uploading…', 'កំពុងផ្ទុកឡើង…') : tr('Add a file or picture', 'បន្ថែមឯកសារ ឬរូបភាព')}</b><small>{tr(`Photo or PDF, up to ${MAX_MB} MB, ${MAX_FILES} files`, `រូបថត ឬ PDF រហូតដល់ ${MAX_MB} MB ${MAX_FILES} ឯកសារ`)}</small></span>
+              <span><b>{upBusy ? tr('Uploading…', 'កំពុងផ្ទុកឡើង…') : tr('Add a file or picture', 'បន្ថែមឯកសារ ឬរូបភាព')}</b><small>{tr(`Up to ${MAX_MB} MB`, `រហូតដល់ ${MAX_MB} MB`)}</small></span>
               <input hidden type="file" multiple accept={FILE_ACCEPT} disabled={upBusy} onChange={e => { addFiles(e.target.files); e.target.value = ''; }} />
             </label>
           )}
-          {physical && files.length === 0 && <small className="ssHint">{tr('No file? Choose pick up and bring your original.', 'គ្មានឯកសារ? ជ្រើសរើសមកយក ហើយនាំឯកសារដើមមក។')}</small>}
         </div>
 
         <label className="ssGroup">
@@ -328,7 +327,7 @@ export function ServiceOrderSheet({ svc, cat, api, PayModal, onClose, onChanged 
             <span className="ssLabel">{tr('How do you want it?', 'តើអ្នកចង់បានដោយរបៀបណា?')}</span>
             <div className="ssTwo" role="radiogroup" aria-label={tr('Pick up or delivery', 'មកយក ឬដឹកជញ្ជូន')}>
               <button type="button" role="radio" aria-checked={ful === 'pickup'} className={'ssBig' + (ful === 'pickup' ? ' on' : '')} onClick={() => { setFul('pickup'); setErr(''); }}><Store /><b>{tr('Pick up', 'មកយក')}</b><small>{tr('Free', 'ឥតគិតថ្លៃ')}</small></button>
-              <button type="button" role="radio" aria-checked={ful === 'delivery'} className={'ssBig' + (ful === 'delivery' ? ' on' : '')} onClick={() => { setFul('delivery'); setErr(''); }}><Truck /><b>{tr('Delivery', 'ដឹកជញ្ជូន')}</b><small>{tr('Fee by distance', 'ថ្លៃតាមចម្ងាយ')}</small></button>
+              <button type="button" role="radio" aria-checked={ful === 'delivery'} className={'ssBig' + (ful === 'delivery' ? ' on' : '')} onClick={() => { setFul('delivery'); setErr(''); }}><Truck /><b>{tr('Delivery', 'ដឹកជញ្ជូន')}</b></button>
             </div>
 
             {ful === 'pickup' && (
@@ -337,7 +336,6 @@ export function ServiceOrderSheet({ svc, cat, api, PayModal, onClose, onChanged 
                 {cfg?.store_address && <p>{cfg.store_address}</p>}
                 {store && <Suspense fallback={<div className="ssMap" style={{ height: 180 }} />}><PinMapL at={store} emoji="🏪" /></Suspense>}
                 {mapsLink(cfg, store) && <a className="ssLinkBtn" href={mapsLink(cfg, store)} target="_blank" rel="noreferrer"><ExternalLink />{tr('Open in Maps', 'បើកក្នុងផែនទី')}</a>}
-                <small className="ssHint">{tr('We will tell you when it is ready.', 'យើងនឹងប្រាប់អ្នកនៅពេលវារួចរាល់។')}</small>
               </div>
             )}
 
@@ -348,7 +346,7 @@ export function ServiceOrderSheet({ svc, cat, api, PayModal, onClose, onChanged 
                   pin={pin} hideTrackNote setMsg={setErr}
                   onConfirm={(p: any, d: any) => {
                     const phone = cleanPhone(d.phone);
-                    if (!phone) { setErr(tr('Please enter a valid phone number so we can reach you.', 'សូមបញ្ចូលលេខទូរស័ព្ទត្រឹមត្រូវ ដើម្បីឱ្យយើងទាក់ទងអ្នកបាន។')); return; }
+                    if (!phone) { setErr(tr('Enter a valid phone number.', 'សូមបញ្ចូលលេខទូរស័ព្ទត្រឹមត្រូវ។')); return; }
                     setErr(''); setPin(p);
                     setDeliv({ phone, address: [p.label, d.delivery_notes].filter(Boolean).join(' · ').slice(0, 300) });
                   }}
@@ -373,7 +371,6 @@ export function ServiceOrderSheet({ svc, cat, api, PayModal, onClose, onChanged 
               <div className="ssTotal"><dt>{tr('Total', 'សរុប')}</dt><dd>{money(fq ? fq.total : q.total)}</dd></div>
             </dl>
           ) : <p className="ssHint">{sub.ok ? '' : sub.error}</p>}
-          <small className="ssHint">{tr('You pay first with Bakong KHQR. Your order starts once the payment arrives.', 'អ្នកបង់ប្រាក់មុនដោយ Bakong KHQR។ ការបញ្ជាទិញចាប់ផ្តើមនៅពេលទទួលបានការទូទាត់។')}</small>
         </section>
 
         {err && <p className="svcErr" role="alert">{err}</p>}

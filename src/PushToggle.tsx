@@ -35,15 +35,13 @@ export default function PushToggle({ admin = false }: { admin?: boolean }) {
       <div className="pushText">
         {state === 'on' && <>
           <b>{tr('Notifications are on', 'ការជូនដំណឹងត្រូវបានបើក')}</b>
-          <small>{tr('This phone will buzz when something changes.', 'ទូរស័ព្ទនេះនឹងញ័រពេលមានការផ្លាស់ប្តូរ។')}</small>
         </>}
         {state === 'off' && <>
           <b>{title}</b>
-          <small>{tr('Tap to allow notifications on this phone.', 'ចុចដើម្បីអនុញ្ញាតការជូនដំណឹងលើទូរស័ព្ទនេះ។')}</small>
         </>}
         {state === 'blocked' && <>
           <b>{tr('Notifications are blocked', 'ការជូនដំណឹងត្រូវបានរារាំង')}</b>
-          <small>{tr('Open your phone or browser settings for this site and set Notifications to Allow.', 'បើកការកំណត់ទូរស័ព្ទ ឬកម្មវិធីរុករកសម្រាប់គេហទំព័រនេះ ហើយកំណត់ការជូនដំណឹងទៅ «អនុញ្ញាត»។')}</small>
+          <small>{tr('Allow notifications in your browser settings.', 'អនុញ្ញាតការជូនដំណឹងក្នុងការកំណត់កម្មវិធីរុករក។')}</small>
         </>}
         {state === 'ios-install' && <>
           <b>{title}</b>
