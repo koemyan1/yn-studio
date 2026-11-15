@@ -1,0 +1,293 @@
+/* ==========================================================================
+   MINIMAL + FLUID  -  the customer side, restyled
+   Quiet monochrome, one accent (ink), generous space, almost no text, and sizes that flow with the screen.
+   Loaded LAST in main.tsx. Written with the scope macro  @S  that tools/minimal/build_css.py expands into src/minimal.css
+   (edit THIS file, then run:  python3 tools/minimal/build_css.py).
+
+   Scope: customer screens only.
+     - admin screens are never touched  (html.yn-admin-page)
+     - Secret Code themes (Chiikawa / Coraline / Spidey ...) keep their own look while unlocked  (html[data-secret-theme="on"])
+   To switch the minimal look off completely, delete the  import './minimal.css'  line in main.tsx.
+   ========================================================================== */
+
+/* ---------- 1. tokens (every old purple / shadow / line now follows these) ---------- */
+@S,
+@S :is(.shop,.detail,.auth,.bottom,.miniCheckout,.payModal){
+  --purple:#111113; --purple2:#2b2b30; --ink:#111113; --muted:#8a8a92; --line:#ececef; --card:#fff; --soft:#f5f5f6;
+  --shadow:0 1px 2px rgba(17,17,19,.04),0 8px 28px rgba(17,17,19,.05);
+  --mn-red:#e5484d; --mn-green:#1f9d63;
+  --mn-ease:cubic-bezier(.22,1,.36,1);            /* fluid, no bounce */
+  --mn-spring:cubic-bezier(.34,1.4,.5,1);         /* tiny overshoot, taps only */
+  --mn-r:16px; --mn-r-lg:22px;
+  --mn-pad:clamp(14px,3.6vw,32px);                /* page side space flows with the screen */
+  --mn-gap:clamp(10px,2.2vw,22px);
+  --theme-primary:#111113; --theme-bg:#fff;
+  color-scheme:light;
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page),
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body{background:#fff!important;color:var(--ink);scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+@S body{background:#fff!important}
+@S body::before,@S body::after{display:none!important}   /* the old aurora backdrop */
+@S .shop{background:#fff;width:min(1120px,100%);padding:clamp(14px,3vw,30px) var(--mn-pad) 120px}
+@S ::selection{background:#111113;color:#fff}
+
+
+/* ---------- 0. clear the earlier purple layer (gradients, glows, shine sweeps in customer.css / home.css / cool.css / wallet.css ...) ---------- */
+@S .shop :is(.search,.hero,.orb,.saleRail,.saleItem .product,.bannerSlider,.cartItem,.cartItem.selected,.cartSummary,.cartBadge,.cartImage,
+  .panel,.glass,.ordercard,.couponCard,.orderSummary,.paymentChoice,.payOption,.receipt,.receiptWrap,.profilePanel,.profileHero,.profileAvatar,
+  .notificationCard,.notificationIcon,.locationPanel,.debtEmptyCard,.debtPayCard,.debtHero,.chatPanel,.chatMessages,.checkoutQr,.marketLoading,
+  .wlPanel,.wlTile,.wlRow,.wlField,.wlChip,.wqCard,.wqPanel,.wqQrBox,.miniitem img,.product>img,.product>.ph,.product .ph,.pageIntro,.notifTabs,
+  .notifTabs button,.categoryRail button,.chips button,.avatar,.icon,.miniLogo,.logo,.status,.stat,.walletHero,.wlHero),
+@S .detail :is(.detailCard,.gallery,.galleryViewport,.galleryArrow,.galleryThumbs button,.chips button,.icon,.secondary,.top,.miniLogo),
+@S :is(.bottom,.miniCheckout,.login,.payModal,.saleUpTo,.saleTag,.heart,.searchClear,.langButton,.productSkel i,.productSkel span){
+  background-image:none!important;box-shadow:none!important}
+@S .shop :is(.hero,.orb,.pageIntro,.bannerSlider,.saleRail,.profileHero,.debtHero,.walletHero,.wlHero)::before,
+@S .shop :is(.hero,.bannerSlider,.saleRail,.product,.debtHero,.coStep,.wlPanel,.wlTile,.profileHero,.wqPanel)::after,
+@S .shop :is(.button,.primary,.checkoutButton,.paywayButton,.abaPaymentButton,.wide,.wlForm .wide)::after,
+@S :is(.miniCheckout button,.detail .stickyActions button,.auth .login>button,.bottom,.eyebrow)::after,
+@S :is(.bottom,.eyebrow,.shop .eyebrow,.detail .eyebrow,.auth .eyebrow)::before{display:none!important;content:none!important}
+/* gradient headline text -> plain ink */
+@S .shop .brandrow h1,@S .authBrand h1,@S .shop .pageIntro h1,@S .shop h1,@S .shop h2{
+  background:none!important;-webkit-text-fill-color:currentColor!important;color:var(--ink);animation:none!important}
+@S .shop .walletHero h1,@S .shop .wlHero h1,@S .shop .debtHero h1,@S .shop .debtHero h2,@S .shop .hero h2,@S .shop .profileHero h1{-webkit-text-fill-color:currentColor!important}
+@S .shop :is(.walletHero,.wlHero,.debtHero) :is(h1,h2,b,strong){color:#fff!important}
+/* buttons: every old purple call-to-action becomes the one ink button */
+@S .shop :is(.button,.primary,.checkoutButton,.paywayButton,.abaPaymentButton,.wide:not(.secondary)),
+@S .miniCheckout button,@S .detail .stickyActions button:not(.secondary),@S .auth .login>button:not(.googleBtn):not(.textBtn),
+@S .shop .categoryRail button.on,@S .shop .chips button.on,@S .detail .chips button.on,@S .shop :is(.notifTabs,.wqTabs) button.on{
+  background-color:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important;text-shadow:none!important}
+@S .shop :is(.notifTabs,.wqTabs,.debtMethodTabs) button.on{background-color:#fff!important;color:var(--ink)!important;border-color:transparent!important;box-shadow:0 1px 6px rgba(17,17,19,.08)!important}
+@S :is(.shop .secondary,.detail .secondary){background-color:transparent!important;color:var(--ink)!important;border:1px solid var(--line)!important}
+/* quiet neutral fills where there used to be lavender */
+@S .shop :is(.search,.hero,.cartBadge,.notifTabs,.profileHero,.wlTile,.wlRow,.wlField,.wlChip,.stat,.notificationIcon,.status){background-color:var(--soft)!important;border-color:transparent!important}
+@S .shop :is(.product>img,.product>.ph,.product .ph,.cartImage,.miniitem img){background-color:var(--soft)!important}
+@S .shop .product .ph,@S .shop .product>.ph{color:#c9c9ce}
+@S .shop :is(.panel,.glass,.ordercard,.couponCard,.orderSummary,.cartItem,.paymentChoice,.payOption,.receipt,.receiptWrap,.profilePanel,.notificationCard,.locationPanel,.debtEmptyCard,.debtPayCard,.chatPanel,.wlPanel,.wqCard,.wqPanel,.login),
+@S .detail :is(.detailCard,.gallery){background-color:#fff!important;border:1px solid var(--line)!important}
+@S .shop .search{border:1px solid transparent!important}
+@S .shop .search:focus-within{background-color:#fff!important;border-color:var(--ink)!important}
+@S .shop .hero{color:var(--ink)!important}
+@S .shop .hero h2{color:var(--ink)!important}
+@S .shop .orb{background-color:#fff!important}
+@S .shop :is(.walletHero,.wlHero,.debtHero){background-color:#111113!important;color:#fff!important}
+@S .bottom,@S .miniCheckout{background-color:rgba(255,255,255,.86)!important;border:1px solid rgba(17,17,19,.06)!important}
+@S .bottom,@S .miniCheckout{box-shadow:0 10px 40px rgba(17,17,19,.10)!important}
+@S .shop .heart{background-color:rgba(255,255,255,.94)!important;box-shadow:0 2px 10px rgba(0,0,0,.10)!important}
+@S .shop .saleUpTo,@S .shop .saleItem .saleTag,@S .shop .product .saleTag{background-color:var(--ink)!important;color:#fff!important;animation:none!important;text-shadow:none!important}
+@S .shop .saleRail{border:0!important;background-color:transparent!important;padding:0!important}
+@S .shop .product,@S .shop .saleItem .product{background-color:transparent!important;border:0!important;box-shadow:none!important}
+@S .shop .product>img,@S .shop .product>.ph{border-radius:var(--mn-r)!important}
+@S .shop :is(.avatar,.icon),@S .detail .icon{background-color:var(--soft)!important;color:var(--ink)!important;border:0!important}
+@S .shop .pcopy span{color:var(--ink)!important;background:none!important;-webkit-text-fill-color:currentColor!important}
+
+/* ---------- 2. less text ---------- */
+@S .eyebrow:not(.keepEyebrow),
+@S .pageIntro,@S .checkoutIntro,@S .notifIntro,@S .snacksIntro,@S .packageScanIntro,
+@S .cartHeader p,@S .hero p,@S .hero small,@S .authBrand p,@S .payHint,@S .wlHint,@S .cvmHint,@S .ssHint,
+@S .sectionHead a span,@S .brandrow .eyebrow{display:none!important}
+@S .detailEyebrowRow .eyebrow{display:inline!important}
+@S .brandrow h1,@S .cartHeader h1,@S .detailCard h1{letter-spacing:-.035em;font-weight:650}
+
+/* ---------- 3. fluid type ---------- */
+@S .brandrow h1{font-size:clamp(24px,3.4vw+10px,40px)}
+@S .cartHeader h1,@S .pageTitle{font-size:clamp(26px,3vw+12px,44px)}
+@S .sectionHead h2{font-size:clamp(17px,1.2vw+12px,24px);letter-spacing:-.02em;font-weight:650}
+@S .detailCard h1{font-size:clamp(24px,2.6vw+12px,40px)}
+@S .price,@S .detailCard .price{font-size:clamp(20px,1.6vw+14px,28px);color:var(--ink);font-weight:650}
+
+/* ---------- 4. buttons, fields ---------- */
+@S button,@S .button{border-radius:999px;background:var(--ink);color:#fff;font-weight:600;letter-spacing:-.005em;padding:13px 22px;
+  transition:transform .45s var(--mn-ease),background-color .35s var(--mn-ease),box-shadow .45s var(--mn-ease),opacity .3s,color .3s,border-color .3s}
+@S button:not(:disabled):active,@S .button:active{transform:scale(.965);transition-duration:.12s}
+@S button:not(:disabled):hover,@S .button:hover{background:#2b2b30}
+@S .secondary,@S button.secondary,@S .button.secondary,@S .ghost{background:transparent!important;color:var(--ink)!important;border:1px solid var(--line)}
+@S .secondary:hover,@S .ghost:hover{background:var(--soft)!important;border-color:#dcdce0}
+@S .textBtn{background:none!important;color:var(--muted)!important}
+@S .icon,@S button.icon{width:44px;height:44px;padding:0;border:0;background:var(--soft)!important;color:var(--ink)!important;border-radius:50%}
+@S .icon:hover{background:#ececef!important}
+@S .avatar{background:var(--soft);color:var(--ink);width:44px;height:44px}
+@S input,@S textarea,@S select{background:var(--soft);border:1px solid transparent;border-radius:14px;padding:14px 16px;
+  transition:background-color .3s var(--mn-ease),border-color .3s var(--mn-ease),box-shadow .4s var(--mn-ease)}
+@S input:focus,@S textarea:focus,@S select:focus{background:#fff;border-color:var(--ink);box-shadow:0 0 0 4px rgba(17,17,19,.06)}
+@S label{font-weight:600;font-size:13px;color:var(--muted)}
+@S :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@S .notice{background:var(--soft);color:var(--ink);border-radius:14px;font-weight:500}
+
+/* ---------- 5. surfaces: flat, hairline, soft ---------- */
+@S .panel,@S .glass,@S .ordercard,@S .transaction,@S .welcome,@S .stat,@S .table,@S .detailCard,@S .gallery,@S .cartItem,
+@S .couponCard,@S .trackingCard,@S .svcCard,@S .cvmCard,@S .swCard,@S .profilePanel,@S .checkoutAside .panel{
+  background:#fff;border:1px solid var(--line);box-shadow:none;border-radius:var(--mn-r-lg)}
+@S .panel{padding:clamp(16px,2.4vw,24px)}
+@S .panel h2,@S .panel h3{letter-spacing:-.02em;font-weight:650}
+@S .line{border-color:var(--line)}
+
+/* ---------- 6. top bar + search ---------- */
+@S .brandrow{margin-bottom:6px}
+@S .homeActions{display:flex;gap:8px;align-items:center}
+@S .search{background:var(--soft);border:1px solid transparent;border-radius:999px;padding:0 18px;margin:clamp(14px,2.4vw,22px) 0;
+  transition:background-color .3s var(--mn-ease),border-color .3s var(--mn-ease),box-shadow .45s var(--mn-ease)}
+@S .search:focus-within{background:#fff;border-color:var(--ink);box-shadow:0 0 0 4px rgba(17,17,19,.06)}
+@S .search input{background:transparent;border:0;box-shadow:none}
+@S .search svg{color:var(--muted)}
+
+/* ---------- 7. hero / banners ---------- */
+@S .hero{min-height:clamp(120px,22vw,200px);padding:clamp(20px,3vw,34px);border-radius:var(--mn-r-lg);background:var(--soft);box-shadow:none}
+@S .hero h2{font-size:clamp(26px,3.4vw+10px,46px);letter-spacing:-.04em;font-weight:650}
+@S .orb{background:#fff;box-shadow:none;width:clamp(64px,12vw,120px);height:clamp(64px,12vw,120px)}
+@S .orb img{width:60%;height:60%;object-fit:contain}
+@S .bannerSlider{border-radius:var(--mn-r-lg);overflow:hidden;box-shadow:none}
+@S .bannerShade{background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.18))}
+
+/* ---------- 8. categories: quiet pills, the active one fills ---------- */
+@S .categoryRail{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;padding:4px 0 8px;margin:6px 0 4px}
+@S .categoryRail::-webkit-scrollbar{display:none}
+@S .categoryRail button{scroll-snap-align:start;flex:0 0 auto;background:transparent;color:var(--muted);border:1px solid var(--line);padding:9px 18px;font-weight:550;font-size:14px}
+@S .categoryRail button:hover{background:var(--soft);color:var(--ink)}
+@S .categoryRail button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ---------- 9. products: the photo is the design ---------- */
+@S .grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(148px,21vw,250px)),1fr));gap:var(--mn-gap) clamp(10px,1.6vw,18px)}
+@S .product{background:transparent;border:0;box-shadow:none;border-radius:0;overflow:visible;
+  transition:transform .6s var(--mn-ease)}
+@S .product>img,@S .product>.ph,@S .product .ph{border-radius:var(--mn-r);background:var(--soft);aspect-ratio:4/5;
+  transition:transform .8s var(--mn-ease),filter .5s}
+@S .product>img{transition:transform .8s var(--mn-ease)}
+@S .product:hover>img{transform:scale(1.025)}
+@S .product:active{transform:scale(.985)}
+@S .pcopy{padding:12px 2px 2px}
+@S .pcopy strong{font-weight:550;font-size:clamp(13px,.5vw+11px,15px);letter-spacing:-.01em}
+@S .pcopy span,@S .pcopy>div>span{color:var(--ink);font-weight:650}
+@S .pcopy del{color:var(--muted);font-weight:400}
+@S .heart{background:rgba(255,255,255,.92)!important;color:var(--ink)!important;border:0;box-shadow:0 2px 10px rgba(0,0,0,.08);width:36px;height:36px;
+  transition:transform .4s var(--mn-spring)}
+@S .heart:active{transform:scale(.85)}
+@S .heart.liked{color:var(--mn-red)!important}
+@S .saleTag{background:var(--ink);color:#fff;border-radius:999px;font-style:normal;font-weight:600}
+@S .productSkel span,@S .productSkel i{background:linear-gradient(90deg,#f3f3f5,#fafafb,#f3f3f5);background-size:200% 100%;animation:mnShimmer 1.4s linear infinite;border-radius:var(--mn-r)}
+@keyframes mnShimmer{to{background-position:-200% 0}}
+@S .saleRail .sectionHead .saleUpTo{background:var(--soft);color:var(--ink);border-radius:999px}
+
+/* ---------- 10. bottom bar: a floating pill, the active tab is a smooth blob ---------- */
+@S .bottom{width:min(520px,calc(100% - 28px));bottom:max(14px,env(safe-area-inset-bottom));border-radius:999px;padding:6px;gap:2px;
+  background:rgba(255,255,255,.82);border:1px solid rgba(17,17,19,.06);box-shadow:0 10px 40px rgba(17,17,19,.10);
+  backdrop-filter:saturate(1.6) blur(22px);-webkit-backdrop-filter:saturate(1.6) blur(22px)}
+@S .bottom a{border-radius:999px;color:var(--muted);font-size:10.5px;font-weight:550;gap:3px;padding:8px 6px;
+  transition:background-color .45s var(--mn-ease),color .35s var(--mn-ease),flex-grow .5s var(--mn-ease),transform .3s var(--mn-ease)}
+@S .bottom a svg{transition:transform .5s var(--mn-spring)}
+@S .bottom a.active{background:var(--ink);color:#fff;font-weight:600;flex-grow:1.45}
+@S .bottom a.active svg{transform:translateY(-1px) scale(1.08)}
+@S .bottom a:not(.active):active{transform:scale(.92)}
+
+/* ---------- 11. product page ---------- */
+@S .detail{gap:clamp(16px,3.4vw,44px);padding:clamp(14px,3vw,28px) var(--mn-pad)}
+@S .gallery{border:0;border-radius:var(--mn-r-lg);background:var(--soft)}
+@S .detailCard{border:0;padding:clamp(4px,1vw,12px) 0;background:transparent}
+@S .galleryThumbs button,@S .choiceThumb{border-radius:12px;border:1px solid var(--line);background:#fff;padding:0}
+@S .galleryThumbs button.active,@S .choiceThumb.active{border:2px solid var(--ink)}
+@S .galleryArrow{background:rgba(255,255,255,.9)!important;color:var(--ink)!important;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+@S .chips button{background:#fff;color:var(--ink);border:1px solid var(--line);padding:9px 16px;font-weight:550}
+@S .chips button.on{background:var(--ink);color:#fff;border:1px solid var(--ink);box-shadow:none;transform:none}
+@S .qty button,@S .qtyControl button{background:var(--soft);color:var(--ink);border:0;width:38px;height:38px}
+@S .stickyActions{gap:10px}
+@S .desc{line-height:1.65}
+
+/* ---------- 12. cart + checkout ---------- */
+@S .cartHeader{padding:6px 0 14px}
+@S .cartBadge{background:var(--soft)!important;color:var(--ink)!important;box-shadow:none!important;border-radius:50%}
+@S .cartItem{padding:clamp(10px,2vw,16px);gap:clamp(10px,2vw,16px);transition:transform .5s var(--mn-ease),opacity .4s}
+@S .cartImage{border-radius:14px;background:var(--soft)}
+@S .qtyControl{background:var(--soft);border-radius:999px;padding:3px;border:0}
+@S .cartRemove{background:transparent!important;color:var(--muted)!important}
+@S .cartRemove:hover{color:var(--mn-red)!important}
+@S .miniCheckout,@S .checkoutbar{background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:var(--mn-r-lg);box-shadow:0 10px 36px rgba(17,17,19,.08);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+@S .checkoutLayout{gap:clamp(14px,2.4vw,28px)}
+@S .coStep{color:var(--ink)}
+@S .summaryLine{border-color:var(--line)}
+@S .summaryLine.grand,@S .total{font-weight:650;letter-spacing:-.01em}
+@S .payRadio,@S .payOptGrid>*{border-radius:var(--mn-r);border:1px solid var(--line);background:#fff;transition:border-color .3s var(--mn-ease),background-color .3s var(--mn-ease),transform .4s var(--mn-ease)}
+@S .payRadio:has(input:checked),@S .payOptGrid>.on{border-color:var(--ink);background:var(--soft)}
+@S .miniitem{border-color:var(--line)}
+
+/* ---------- 13. orders ---------- */
+@S .ordercard{padding:clamp(14px,2.2vw,20px);transition:transform .5s var(--mn-ease),border-color .3s}
+@S .ordercard:hover{border-color:#dcdce0}
+@S .status{background:var(--soft);color:var(--ink);font-weight:600;border-radius:999px}
+@S .status.approved,@S .status.paid,@S .status.completed,@S .status.delivered,@S .status.published{background:#e8f6ef;color:var(--mn-green)}
+@S .status.pending,@S .status.processing,@S .status.shipped{background:#f5f5f6;color:#5b5b63}
+@S .status.rejected,@S .status.cancelled,@S .status.unpublished{background:#fdecec;color:var(--mn-red)}
+
+/* ---------- 14. wallet + debt: one calm dark card ---------- */
+@S .walletHero,@S .wlHero,@S .debtHero{background:#111113!important;color:#fff;border:0;border-radius:var(--mn-r-lg);box-shadow:none;min-height:0;padding:clamp(22px,4vw,34px)}
+@S .walletHero small,@S .wlHero small{color:rgba(255,255,255,.55)}
+@S .walletHero h1,@S .wlHero h1{font-size:clamp(34px,5vw+8px,56px);letter-spacing:-.045em;font-weight:650}
+@S .walletGlow,@S .debtOrb{display:none}
+@S .walletHero button,@S .wlHero button{background:#fff;color:var(--ink)}
+@S .wlTile,@S .wlRow{border-radius:var(--mn-r);background:var(--soft);border:0;box-shadow:none}
+@S .debtMethodTabs{background:var(--soft);border-radius:999px;padding:4px;display:flex;gap:2px;border:0}
+@S .debtMethodTabs button{background:transparent;color:var(--muted);flex:1;padding:9px 14px}
+@S .debtMethodTabs button.on,@S .debtMethodTabs button.active{background:#fff;color:var(--ink);box-shadow:0 1px 6px rgba(17,17,19,.08)}
+
+/* ---------- 15. profile, notifications, support ---------- */
+@S .profileHero{background:var(--soft)!important;color:var(--ink);border:0;box-shadow:none;border-radius:var(--mn-r-lg)}
+@S .profileAvatar{background:#fff;color:var(--ink)}
+@S .stat{padding:16px}
+@S .notifTabs,@S .rewardTabs{background:var(--soft);border-radius:999px;padding:4px;border:0;display:flex;gap:2px}
+@S .notifTabs button,@S .rewardTabs button{background:transparent;color:var(--muted);flex:1}
+@S .notifTabs button.on,@S .notifTabs button.active,@S .rewardTabs button.on,@S .rewardTabs button.active{background:#fff;color:var(--ink);box-shadow:0 1px 6px rgba(17,17,19,.08)}
+@S .notificationButton::after,@S [data-unread]::after{background:var(--ink);color:#fff}
+@S .chatPanel,@S .supportThreads{border-radius:var(--mn-r-lg);border:1px solid var(--line);background:#fff;box-shadow:none}
+@S .chatComposer{border-top:1px solid var(--line)}
+
+/* ---------- 16. services / CV / book cover / software ---------- */
+@S .svcPage .svcPrimary,@S .svcSheet .svcPrimary,@S .cvmGo,@S .cvmBtn,@S .swBtn.pri,@S .swPickBtn{
+  background:var(--ink)!important;color:#fff!important;border-radius:999px!important;box-shadow:none!important;border:0}
+@S .svcCard,@S .cvmCard,@S .swCard{overflow:hidden;transition:transform .6s var(--mn-ease),border-color .3s}
+@S .svcCard:hover,@S .cvmCard:hover,@S .swCard:hover{transform:translateY(-3px);border-color:#dcdce0}
+@S .svcSweep,@S .svcAsk::after{display:none}
+@S .cvmHero,@S .svcHero{background:var(--soft)!important;color:var(--ink);box-shadow:none;border-radius:var(--mn-r-lg)}
+@S .svcSheet,@S .payModalCard,@S .msgBoxCard,@S .wqSheet{border-radius:28px;box-shadow:0 24px 80px rgba(17,17,19,.18)}
+
+/* ---------- 17. login ---------- */
+@S .auth{gap:clamp(24px,6vw,60px);grid-template-columns:minmax(0,1fr) minmax(0,440px)}
+@S .authBrand h1{font-size:clamp(34px,6vw,72px);letter-spacing:-.05em;font-weight:650}
+@S .logo,@S .miniLogo{background:var(--ink)!important;color:#fff;border-radius:18px}
+@S .login{box-shadow:none;border:1px solid var(--line);background:#fff}
+
+/* ---------- 18. page / list entrance: one soft fade, nothing flies around ---------- */
+@media (prefers-reduced-motion:no-preference){
+  @S main.shop,@S .detail{animation:mnPage .55s var(--mn-ease) both}
+  @S .grid>.product,@S .cartItem,@S .ordercard{animation:mnRise .7s var(--mn-ease) both}
+  @S .grid>.product:nth-child(2){animation-delay:.04s}
+  @S .grid>.product:nth-child(3){animation-delay:.08s}
+  @S .grid>.product:nth-child(4){animation-delay:.12s}
+  @S .grid>.product:nth-child(n+5){animation-delay:.16s}
+}
+@keyframes mnPage{from{opacity:0}to{opacity:1}}
+@keyframes mnRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  @S *,@S *::before,@S *::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
+/* ---------- 19. small screens: bigger touch targets, 2 columns, tighter rhythm ---------- */
+@media (max-width:700px){
+  @S .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @S .detail{grid-template-columns:1fr}
+}
+
+/* ---------- 20. last word: leftovers found while testing ---------- */
+@S :is(.shop,.detail,.auth,.miniCheckout,.payModal) :is(button,.button,.primary,a.button){box-shadow:none!important;text-shadow:none!important}
+@S .shop .heart{box-shadow:0 2px 10px rgba(0,0,0,.10)!important}
+@S :is(.ph,.product .ph,.cartImage.ph,.cartImage){color:#c9c9ce!important}
+@S .shop .hero{min-height:clamp(104px,13vw,160px)!important}
+@S .shop .hero h2{font-size:clamp(24px,2.6vw+12px,40px)!important}
+@S .shop .walletHero button,@S .shop .wlHero button,@S .shop .wlHero .wlAdd{background-color:#fff!important;color:var(--ink)!important}
+@S :is(.ph,.ph.big,.gallery .ph,.miniitem .ph,.galleryViewport){background:var(--soft)!important;background-image:none!important}
+@S .detail .detailCard{border:0!important;background:transparent!important;padding:clamp(4px,1vw,12px) 0!important}
+@S .detail .gallery{border:0!important}
+@S .detail .detailEyebrowRow .eyebrow,@S .detail .eyebrow{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;color:var(--muted)!important;letter-spacing:.02em;font-weight:550;font-size:13px}
+@S :is(.price,.pcopy,.detailCard) del{color:var(--muted)!important;-webkit-text-fill-color:currentColor!important;background:none!important}
+@S .shop :is(.top,.walletPage .top){background:transparent!important;box-shadow:none!important;border:0!important;backdrop-filter:none!important}
+@S :is(.sectionHead h2,.walletPage .sectionHead h2)::after,@S .sectionHead h2::before{display:none!important;content:none!important}
+@S .shop .ordercard,@S .shop.ordersPage .ordercard.ordCard,@S html .shop.ordersPage .ordercard.ordCard{border:1px solid var(--line)!important;border-left:1px solid var(--line)!important;box-shadow:none!important}
+@S .shop .ordercard::before,@S .shop .ordercard::after{display:none!important}
