@@ -120,6 +120,7 @@ const adminApi = createAdminApi({ shield, store: secStore, sb, userFromToken });
 // Default-deny: EVERYTHING under /api/admin needs a signed-in user whose profiles.role is 'admin' (checked in the database,
 // cached 60 s). A route added here later is protected automatically; it cannot be forgotten.
 app.use('/api/admin', async (req, res, next) => { if (req.method === 'OPTIONS') return next(); const admin = await adminApi.requireAdmin(req, res); if (admin) { req.admin = admin; next(); } });
+app.post('/api/admin/ping', (_req, res) => res.json({ ok: true })); // the admin panel calls this so the shield learns the admin's address (see shield.trustAdmin)
 app.get('/api/admin/env-check', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(auditEnv()); }); // set/missing only - never values
 app.use('/api/admin/security', adminApi.handler);
 // Live visitors (who is on the site right now + approximate location). In memory only, nothing stored; see presence.js.

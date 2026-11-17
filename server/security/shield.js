@@ -97,13 +97,14 @@ export function createShield({ store, alerts, intel = null, env = process.env, n
   const levels = new Map();     // key -> { level, at }
   const scores = new Map();     // key -> { score, first }
   const allow = new Set();      // keys that are never blocked or limited
+  const adminTrust = new Map(); // key -> expiry: addresses a signed-in ADMIN used recently (never blocked or limited while it lasts)
   const counters = new Map();   // `${name}|${key}` -> { n, reset }
   const strikeGate = new Map(); // limits how often a repeated rate-limit breach is counted
   const hdr = securityHeaders(env);
   const runtime = { denied: 0, deniedWindow: [], lastCloudflareAt: 0, started: now() };
   for (const ip of String(env.ALLOW_IPS || '').split(/[\s,]+/).map(normalizeIp).filter(Boolean)) allow.add(ipKey(ip));
 
-  const isAllowed = (ip, key) => allow.has(key) || isTrustedInfra(ip);
+  const isAllowed = (ip, key) => allow.has(key) || isTrustedInfra(ip) || (adminTrust.get(key) || 0) > now();
 
   function sweep() {
     const t = now();
@@ -112,6 +113,7 @@ export function createShield({ store, alerts, intel = null, env = process.env, n
     for (const [k, s] of scores) if (t - s.first > cfg.scoreWindow) scores.delete(k);
     for (const [k, l] of levels) if (t - l.at > cfg.levelMemory) levels.delete(k);
     for (const [k, g] of strikeGate) if (g <= t) strikeGate.delete(k);
+    for (const [k, g] of adminTrust) if (g <= t) adminTrust.delete(k);
     for (const m of [counters, scores, blocks, levels]) if (m.size > cfg.maxKeys) m.clear(); // hard cap: fail open rather than grow forever
     runtime.deniedWindow = runtime.deniedWindow.filter(x => t - x < MIN);
     intel?.sweep();
@@ -268,6 +270,7 @@ export function createShield({ store, alerts, intel = null, env = process.env, n
   function userLimited(userId, name, max, windowMs = MIN, req) {
     try {
       if (!cfg.enabled || !userId) return false;
+      if (req?.sec && isAllowed(req.sec.ip, req.sec.key)) return false;   // admins / allow-listed addresses are never limited
       const r = hit('user:' + name, String(userId), max, windowMs);
       if (r.limited) { countDenied(); if (req?.sec) rateStrike(req, 'user:' + name, 1); }
       return r.limited;
@@ -284,9 +287,17 @@ export function createShield({ store, alerts, intel = null, env = process.env, n
     }
     for (const a of await (store?.loadAllow() ?? [])) { const ip = normalizeIp(a.ip); if (ip) allow.add(ipKey(ip)); }
   }
+  /** Called when a signed-in admin is verified: this address is trusted for 12 h and any block on it is lifted. */
+  function trustAdmin(ip) {
+    if (!ip || ip === 'unknown') return;
+    const key = ipKey(ip);
+    adminTrust.set(key, now() + 12 * 3600000);
+    if (activeBlock(key)) unblock(ip);
+    if (adminTrust.size > 500) sweep();
+  }
   const allowIp = ip => { allow.add(ipKey(ip)); blocks.delete(ipKey(ip)); };
   const disallowIp = ip => allow.delete(ipKey(ip));
   const listBlocks = () => { sweep(); return [...blocks.values()].map(b => ({ ip: b.ip, reason: b.reason, level: b.level, until: new Date(b.until).toISOString(), permanent: b.permanent, by: b.by })); };
 
-  return { middleware, limiter, limited, userLimited, strike, block, unblock, init, allowIp, disallowIp, listBlocks, isBlocked: ip => !!activeBlock(ipKey(ip)), isAllowed: ip => isAllowed(ip, ipKey(ip)), cfg, runtime, hdr, _sweep: sweep, _state: { blocks, scores, counters, allow } };
+  return { middleware, limiter, limited, userLimited, strike, block, unblock, init, allowIp, trustAdmin, disallowIp, listBlocks, isBlocked: ip => !!activeBlock(ipKey(ip)), isAllowed: ip => isAllowed(ip, ipKey(ip)), cfg, runtime, hdr, _sweep: sweep, _state: { blocks, scores, counters, allow } };
 }

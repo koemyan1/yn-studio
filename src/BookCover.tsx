@@ -553,7 +553,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
     setSaved('saving');
     const t = window.setTimeout(async () => {
       try { await api('/api/bookcover/layout', { order_id: orderId, items: layoutBody() }); setSaved('saved'); } catch { setSaved('error'); }
-    }, 900);
+    }, 2500);   // wait for a real pause: saving on every small drag used to trip the security rate limit
     return () => window.clearTimeout(t);
   }, [layout, step, orderId, locked]);   // eslint-disable-line react-hooks/exhaustive-deps
 

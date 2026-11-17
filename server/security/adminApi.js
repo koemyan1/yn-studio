@@ -30,7 +30,7 @@ export function createAdminApi({ shield, store, sb, userFromToken, now = Date.no
     const ip = req.sec?.ip || 'unknown';
     const user = await userFromToken(req).catch(() => null);
     if (!user) { shield.strike(ip, 'unauth_admin_api', 3, { path: '/api/admin/security', method: req.method, ua: req.headers['user-agent'], action: 'blocked' }); send(res, 401, { error: 'Sign in required.' }); return null; }
-    if ((adminCache.get(user.id) || 0) > now()) return user;
+    if ((adminCache.get(user.id) || 0) > now()) { try { shield.trustAdmin?.(ip); } catch { /* never matters */ } return user; }
     let role = null;
     try { role = (await sb(`profiles?user_id=eq.${encodeURIComponent(user.id)}&select=role&limit=1`))?.[0]?.role; } catch { /* treated as non-admin */ }
     if (role !== 'admin') {
@@ -39,6 +39,7 @@ export function createAdminApi({ shield, store, sb, userFromToken, now = Date.no
       return null;
     }
     adminCache.set(user.id, now() + 60000);
+    try { shield.trustAdmin?.(ip); } catch { /* never matters */ }
     if (adminCache.size > 200) for (const [k, v] of adminCache) if (v < now()) adminCache.delete(k);
     return user;
   }

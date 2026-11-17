@@ -190,7 +190,7 @@ export function createBookCoverShop(deps) {
 
   app.post('/api/bookcover/layout', jsonBody, async (req, res) => {
     try {
-      const user = await gate(req, res, 'bc-layout', 40); if (!user) return;
+      const user = await gate(req, res, 'bc-layout', 120); if (!user) return;
       const o = await ownOrder(res, user, req.body?.order_id); if (!o) return;
       if (o.status !== 'paid' && o.status !== 'submitted') return res.status(409).json({ error: o.status === 'pending' ? 'Please pay first.' : 'This order can no longer be changed.', code: o.status === 'pending' ? 'unpaid' : 'locked' });
       // One entry per design, in the order's own order. The old shape (covers:[{pos}] for a single-design order) still works.
