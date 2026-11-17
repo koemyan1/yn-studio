@@ -224,6 +224,18 @@ export async function downloadOrderJpegs(o: ExportOrder, name: string, onProgres
   }
 }
 
+/** Finished A4 sheets as JPEG blobs, for the admin's on-screen preview (each can be saved by hand). */
+export type SheetPreview = { blob: Blob; url: string; name: string };
+export async function previewOrderSheets(o: ExportOrder, name: string, onProgress?: (n: number, t: number) => void): Promise<SheetPreview[]> {
+  const cs = await sheetsFor(o, onProgress);
+  const out: SheetPreview[] = [];
+  for (let i = 0; i < cs.length; i++) {
+    const blob: Blob = await new Promise((res, rej) => cs[i].toBlob(b => (b ? res(b) : rej(new Error('Could not make the picture.'))), 'image/jpeg', 0.95));
+    out.push({ blob, url: URL.createObjectURL(blob), name: cs.length === 1 ? `${safeName(name)}.jpg` : `${safeName(name)} - sheet ${i + 1}.jpg` });
+  }
+  return out;
+}
+
 /** Opens the print dialog: one A4 landscape sheet per two covers (the margins are part of the picture). */
 export async function printOrder(o: ExportOrder, onProgress?: (n: number, t: number) => void) {
   const cs = await sheetsFor(o, onProgress);

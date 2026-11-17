@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, BookOpen, Download, Eye, EyeOff, ImagePlus, MapPin, Pencil, Phone, Plus, Printer, Save, Trash2, X } from 'lucide-react';
+import { Share2, ExternalLink, ArrowDown, ArrowUp, BookOpen, Download, Eye, EyeOff, ImagePlus, MapPin, Pencil, Phone, Plus, Printer, Save, Trash2, X } from 'lucide-react';
 import { supabase } from './supabase';
-import { BookCoverSheet, Scaled, A4Paper, downloadOrderJpegs, ensureBcFonts, labelOf, printOrder } from './bookCoverSheet';
+import { BookCoverSheet, Scaled, A4Paper, downloadOrderJpegs, ensureBcFonts, labelOf, previewOrderSheets, printOrder } from './bookCoverSheet';
+import type { SheetPreview } from './bookCoverSheet';
 import { DEFAULT_PRICE_PER_PAGE, FONTS, KHMER_FONTS, MAX_FIELDS, ORDER_STATUSES, bcNo, cleanFields, cleanPricePerPage, defaultSpot, itemsPages, orderItems } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField, BcItem } from '../shared/bookCoverMath.js';
 import './bookCover.css';
@@ -183,6 +184,8 @@ export function AdminBookCovers({ Shell }: { Shell: Shell }) {
 /* ================================================== ONE ORDER ================================================== */
 function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderRow, s: string) => void; onError: (m: string) => void }) {
   const [busy, setBusy] = useState('');
+  const [sheets, setSheets] = useState<SheetPreview[] | null>(null);
+  const closePreview = () => { sheets?.forEach(x => URL.revokeObjectURL(x.url)); setSheets(null); };
   const who = o.contact_name || 'Customer';
   const file = `${bcNo(o.id)} - ${who}`;
   const exp = useMemo(() => ({ id: o.id, items: o.items.map(it => ({ design_id: it.design_id, design_image: it.design_image, design_fields: it.design_fields, covers: it.covers })) }), [o]);
@@ -221,7 +224,8 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
       ))}
 
       <div className="bcaFoot">
-        <button disabled={!printable || !!busy} onClick={run('JPEG', p => downloadOrderJpegs(exp, file, p))}><Download size={16} />Save as JPEG</button>
+        <button disabled={!printable || !!busy} onClick={run('Preview', async p => { setSheets(await previewOrderSheets(exp, file, p)); })}><Eye size={16} />Preview &amp; save</button>
+        <button className="secondary" disabled={!printable || !!busy} onClick={run('JPEG', p => downloadOrderJpegs(exp, file, p))}><Download size={16} />Save as JPEG</button>
         <button className="secondary" disabled={!printable || !!busy} onClick={run('Print', p => printOrder(exp, p))}><Printer size={16} />Print</button>
         {busy && <small>{busy}</small>}
         <span className="grow" />
@@ -231,7 +235,50 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
           {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
+      {sheets && <SheetViewer sheets={sheets} onClose={closePreview} />}
     </article>
+  );
+}
+
+/** Full-screen preview of the finished sheets. Every save path is manual, so one failing never blocks the others. */
+function SheetViewer({ sheets, onClose }: { sheets: SheetPreview[]; onClose: () => void }) {
+  const [note, setNote] = useState('');
+  const save = (x: SheetPreview) => {
+    try {
+      const a = document.createElement('a');
+      a.href = x.url; a.download = x.name; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setNote('If nothing was saved, press and hold the picture, then choose “Save image” (or use Share).');
+    } catch { setNote('Press and hold the picture, then choose “Save image”.'); }
+  };
+  const share = async (x: SheetPreview) => {
+    const f = new File([x.blob], x.name, { type: 'image/jpeg' });
+    try {
+      if ((navigator as any).canShare?.({ files: [f] })) await (navigator as any).share({ files: [f], title: x.name });
+      else setNote('Sharing is not available here. Use Save, Open, or press and hold the picture.');
+    } catch (e: any) { if (e?.name !== 'AbortError') setNote('Could not share. Press and hold the picture to save it.'); }
+  };
+  return (
+    <div className="bcaViewer" role="dialog" aria-modal="true" aria-label="Preview">
+      <div className="bcaViewerBar">
+        <b>Preview · {sheets.length} sheet{sheets.length === 1 ? '' : 's'}</b>
+        <button className="secondary" onClick={onClose}><X size={16} />Close</button>
+      </div>
+      {note && <p className="bcaViewerNote">{note}</p>}
+      <div className="bcaViewerList">
+        {sheets.map((x, i) => (
+          <figure key={i}>
+            <img src={x.url} alt={x.name} />
+            <figcaption>
+              <span>{sheets.length > 1 ? `Sheet ${i + 1}/${sheets.length}` : 'Sheet'}</span>
+              <button onClick={() => save(x)}><Download size={15} />Save</button>
+              <button className="secondary" onClick={() => share(x)}><Share2 size={15} />Share</button>
+              <a className="bcaBtnLink" href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />Open</a>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
   );
 }
 
