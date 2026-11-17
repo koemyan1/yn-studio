@@ -61,7 +61,7 @@ let started = false;
 
 const SPOT = '.admin .stat,.admin .quickGrid a,.admin .adminOrderCard,.admin .thCard,.admin .pmxTile';
 const RIPPLE = '.admin button,.admin .button,.admin a.secondary';
-const RIPPLE_SKIP = '.aiFloat,.aiBot,.adminLiveToast,.ynFrameWrap,.thPrev,.pmxSheetBack,.adminNav';
+const RIPPLE_SKIP = '.adminLiveToast,.ynFrameWrap,.thPrev,.pmxSheetBack,.adminNav';
 
 /* ---------------------------------------------- aurora layer (pointer FX) */
 const TILT = '.admin .stat,.admin .quickGrid a,.admin .thCard,.admin .pmxTile';

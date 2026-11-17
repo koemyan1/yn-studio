@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Share2, ExternalLink, ArrowDown, ArrowUp, BookOpen, Download, Eye, EyeOff, ImagePlus, MapPin, Pencil, Phone, Plus, Printer, Save, Trash2, X } from 'lucide-react';
 import { supabase } from './supabase';
 import { BookCoverSheet, Scaled, A4Paper, downloadOrderJpegs, ensureBcFonts, labelOf, previewOrderSheets, printOrder } from './bookCoverSheet';
@@ -182,9 +182,17 @@ export function AdminBookCovers({ Shell }: { Shell: Shell }) {
 }
 
 /* ================================================== ONE ORDER ================================================== */
+/** Sheets are drawn one order at a time, so a phone never holds several 3508 x 2480 canvases at once. */
+let sheetQueue: Promise<unknown> = Promise.resolve();
+const inQueue = <T,>(fn: () => Promise<T>): Promise<T> => { const r = sheetQueue.then(fn, fn); sheetQueue = r.catch(() => undefined); return r; };
+
 function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderRow, s: string) => void; onError: (m: string) => void }) {
   const [busy, setBusy] = useState('');
   const [sheets, setSheets] = useState<SheetPreview[] | null>(null);
+  const [pics, setPics] = useState<SheetPreview[] | null>(null);   // the finished A4 sheets as real pictures: press and hold = Save to Photos
+  const [picFailed, setPicFailed] = useState(false);
+  const [seen, setSeen] = useState(false);
+  const card = useRef<HTMLElement | null>(null);
   const closePreview = () => { sheets?.forEach(x => URL.revokeObjectURL(x.url)); setSheets(null); };
   const who = o.contact_name || 'Customer';
   const file = `${bcNo(o.id)} - ${who}`;
@@ -196,12 +204,36 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
     catch (e) { onError('Could not prepare the covers: ' + errText(e)); }
     setBusy('');
   };
+  const expKey = useMemo(() => JSON.stringify(exp), [exp]);   // redraw the picture only when the covers really change
   const subjectOf = (it: BcItem, c: BcCover) => it.design_fields.filter(f => f.per_subject).map(f => c.values[f.key]).find(Boolean) || '';
   const pageCount = itemsPages(o.items) || o.pages;
   const printable = o.status !== 'pending' && o.status !== 'cancelled';
 
+  // start drawing the picture only when the card is on screen
+  useEffect(() => {
+    const el = card.current;
+    if (!el || seen) return;
+    if (typeof IntersectionObserver === 'undefined') { setSeen(true); return; }
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { setSeen(true); io.disconnect(); } }, { rootMargin: '300px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+  useEffect(() => {
+    if (!printable || !seen) return;
+    let dead = false;
+    let made: SheetPreview[] = [];
+    setPicFailed(false);
+    inQueue(async () => {
+      if (dead) return;
+      made = await previewOrderSheets(exp, file);
+      if (dead) { made.forEach(x => URL.revokeObjectURL(x.url)); made = []; return; }
+      setPics(made);
+    }).catch(() => { if (!dead) setPicFailed(true); });
+    return () => { dead = true; made.forEach(x => URL.revokeObjectURL(x.url)); setPics(null); };
+  }, [expKey, file, printable, seen]);
+
   return (
-    <article className="bcaOrder">
+    <article className="bcaOrder" ref={card}>
       <header>
         <div className="bcaWho">
           <b>{bcNo(o.id)} · {o.design_name || 'Book cover'} <span className={'bcaBadge ' + o.status}>{o.status}</span>{o.items.length > 1 && <span className="bcaBadge multi">{o.items.length} designs</span>}</b>
@@ -216,12 +248,26 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
           {o.items.map((it, k) => <small key={k} style={{ display: 'block' }}>{it.design_name || 'Design ' + (k + 1)} · {it.covers.length} × {riel(it.price_per_page)}</small>)}</div>
       </header>
 
+      {pics ? (
+        <div className="bcaPics">
+          {pics.map((x, i) => (
+            <figure key={x.url}>
+              <img src={x.url} alt={x.name} draggable={false} />
+              <figcaption>{pics.length > 1 ? `Sheet ${i + 1}/${pics.length} · ` : ''}Press and hold the picture, then choose “Save to Photos”.</figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : (
+        <>
       {o.items.map((it, k) => (
         <div key={k} className="bcaGroup">
           {o.items.length > 1 && <small className="bcaGroupName">{k + 1}. {it.design_name || 'Design ' + (k + 1)} · {it.covers.length} page{it.covers.length === 1 ? '' : 's'}</small>}
           <A4Paper design={{ id: it.design_id, image: it.design_image, fields: it.design_fields }} covers={it.covers} captions={it.covers.map((c, i) => String(i + 1) + (subjectOf(it, c) ? ' ' + subjectOf(it, c) : ''))} />
         </div>
       ))}
+          {printable && !picFailed && <small className="muted">Preparing the picture to save…</small>}
+        </>
+      )}
 
       <div className="bcaFoot">
         <button disabled={!printable || !!busy} onClick={run('Preview', async p => { setSheets(await previewOrderSheets(exp, file, p)); })}><Eye size={16} />Preview &amp; save</button>
