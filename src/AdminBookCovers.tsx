@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, BookOpen, Download, Eye, EyeOff, FileDown, ImagePlus, MapPin, Pencil, Phone, Plus, Printer, Save, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, Download, Eye, EyeOff, ImagePlus, MapPin, Pencil, Phone, Plus, Printer, Save, Trash2, X } from 'lucide-react';
 import { supabase } from './supabase';
-import { BookCoverSheet, Scaled, downloadOrderPdf, downloadOrderPngs, ensureBcFonts, labelOf, printOrder } from './bookCoverSheet';
+import { BookCoverSheet, Scaled, A4Paper, downloadOrderJpegs, ensureBcFonts, labelOf, printOrder } from './bookCoverSheet';
 import { DEFAULT_PRICE_PER_PAGE, FONTS, KHMER_FONTS, MAX_FIELDS, ORDER_STATUSES, bcNo, cleanFields, cleanPricePerPage, defaultSpot, itemsPages, orderItems } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField, BcItem } from '../shared/bookCoverMath.js';
 import './bookCover.css';
@@ -216,16 +216,13 @@ function OrderCard({ o, onStatus, onError }: { o: OrderRow; onStatus: (o: OrderR
       {o.items.map((it, k) => (
         <div key={k} className="bcaGroup">
           {o.items.length > 1 && <small className="bcaGroupName">{k + 1}. {it.design_name || 'Design ' + (k + 1)} · {it.covers.length} page{it.covers.length === 1 ? '' : 's'}</small>}
-          <div className="bcaThumbs">
-            {it.covers.map((c, i) => (<figure key={i}><Scaled><BookCoverSheet design={{ id: it.design_id, image: it.design_image, fields: it.design_fields }} cover={c} /></Scaled><figcaption>{i + 1}{subjectOf(it, c) ? ' · ' + subjectOf(it, c) : ''}</figcaption></figure>))}
-          </div>
+          <A4Paper design={{ id: it.design_id, image: it.design_image, fields: it.design_fields }} covers={it.covers} captions={it.covers.map((c, i) => String(i + 1) + (subjectOf(it, c) ? ' ' + subjectOf(it, c) : ''))} />
         </div>
       ))}
 
       <div className="bcaFoot">
-        <button disabled={!printable || !!busy} onClick={run('PDF', p => downloadOrderPdf(exp, file, p))}><FileDown size={16} />Download PDF</button>
+        <button disabled={!printable || !!busy} onClick={run('JPEG', p => downloadOrderJpegs(exp, file, p))}><Download size={16} />Save as JPEG</button>
         <button className="secondary" disabled={!printable || !!busy} onClick={run('Print', p => printOrder(exp, p))}><Printer size={16} />Print</button>
-        <button className="secondary" disabled={!printable || !!busy} onClick={run('Pictures', p => downloadOrderPngs(exp, file, p))}><Download size={16} />Pictures</button>
         {busy && <small>{busy}</small>}
         <span className="grow" />
         {(o.status === 'paid' || o.status === 'submitted') && <button className="secondary" onClick={() => onStatus(o, 'printed')}>Mark printed</button>}
@@ -306,7 +303,7 @@ function DesignEditor({ draft, onChange, count, onClose, onSaved, onError }: { d
         {img
           ? <div className="bcPaper"><Scaled className="live"><BookCoverSheet design={{ image: img, fields: draft.fields }} sample selected={sel} onSelect={setSel} frame
               onMove={(key, x, y) => setField(key, { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 })} /></Scaled></div>
-          : <label className="bcaDrop"><ImagePlus /><b>Upload the blank cover</b><small>A4 portrait picture, JPG / PNG / WebP (about 2480 × 3508 px is perfect)</small>
+          : <label className="bcaDrop"><ImagePlus /><b>Upload the blank cover</b><small>A5 portrait picture (A4 shape works too), JPG / PNG / WebP (about 2480 × 3508 px is perfect)</small>
               <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { pickImage(e.target.files?.[0] || null); e.target.value = ''; }} /></label>}
         <small className="muted">Drag a text on the cover to choose where it starts. The customer can still move it. Texts shown here are just examples (the question names).</small>
       </div>

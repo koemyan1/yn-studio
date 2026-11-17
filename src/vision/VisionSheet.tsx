@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Camera, ImagePlus, RefreshCcw, ScanSearch, ShieldCheck, SwitchCamera, X, Zap } from 'lucide-react';
+import { Camera, ImagePlus, RefreshCcw, ScanSearch, SwitchCamera, X } from 'lucide-react';
 import { tr } from '../lang';
 import { matchPercent } from '../../shared/visionMath.js';
 import { searchByImage, visionSupported, VISION_MODEL_MB } from './visionEngine';
-import type { VisionHit, VisionProgress } from './visionEngine';
+import type { VisionGroup, VisionProgress } from './visionEngine';
 import type { VisionCatalogItem } from './YNVision';
 
 type Stage = 'pick' | 'camera' | 'working' | 'results' | 'error';
@@ -15,7 +15,8 @@ export default function VisionSheet({ products, onClose }: { products: VisionCat
   const [stage, setStage] = useState<Stage>('pick');
   const [closing, setClosing] = useState(false);
   const [photo, setPhoto] = useState<string>('');           // object URL of the customer's photo (preview only)
-  const [hits, setHits] = useState<VisionHit[]>([]);
+  const [groups, setGroups] = useState<VisionGroup[]>([]);
+  const [sel, setSel] = useState(0);
   const [prog, setProg] = useState<VisionProgress>({ phase: 'idle', pct: 0 });
   const [camErr, setCamErr] = useState('');
   const [drag, setDrag] = useState(false);
@@ -60,14 +61,14 @@ export default function VisionSheet({ products, onClose }: { products: VisionCat
 
   async function startCamera(face: 'environment' | 'user' = facing) {
     setCamErr(''); stopCamera();
-    if (!navigator.mediaDevices?.getUserMedia) { setCamErr(tr('Camera is not available here. Use "Upload photo" instead.', 'កាមេរ៉ាមិនអាចប្រើបានទេ។ សូមប្រើ «ផ្ទុកឡើងរូបថត» ជំនួស។')); return; }
+    if (!navigator.mediaDevices?.getUserMedia) { setCamErr(tr('Camera not available', 'កាមេរ៉ាមិនអាចប្រើបាន')); return; }
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: face }, width: { ideal: 1280 } }, audio: false });
       streamRef.current = s;
       setStage('camera'); setFacing(face);
       requestAnimationFrame(() => { const v = videoRef.current; if (v) { v.srcObject = s; v.play().catch(() => {}); } });
     } catch {
-      setCamErr(tr('Camera permission was blocked. Allow the camera, or use "Upload photo".', 'ការអនុញ្ញាតកាមេរ៉ាត្រូវបានបិទ។ សូមអនុញ្ញាតកាមេរ៉ា ឬប្រើ «ផ្ទុកឡើងរូបថត»។'));
+      setCamErr(tr('Camera blocked. Allow it or upload.', 'កាមេរ៉ាត្រូវបានបិទ។ សូមអនុញ្ញាត ឬផ្ទុកឡើង។'));
       setStage('pick');
     }
   }
@@ -81,61 +82,53 @@ export default function VisionSheet({ products, onClose }: { products: VisionCat
   }
 
   async function run(file: Blob) {
-    if (!file.type.startsWith('image/')) { setCamErr(tr('Please choose a picture file.', 'សូមជ្រើសរើសឯកសាររូបភាព។')); setStage('pick'); return; }
+    if (!file.type.startsWith('image/')) { setCamErr(tr('Choose a picture', 'ជ្រើសរើសរូបភាព')); setStage('pick'); return; }
     abortRef.current?.abort();
     const ac = new AbortController(); abortRef.current = ac;
-    setPhoto(URL.createObjectURL(file)); setHits([]); setCamErr('');
+    setPhoto(URL.createObjectURL(file)); setGroups([]); setSel(0); setCamErr('');
     setProg({ phase: 'model', pct: 0 }); setStage('working');
     try {
       const res = await searchByImage(file, productsRef.current, p => { if (!ac.signal.aborted) setProg(p); }, ac.signal);
       if (ac.signal.aborted) return;
-      setHits(res); setProg({ phase: 'done', pct: 100 }); setStage('results');
+      setGroups(res); setProg({ phase: 'done', pct: 100 }); setStage('results');
     } catch (e: any) {
       if (ac.signal.aborted || e?.name === 'AbortError') return;
       console.error('YN Vision', e);
       setStage('error');
     }
   }
-  function again() { abortRef.current?.abort(); setStage('pick'); setHits([]); setPhoto(''); if (fileRef.current) fileRef.current.value = ''; }
+  function again() { abortRef.current?.abort(); setStage('pick'); setGroups([]); setPhoto(''); if (fileRef.current) fileRef.current.value = ''; }
   function onFile(f?: File | null) { if (f) run(f); }
 
   const supported = visionSupported();
-  const phaseText = prog.phase === 'model'
-    ? tr('Waking up YN Vision AI…', 'កំពុងបើក YN Vision AI…')
-    : prog.phase === 'index'
-      ? tr(`Learning the catalog ${prog.done}/${prog.total}`, `កំពុងរៀនកាតាឡុក ${prog.done}/${prog.total}`)
-      : tr('Finding look-alikes…', 'កំពុងស្វែងរកទំនិញដូចគ្នា…');
+  const g = groups[Math.min(sel, groups.length - 1)];
+  /* a small square of the photo that shows one detected item */
+  const chip = (b: VisionGroup['box']): React.CSSProperties => ({
+    backgroundImage: `url(${photo})`, backgroundRepeat: 'no-repeat',
+    backgroundSize: `${100 / b.w}% ${100 / b.h}%`,
+    backgroundPosition: `${b.w >= 1 ? 0 : (b.x / (1 - b.w)) * 100}% ${b.h >= 1 ? 0 : (b.y / (1 - b.h)) * 100}%`,
+  });
 
   const sheet = <div className={'visionRoot' + (closing ? ' out' : '')} role="dialog" aria-modal="true" aria-label="YN Vision">
     <div className="visionScrim" onClick={close} />
     <section className="visionSheet">
       <i className="visionGrab" aria-hidden="true" />
       <header className="visionHead">
-        <div className="visionTitle"><span className="visionLogo"><ScanSearch /></span><div><h2>YN Vision</h2><small>{tr('Search with a photo', 'ស្វែងរកដោយរូបថត')}</small></div></div>
+        <div className="visionTitle"><span className="visionLogo"><ScanSearch /></span><h2>YN Vision</h2></div>
         <button type="button" className="visionIconBtn" onClick={close} aria-label={tr('Close', 'បិទ')}><X /></button>
       </header>
 
       {stage === 'pick' && <div className="visionBody visionPick"
         onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
         onDrop={e => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0]); }}>
-        <div className={'visionDrop' + (drag ? ' on' : '')}>
-          <div className="visionOrb"><ScanSearch /></div>
-          <h3>{tr('Show us what you love', 'បង្ហាញយើងនូវអ្វីដែលអ្នកចូលចិត្ត')}</h3>
-          <p>{tr('Take or upload a photo and the AI finds similar products from YN Studio.', 'ថត ឬផ្ទុកឡើងរូបថត ហើយ AI នឹងរកទំនិញស្រដៀងគ្នាពី YN Studio។')}</p>
-        </div>
-        {!supported && <p className="visionNote warn">{tr('This browser cannot run YN Vision. Please update your browser.', 'កម្មវិធីរុករកនេះមិនអាចដំណើរការ YN Vision បានទេ។ សូមធ្វើបច្ចុប្បន្នភាព។')}</p>}
-        {camErr && <p className="visionNote warn" role="alert">{camErr}</p>}
+        <div className={'visionDrop' + (drag ? ' on' : '')}><div className="visionOrb"><ScanSearch /></div></div>
+        {(camErr || !supported) && <p className="visionNote warn" role="alert">{camErr || tr('Browser not supported', 'កម្មវិធីរុករកមិនគាំទ្រ')}</p>}
         <div className="visionActions">
-          <button type="button" className="visionBtnMain" disabled={!supported} onClick={() => startCamera()}><Camera />{tr('Take photo', 'ថតរូប')}</button>
-          <button type="button" className="visionBtnGlass" disabled={!supported} onClick={() => fileRef.current?.click()}><ImagePlus />{tr('Upload photo', 'ផ្ទុកឡើងរូបថត')}</button>
+          <button type="button" className="visionBtnMain" disabled={!supported} onClick={() => startCamera()}><Camera />{tr('Camera', 'កាមេរ៉ា')}</button>
+          <button type="button" className="visionBtnGlass" disabled={!supported} onClick={() => fileRef.current?.click()}><ImagePlus />{tr('Photo', 'រូបថត')}</button>
         </div>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => onFile(e.target.files?.[0])} />
-        <ul className="visionTrust">
-          <li><ShieldCheck />{tr('Your photo stays on your phone', 'រូបថតរបស់អ្នកស្ថិតនៅលើទូរសព្ទអ្នក')}</li>
-          <li><Zap />{firstTime
-            ? tr(`First use downloads a free ~${VISION_MODEL_MB} MB AI model (once). Wi-Fi recommended.`, `ការប្រើលើកដំបូងទាញយកម៉ូឌែល AI ឥតគិតថ្លៃ ~${VISION_MODEL_MB} MB (ម្តង)។ ណែនាំឱ្យប្រើ Wi-Fi។`)
-            : tr('AI is ready on this device', 'AI រួចរាល់នៅលើឧបករណ៍នេះ')}</li>
-        </ul>
+        {firstTime && <small className="visionTiny">{tr(`Free AI · ~${VISION_MODEL_MB} MB once`, `AI ឥតគិតថ្លៃ · ~${VISION_MODEL_MB} MB ម្តង`)}</small>}
       </div>}
 
       {stage === 'camera' && <div className="visionBody visionCam">
@@ -152,33 +145,34 @@ export default function VisionSheet({ products, onClose }: { products: VisionCat
 
       {stage === 'working' && <div className="visionBody visionWork" aria-live="polite">
         <div className="visionScan">{photo && <img src={photo} alt="" />}<i className="visionBeam" /></div>
-        <h3>{phaseText}</h3>
         <div className="visionBar" role="progressbar" aria-valuenow={prog.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: Math.max(4, prog.pct) + '%' }} /></div>
-        {prog.phase === 'model' && firstTime && <small>{tr(`Downloading free AI model (~${VISION_MODEL_MB} MB, first time only) · ${prog.pct}%`, `កំពុងទាញយកម៉ូឌែល AI ឥតគិតថ្លៃ (~${VISION_MODEL_MB} MB, ម្តងប៉ុណ្ណោះ) · ${prog.pct}%`)}</small>}
-        {prog.phase === 'index' && <small>{tr('One-time setup on this device, next searches are instant.', 'ការរៀបចំម្តងលើឧបករណ៍នេះ ការស្វែងរកបន្ទាប់នឹងលឿន។')}</small>}
+        <small className="visionTiny">{prog.phase === 'index' && prog.total ? `${prog.done}/${prog.total}` : prog.pct + '%'}</small>
       </div>}
 
       {stage === 'results' && <div className="visionBody visionRes">
-        <div className="visionResHead">
-          {photo && <img className="visionThumb" src={photo} alt="" />}
-          <div><h3>{hits.length ? tr(`${hits.length} similar products`, `ទំនិញស្រដៀងគ្នា ${hits.length}`) : tr('No close match', 'រកមិនឃើញទំនិញដូចគ្នា')}</h3>
-            <small>{hits.length ? tr('Best match first', 'ដូចបំផុតមុនគេ') : tr('Try a clearer photo with the item in the middle.', 'សូមសាកល្បងរូបថតច្បាស់ជាងនេះ ដោយដាក់ទំនិញនៅកណ្តាល។')}</small></div>
-          <button type="button" className="visionIconBtn" onClick={again} aria-label={tr('New photo', 'រូបថតថ្មី')}><RefreshCcw /></button>
+        <div className="visionPhoto">
+          <img src={photo} alt="" />
+          {groups.map((x, i) => <button type="button" key={i} className={'visionMark' + (i === sel ? ' on' : '')} aria-label={String(i + 1)}
+            style={{ left: x.box.x * 100 + '%', top: x.box.y * 100 + '%', width: x.box.w * 100 + '%', height: x.box.h * 100 + '%' }} onClick={() => setSel(i)}>{groups.length > 1 && <b>{i + 1}</b>}</button>)}
+          <button type="button" className="visionIconBtn visionRetake" onClick={again} aria-label={tr('New photo', 'រូបថតថ្មី')}><RefreshCcw /></button>
         </div>
-        <div className="visionGrid">
-          {hits.map((h, i) => { const p = byId.get(h.id); if (!p) return null; const cur = p.display_price ?? p.price;
+        {groups.length > 1 && <div className="visionTabs" role="tablist">
+          {groups.map((x, i) => <button type="button" role="tab" aria-selected={i === sel} key={i} className={i === sel ? 'on' : ''} onClick={() => setSel(i)}><i style={chip(x.box)} /><b>{i + 1}</b></button>)}
+        </div>}
+        {!g && <p className="visionEmpty">{tr('No match', 'រកមិនឃើញ')}</p>}
+        {g && <div className="visionGrid" key={sel}>
+          {g.hits.map((h, i) => { const p = byId.get(h.id); if (!p) return null; const cur = p.display_price ?? p.price;
             return <Link key={h.id} to={'/product/' + h.id} className="visionCard" style={{ '--i': i } as React.CSSProperties} onClick={close}>
               <div className="visionImg"><img src={p.main_image_url} alt={p.name} loading="lazy" decoding="async" /><b className="visionPct">{matchPercent(h.score)}%</b></div>
               <strong>{p.name}</strong><span>{money(cur)}{p.original_price && p.original_price > Number(cur) ? <del>{money(p.original_price)}</del> : null}</span>
             </Link>; })}
-        </div>
+        </div>}
       </div>}
 
       {stage === 'error' && <div className="visionBody visionPick">
-        <div className="visionDrop"><div className="visionOrb err"><X /></div>
-          <h3>{tr('Could not run AI search', 'មិនអាចស្វែងរកដោយ AI បានទេ')}</h3>
-          <p>{tr('Check your internet for the one-time model download, then try again. Normal text search still works.', 'សូមពិនិត្យអ៊ីនធឺណិតសម្រាប់ការទាញយកម៉ូឌែលម្តង ហើយព្យាយាមម្តងទៀត។ ការស្វែងរកអក្សរនៅតែប្រើបាន។')}</p></div>
-        <div className="visionActions"><button type="button" className="visionBtnMain" onClick={again}><RefreshCcw />{tr('Try again', 'ព្យាយាមម្តងទៀត')}</button></div>
+        <div className="visionDrop"><div className="visionOrb err"><X /></div></div>
+        <p className="visionNote warn" role="alert">{tr('Needs internet once. Try again.', 'ត្រូវការអ៊ីនធឺណិតម្តង។ សាកម្តងទៀត។')}</p>
+        <div className="visionActions"><button type="button" className="visionBtnMain" onClick={again}><RefreshCcw />{tr('Retry', 'សាកម្តងទៀត')}</button></div>
       </div>}
     </section>
   </div>;

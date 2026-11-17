@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Check, Crosshair, ImagePlus, Layers, M
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from './supabase';
 import { isKm, tr, useLang } from './lang';
-import { BookCoverSheet, Scaled, ensureBcFonts, labelOf, spotOf } from './bookCoverSheet';
+import { A4Paper, BookCoverSheet, Scaled, ensureBcFonts, labelOf, spotOf } from './bookCoverSheet';
 import { CUSTOM_BUCKET, CUSTOM_NAME_EN, CUSTOM_NAME_KM, DEFAULT_PRICE_PER_PAGE, MAX_COVERS, MAX_ITEMS, bcNo, cleanFields, customFields, hasSubjectFields, isCustomId, newCustomId, orderItems, orderTotal, validateContact } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField } from '../shared/bookCoverMath.js';
 import './cv.css';
@@ -644,9 +644,7 @@ export function BookCoverMaker({ Top, Nav, PayModal, bkOn = null }: Chrome) {
                 </button>
               </div>
 
-              <div className="bcThumbs" aria-label={tr('Your pages', 'ទំព័ររបស់អ្នក')}>
-                {(merged[active] || []).map((c, i) => (<figure key={i}><Scaled><BookCoverSheet design={cur.design} cover={c} /></Scaled><figcaption>{i + 1}</figcaption></figure>))}
-              </div>
+              <A4Paper design={cur.design} covers={(merged[active] || []).filter(Boolean) as any} />
 
               {more && (
                 <div className="cvmForm">

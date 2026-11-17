@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CUSTOM_BOX, DEFAULT_KHMER_FONT, KHMER_FONTS, SHEET_H, SHEET_W, coverText, hasKhmer, isCustomId } from '../shared/bookCoverMath.js';
 import type { BcCover, BcField, BcPos } from '../shared/bookCoverMath.js';
-import { canvasesToPdfBlob, downloadBlob } from './pdfSave';
+import { downloadBlob } from './pdfSave';
 
 /* ---------------------------------------------------------------------------------------------
    Book cover sheet.
@@ -152,39 +152,81 @@ export type ExportItem = { design_id?: string | null; design_image: string; desi
 export type ExportOrder = { id: string; items: ExportItem[] };
 const safeName = (s: string) => (s || 'book-cover').replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'book-cover';
 
-/** Every page of the order as a canvas: design 1's pages, then design 2's, and so on. */
-async function canvasesFor(o: ExportOrder, ratio: number, onProgress?: (n: number, total: number) => void) {
+/* ================================================ A4 PAPER: two A5 covers side by side, with margins ================================================
+   An A5 cover is exactly half an A4 sheet, and the cover keeps the A4 proportions (794 x 1123), so it simply prints at A5 size.
+   Two covers sit side by side on one A4 sheet turned sideways (landscape). The sheet keeps a white margin all round (never borderless),
+   so each cover is drawn slightly under the true 148 x 210 mm; thin grey lines show where to cut. One cover alone sits on the left. */
+export const A4L = { W: 3508, H: 2480, margin: 118, gap: 94 };   // A4 landscape at 300 dpi
+const COVER_H = A4L.H - 2 * A4L.margin;
+const COVER_W = Math.round((COVER_H * SHEET_W) / SHEET_H);
+const slotX = (i: number) => Math.round((A4L.W - (2 * COVER_W + A4L.gap)) / 2) + i * (COVER_W + A4L.gap);
+const pairs = <T,>(l: T[]): T[][] => { const o: T[][] = []; for (let i = 0; i < l.length; i += 2) o.push(l.slice(i, i + 2)); return o; };
+
+/** What the sheet looks like on screen: A4 paper with the covers on it. */
+export function A4Paper({ design, covers, captions }: { design: BcDesignLike; covers: BcCover[]; captions?: string[] }) {
+  const sheets = pairs(covers);
+  return (
+    <div className="bcA4Stack">
+      {sheets.map((pair, n) => (
+        <figure className="bcA4Fig" key={n}>
+          <div className="bcA4">
+            {pair.map((c, j) => (
+              <div className="bcA4Slot" key={j} style={{ left: (slotX(j) / A4L.W) * 100 + '%', top: (A4L.margin / A4L.H) * 100 + '%', width: (COVER_W / A4L.W) * 100 + '%', height: (COVER_H / A4L.H) * 100 + '%' }}>
+                <Scaled><BookCoverSheet design={design} cover={c} /></Scaled>
+              </div>
+            ))}
+          </div>
+          <figcaption>A4 · {pair.length} × A5{sheets.length > 1 ? ` · ${n + 1}/${sheets.length}` : ''}{captions ? ' · ' + pair.map((_, j) => captions[n * 2 + j]).filter(Boolean).join(' / ') : ''}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+}
+
+function composeA4(covers: HTMLCanvasElement[]): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = A4L.W; c.height = A4L.H;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height);
+  g.imageSmoothingQuality = 'high';
+  covers.forEach((cv, i) => {
+    const x = slotX(i);
+    g.drawImage(cv, x, A4L.margin, COVER_W, COVER_H);
+    g.strokeStyle = '#cfcfd6'; g.lineWidth = 2; g.strokeRect(x, A4L.margin, COVER_W, COVER_H);   // thin cut line
+  });
+  return c;
+}
+
+/** Every A4 sheet of the order: each design's pages are put two to a sheet. */
+async function sheetsFor(o: ExportOrder, onProgress?: (n: number, total: number) => void) {
   ensureBcFonts();
   const total = o.items.reduce((n, it) => n + it.covers.length, 0);
   const out: HTMLCanvasElement[] = [];
+  let done = 0;
   for (const it of o.items) {
     const design: BcDesignLike = { id: it.design_id, image: it.design_image, fields: it.design_fields };
     const img = await toDataUrl(it.design_image);
-    for (const c of it.covers) { onProgress?.(out.length, total); out.push(await coverCanvas(design, c, img, ratio)); }
+    const cs: HTMLCanvasElement[] = [];
+    for (const c of it.covers) { onProgress?.(done++, total); cs.push(await coverCanvas(design, c, img, 2)); }
+    for (const pair of pairs(cs)) out.push(composeA4(pair));
   }
   onProgress?.(total, total);
   return out;
 }
 
-/** One A4 PDF with a page per cover, ready for the printer. */
-export async function downloadOrderPdf(o: ExportOrder, name: string, onProgress?: (n: number, t: number) => void) {
-  const cs = await canvasesFor(o, 2.5, onProgress);
-  downloadBlob(await canvasesToPdfBlob(cs, 0.94), safeName(name) + '.pdf');
-}
-
-/** Each cover as its own picture (PNG). */
-export async function downloadOrderPngs(o: ExportOrder, name: string, onProgress?: (n: number, t: number) => void) {
-  const cs = await canvasesFor(o, 2.5, onProgress);
+/** Saves every A4 sheet as a JPEG picture (one file per sheet). */
+export async function downloadOrderJpegs(o: ExportOrder, name: string, onProgress?: (n: number, t: number) => void) {
+  const cs = await sheetsFor(o, onProgress);
   for (let i = 0; i < cs.length; i++) {
-    const blob: Blob = await new Promise((res, rej) => cs[i].toBlob(b => (b ? res(b) : rej(new Error('png'))), 'image/png'));
-    downloadBlob(blob, `${safeName(name)} - page ${i + 1}.png`);
+    const blob: Blob = await new Promise((res, rej) => cs[i].toBlob(b => (b ? res(b) : rej(new Error('jpeg'))), 'image/jpeg', 0.95));
+    downloadBlob(blob, cs.length === 1 ? `${safeName(name)}.jpg` : `${safeName(name)} - sheet ${i + 1}.jpg`);
     await new Promise(r => setTimeout(r, 250));   // browsers block a burst of downloads
   }
 }
 
-/** Opens the print dialog with one full A4 page per cover (no margins). */
+/** Opens the print dialog: one A4 landscape sheet per two covers (the margins are part of the picture). */
 export async function printOrder(o: ExportOrder, onProgress?: (n: number, t: number) => void) {
-  const cs = await canvasesFor(o, 2, onProgress);
+  const cs = await sheetsFor(o, onProgress);
   const imgs = cs.map(c => c.toDataURL('image/jpeg', 0.92));
   const f = document.createElement('iframe');
   f.setAttribute('aria-hidden', 'true');
@@ -192,7 +234,7 @@ export async function printOrder(o: ExportOrder, onProgress?: (n: number, t: num
   document.body.appendChild(f);
   const d = f.contentDocument!;
   d.open();
-  d.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName('Book covers')}</title><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:#fff}img{display:block;width:210mm;height:297mm;page-break-after:always;break-after:page}img:last-child{page-break-after:auto;break-after:auto}</style></head><body>${imgs.map(s => `<img src="${s}">`).join('')}</body></html>`);
+  d.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeName('Book covers')}</title><style>@page{size:A4 landscape;margin:0}html,body{margin:0;padding:0;background:#fff}img{display:block;width:297mm;height:210mm;page-break-after:always;break-after:page}img:last-child{page-break-after:auto;break-after:auto}</style></head><body>${imgs.map(s => `<img src="${s}">`).join('')}</body></html>`);
   d.close();
   await Promise.all(Array.from(d.images).map(i => (i.complete ? Promise.resolve() : new Promise(r => { i.onload = i.onerror = () => r(null); }))));
   const w = f.contentWindow!;

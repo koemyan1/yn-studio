@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalize, dot, meanVector, rankSimilar, matchPercent, imageKey, vecToBase64, base64ToVec } from '../shared/visionMath.js';
+import { normalize, dot, meanVector, rankSimilar, matchPercent, imageKey, vecToBase64, base64ToVec, iou, cropGrid, groupMatches } from '../shared/visionMath.js';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const approx = (a, b, e = 1e-6) => assert.ok(Math.abs(a - b) < e, `${a} !~ ${b}`);
@@ -62,11 +62,52 @@ test('YN Vision stays 100% free: no paid API, key or vendor SDK in the vision co
     assert.ok(!banned.test(src), `${f} mentions a paid/keyed service`);
   }
   const eng = fs.readFileSync(path.join(root, 'src/vision/visionEngine.ts'), 'utf8');
-  assert.match(eng, /Xenova\/clip-vit-base-patch32/); // open-source (MIT) model, in-browser
+  assert.match(eng, /Xenova\/clip-vit-base-patch16/); // open-source (MIT) model, in-browser
 });
 
 test('the text search input is untouched by the camera button', () => {
   const main = fs.readFileSync(path.join(root, 'src/main.tsx'), 'utf8');
   assert.match(main, /<input value=\{q\} onChange=\{e=>setQ\(e\.target\.value\)\}/);
   assert.match(main, /<YNVision products=\{visionCatalog\}\/>/);
+});
+
+test('cropGrid: square windows that stay inside the photo and cover it', () => {
+  for (const [W, H] of [[768, 768], [768, 576], [768, 432], [400, 768]]) {
+    const g = cropGrid(W, H);
+    assert.ok(g.length >= 1 && g.length <= 16);
+    for (const b of g) { assert.equal(b.w, b.h); assert.ok(b.x >= -1e-9 && b.y >= -1e-9 && b.x + b.w <= W + 1e-9 && b.y + b.h <= H + 1e-9); }
+    assert.ok(Math.min(...g.map(b => b.x)) < 1 && Math.max(...g.map(b => b.x + b.w)) > W - 1); // reaches both edges
+  }
+});
+
+test('iou of identical / disjoint boxes', () => {
+  approx(iou({ x: 0, y: 0, w: 1, h: 1 }, { x: 0, y: 0, w: 1, h: 1 }), 1);
+  approx(iou({ x: 0, y: 0, w: .2, h: .2 }, { x: .5, y: .5, w: .2, h: .2 }), 0);
+});
+
+const axis = i => { const v = new Float32Array(8); v[i] = 1; return v; };
+const cat = [{ id: 'bag', vec: axis(0) }, { id: 'shoe', vec: axis(1) }, { id: 'cup', vec: axis(2) }];
+const B = (x, y) => ({ x, y, w: .4, h: .4 });
+
+test('groupMatches: three different products in one photo -> three groups, each with its own list', () => {
+  const crops = [
+    { box: { x: 0, y: 0, w: 1, h: 1 }, vec: normalize([1, 1, 1, 0, 0, 0, 0, 0]), full: true }, // mixed whole photo, weak
+    { box: B(0, 0), vec: axis(0) }, { box: B(.05, .0), vec: normalize([1, .1, 0, 0, 0, 0, 0, 0]) }, // bag seen twice
+    { box: B(.6, 0), vec: axis(1) }, { box: B(.3, .6), vec: axis(2) },
+  ];
+  const g = groupMatches(crops, cat, { minScore: 0.6, showMin: 0.0 });
+  assert.deepEqual(g.map(x => x.hits[0].id).sort(), ['bag', 'cup', 'shoe']);
+});
+
+test('groupMatches: one product filling the frame -> a single group', () => {
+  const crops = [
+    { box: { x: 0, y: 0, w: 1, h: 1 }, vec: axis(1), full: true },
+    { box: B(0, 0), vec: normalize([0.2, 1, 0, 0, 0, 0, 0, 0]) }, { box: B(.6, .6), vec: normalize([0, 1, 0.3, 0, 0, 0, 0, 0]) },
+  ];
+  const g = groupMatches(crops, cat, { showMin: 0.0 });
+  assert.equal(g.length, 1); assert.equal(g[0].hits[0].id, 'shoe');
+});
+
+test('groupMatches: nothing similar -> empty', () => {
+  assert.deepEqual(groupMatches([{ box: { x: 0, y: 0, w: 1, h: 1 }, vec: axis(5), full: true }], cat), []);
 });

@@ -12,7 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { AutoProcessor, CLIPVisionModelWithProjection, RawImage } from '@huggingface/transformers';
 import { imageKey, normalize, vecToBase64 } from '../shared/visionMath.js';
 
-const MODEL = 'Xenova/clip-vit-base-patch32'; // must match VISION_MODEL in src/vision/visionEngine.ts
+const MODEL = 'Xenova/clip-vit-base-patch16'; // must match VISION_MODEL in src/vision/visionEngine.ts
 const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 if (!url || !key) { console.error('Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (the public values).'); process.exit(1); }

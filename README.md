@@ -32,7 +32,8 @@ Set on Render (see `render.yaml`). Secrets must never use a `VITE_` prefix.
 
 A camera button inside the home search bar lets customers take/upload a photo and see the most visually similar products.
 
-- **Free, open source, no accounts:** OpenAI CLIP ViT-B/32 (MIT, `Xenova/clip-vit-base-patch32`, 8-bit) run by Transformers.js (Apache-2.0) **inside the customer's browser**. No server, no API key, no usage fees; the photo never leaves the phone.
+- **Free, open source, no accounts:** OpenAI CLIP ViT-B/16 (MIT, `Xenova/clip-vit-base-patch16`, 8-bit) run by Transformers.js (Apache-2.0) **inside the customer's browser**. No server, no API key, no usage fees; the photo never leaves the phone.
+- A photo with several products is scanned in overlapping windows; each item found gets its own list of similar products (tap its number).
 - First use downloads ~90 MB of model files from the free Hugging Face Hub (cached in the browser afterwards). Product-picture fingerprints are cached in IndexedDB.
 - Optional speed-up (also free): `VITE_SUPABASE_URL=... VITE_SUPABASE_ANON_KEY=... npm run vision:index` writes `public/vision-index.json` so phones skip computing fingerprints. Re-run after catalog changes; anything missing is computed on-device.
 - Code: `src/vision/` (engine, button, sheet, CSS), `shared/visionMath.js` (tested in `tests/vision.test.mjs`). Text search is unchanged. Run `npm install` once (adds `@huggingface/transformers`).

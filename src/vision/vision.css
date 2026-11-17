@@ -134,3 +134,22 @@
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .visionSheet{background:#f8f2ff}.visionScrim{background:rgba(24,12,48,.6)}
 }
+
+/* ---------- minimalist overrides ---------- */
+.visionTitle h2{font-size:18px}
+.visionDrop{padding:30px 0;background:transparent;border:0}
+.visionTiny{align-self:center;color:var(--vz-mut);font-size:12px;letter-spacing:.01em}
+.visionNote{text-align:center}
+.visionPhoto{position:relative;align-self:center;max-width:100%;border-radius:24px;overflow:hidden;box-shadow:0 12px 32px rgba(76,29,149,.22),0 0 0 2px #fff;flex:0 0 auto;line-height:0}
+.visionPhoto>img{display:block;max-width:100%;max-height:34dvh;width:auto;height:auto}
+.visionMark{position:absolute;padding:0;min-height:0;border:2px solid rgba(255,255,255,.75);border-radius:14px;background:transparent;cursor:pointer;transition:border-color .3s,box-shadow .35s var(--vz-ease),background .3s}
+.visionMark.on{border-color:#fff;background:rgba(192,38,211,.14);box-shadow:0 0 0 2px rgba(192,38,211,.9),0 8px 22px rgba(192,38,211,.4)}
+.visionMark b{position:absolute;top:5px;left:5px;min-width:22px;height:22px;display:grid;place-items:center;border-radius:99px;font-size:12px;line-height:1;color:#fff;background:var(--vz-grad)}
+.visionRetake{position:absolute;right:10px;bottom:10px;width:38px;height:38px;line-height:1}
+.visionTabs{display:flex;gap:10px;justify-content:center}
+.visionTabs button{position:relative;width:54px;height:54px;min-height:0;padding:0;border:2px solid transparent;border-radius:18px;overflow:hidden;cursor:pointer;background:rgba(255,255,255,.6);opacity:.6;transition:transform .45s var(--vz-spring),opacity .25s,border-color .25s}
+.visionTabs button.on{opacity:1;border-color:#c026d3;transform:scale(1.08)}
+.visionTabs i{position:absolute;inset:0}
+.visionTabs b{position:absolute;right:3px;bottom:3px;min-width:18px;height:18px;display:grid;place-items:center;border-radius:99px;font-size:11px;color:#fff;background:rgba(31,21,53,.6)}
+.visionEmpty{text-align:center;color:var(--vz-mut);margin:18px 0}
+.visionWork{gap:18px}

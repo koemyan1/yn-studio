@@ -281,3 +281,12 @@
 .bcHome .bcOwn .cvmCardName{margin-top:16px}
 .bcOwnWrap .cvmErr{font-size:12px;margin:0;text-align:center}
 @media(prefers-reduced-motion:reduce){.bcOwnPlus svg{transition:none}}
+
+/* ---------- A4 paper holding two A5 covers (customer preview + admin order) ---------- */
+.bcA4Stack{display:grid;gap:14px;margin:10px 0}
+.bcA4Fig{margin:0;display:grid;gap:6px}
+.bcA4Fig figcaption{font-size:12px;font-weight:700;opacity:.7;text-align:center}
+.bcA4{position:relative;width:100%;aspect-ratio:297/210;background:#fff;border-radius:6px;border:1px solid #0002;box-shadow:0 10px 30px rgba(30,15,60,.16),0 2px 6px rgba(30,15,60,.08)}
+.bcA4Slot{position:absolute;outline:1px solid #cfcfd6}
+.bcA4Slot .bcScaled{border-radius:0;border:0}
+@media(min-width:900px){.bcA4Stack{grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr))}}

@@ -1,7 +1,7 @@
 /**
  * YN Vision engine – image search that costs $0.
  *
- * - Model: OpenAI CLIP ViT-B/32 (MIT licence), ONNX build `Xenova/clip-vit-base-patch32`, 8-bit quantised (~90 MB).
+ * - Model: OpenAI CLIP ViT-B/16 (MIT licence), ONNX build `Xenova/clip-vit-base-patch16`, 8-bit quantised (~90 MB).
  * - Runtime: Transformers.js (Apache-2.0) running ONNX Runtime Web (WASM) INSIDE the customer's browser.
  * - No server, no API key, no per-use fee. The customer's photo never leaves their phone.
  * - The model files come from the free public Hugging Face Hub and are stored in the browser cache after the first
@@ -9,19 +9,21 @@
  * - Catalog picture "fingerprints" (512 numbers each) are cached in IndexedDB. If `public/vision-index.json` exists
  *   (made by `npm run vision:index`, also free) they are loaded from it, so customers never have to compute them.
  */
-import { base64ToVec, imageKey, normalize, rankSimilar } from '../../shared/visionMath.js';
+import { base64ToVec, cropGrid, groupMatches, imageKey, normalize } from '../../shared/visionMath.js';
+import type { VBox } from '../../shared/visionMath.js';
 
-export const VISION_MODEL = 'Xenova/clip-vit-base-patch32';
+export const VISION_MODEL = 'Xenova/clip-vit-base-patch16'; // ViT-B/16 sees 4x more detail than B/32: clearly better at similar-looking products
 export const VISION_MODEL_MB = 90; // shown to the customer before the first download
 
 export type VisionProduct = { id: string; main_image_url?: string | null };
 export type VisionHit = { id: string; score: number };
+export type VisionGroup = { box: VBox; score: number; hits: VisionHit[] };
 export type VisionPhase = 'idle' | 'model' | 'index' | 'search' | 'done' | 'error';
 export type VisionProgress = { phase: VisionPhase; pct: number; done?: number; total?: number };
 type Progress = (p: VisionProgress) => void;
 
 /* ---------------------------------------------------------------- IndexedDB cache */
-const DB_NAME = 'yn-vision-v1';
+const DB_NAME = 'yn-vision-v2'; // v2 = ViT-B/16 fingerprints (old B/32 ones are not compatible)
 const STORE = 'vec';
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 function openDb(): Promise<IDBDatabase | null> {
@@ -183,16 +185,43 @@ export async function isIndexed(products: VisionProduct[]): Promise<boolean> {
   return products.filter(p => p.main_image_url).every(p => index.has(imageKey(p.id, p.main_image_url)));
 }
 
-/** Find the catalog products that look most like the customer's photo. */
-export async function searchByImage(photo: Blob, products: VisionProduct[], onProgress?: Progress, signal?: AbortSignal): Promise<VisionHit[]> {
+/** Draw a square window of the photo (or the whole photo, letter-boxed in white) as a small JPEG for the AI. */
+function windowBlob(img: ImageBitmap | HTMLCanvasElement, b: VBox | null): Promise<Blob> {
+  const S = 288, c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, S, S);
+  const W = (img as any).width as number, H = (img as any).height as number;
+  if (b) ctx.drawImage(img, b.x, b.y, b.w, b.h, 0, 0, S, S);
+  else { const k = S / Math.max(W, H); ctx.drawImage(img, (S - W * k) / 2, (S - H * k) / 2, W * k, H * k); }
+  return new Promise(res => c.toBlob(x => res(x as Blob), 'image/jpeg', 0.9));
+}
+
+/**
+ * Find the products in the customer's photo. One group per item seen (a photo with 3 products gives 3 groups),
+ * each with its own list of most similar catalog products.
+ */
+export async function searchByImage(photo: Blob, products: VisionProduct[], onProgress?: Progress, signal?: AbortSignal): Promise<VisionGroup[]> {
   const loaded = await loadVisionModel(onProgress);
   if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
   await ensureIndex(products, loaded, onProgress, signal);
-  onProgress?.({ phase: 'search', pct: 100 });
-  const q = await embed(await prepareImage(photo), loaded);
   const entries = products.flatMap(p => {
     const v = p.main_image_url ? index.get(imageKey(p.id, p.main_image_url)) : undefined;
     return v ? [{ id: p.id, vec: v }] : [];
   });
-  return rankSimilar(q, entries, { limit: 24, min: 0.45 });
+  const bmp = await createImageBitmap(await prepareImage(photo, 768));
+  const W = bmp.width, H = bmp.height;
+  const boxes = cropGrid(W, H);
+  const jobs: { box: VBox; px: VBox | null; full: boolean }[] = [{ box: { x: 0, y: 0, w: 1, h: 1 }, px: null, full: true },
+    ...boxes.map(b => ({ box: { x: b.x / W, y: b.y / H, w: b.w / W, h: b.h / H }, px: b, full: false }))];
+  const crops: { box: VBox; vec: Float32Array; full?: boolean }[] = [];
+  let n = 0;
+  for (const j of jobs) {
+    if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
+    crops.push({ box: j.box, vec: await embed(await windowBlob(bmp, j.px), loaded), full: j.full });
+    onProgress?.({ phase: 'search', pct: Math.round((++n / jobs.length) * 100) });
+    await new Promise(r => setTimeout(r, 0));
+  }
+  bmp.close?.();
+  return groupMatches(crops, entries);
 }

@@ -125,3 +125,4 @@ Legend for the *Why here* column: **stated** = the file's own header says so; **
 | 50 | `supabase-server-side-order.sql` | NEW: server-side pricing; needs supabase-security-hardening.sql (uses its settings/log helpers) |
 | 51 | `supabase-security-audit.sql` | (run again) |
 | 52 | `supabase-guest-browse.sql` | NEW: lets visitors who are not signed in browse the marketplace (read-only on published products, categories, photos, options). Needs the baseline tables. |
+| 53 | `supabase-wallet-goals.sql` | NEW: wallet **Goals** (`wallet_goals`): a customer picks a category or uploads their own picture + price and watches it fill as the wallet balance grows. Own rows only (RLS). Without it Goals still work, saved on the device only. |
