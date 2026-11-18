@@ -1,0 +1,527 @@
+/* =====================================================================
+   YN Studio — customer side, "market stall" restyle.
+   Loaded LAST (after fluid.css). Customer screens only: every rule is scoped by
+   H = html:not([data-secret-theme="on"]):not(.yn-admin-page), so admin screens and the
+   secret themes (Chiikawa, Spidey, Coraline) keep their own look.
+
+   Direction: a printed shop catalogue, not a SaaS landing page.
+     - flat paper ground, white sheets, 1px ink-blue-grey rules
+     - one accent (ballpoint ink blue) + one signal colour (sale red)
+     - no gradients, no gradient text, no glass blur, no glow shadows
+     - small radii (6–12px), real borders instead of shadows
+     - almost no idle motion: nothing floats, shines or pulses
+   ===================================================================== */
+
+/* ---------- 0. tokens ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page){
+  --paper:#f1f2ef;--sheet:#fff;--ink:#161a26;--muted:#626877;--line:#d8dbe2;--soft:#e9ecf3;
+  --purple:#2e46b4;--purple2:#2e46b4;--blue-deep:#22338a;--blue-tint:#e6eaf8;
+  --sale:#d23a2a;--ok:#1f7a4d;
+  --yn-grad:#2e46b4;--yn-grad-soft:#e6eaf8;
+  --yn-card:#fff;--yn-edge:#d8dbe2;
+  --yn-shadow:none;--yn-shadow-lg:none;
+  --yn-display:'Bricolage Grotesque','Instrument Sans','Noto Sans Khmer',ui-sans-serif,system-ui,sans-serif;
+  --yn-body:'Instrument Sans','Noto Sans Khmer',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r-s:6px;--r-m:10px;--r-l:14px;
+  font-family:var(--yn-body);color:var(--ink);background:var(--paper);
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth,.bottom,.miniCheckout,.payModal){
+  --purple:#2e46b4;--purple2:#2e46b4;--soft:#e9ecf3;--line:#d8dbe2;--ink:#161a26;--muted:#626877;
+  font-family:var(--yn-body);
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(button,input,textarea,select){font-family:inherit}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) ::selection{background:#c9d2f3}
+
+/* ---------- 1. ground: no aurora, no dots ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page){background:var(--paper)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body:not(:has(.admin)){background:var(--paper)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body:not(:has(.admin))::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body:not(:has(.admin))::after{content:none;display:none;animation:none}
+
+/* kill glass everywhere on the customer side */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth,.bottom,.miniCheckout,.payModal,.payModalCard) ,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth,.bottom,.miniCheckout,.payModal,.payModalCard) *{
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ---------- 2. type ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth) :is(h1,h2,h3){
+  font-family:var(--yn-display);font-weight:700;letter-spacing:-.025em;color:var(--ink);
+  background:none;-webkit-background-clip:initial;background-clip:initial;-webkit-text-fill-color:currentColor;animation:none;
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .brandrow h1{font-size:clamp(30px,5.5vw,40px);line-height:1.05;letter-spacing:-.035em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pageIntro h1,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartHeader h1,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .checkoutIntro h1{
+  font-size:clamp(28px,6vw,38px);line-height:1.08;letter-spacing:-.03em;background:none;-webkit-text-fill-color:currentColor;color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .sectionHead h2{font-size:21px;letter-spacing:-.02em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.pcopy span,.detail .price,.summaryTotal,.ordercard .total b,.profileStats b,.cartInfoBottom strong,.miniCheckout b){
+  font-family:var(--yn-display);background:none;-webkit-background-clip:initial;background-clip:initial;-webkit-text-fill-color:currentColor;
+  color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .muted,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop small{color:var(--muted)}
+
+/* eyebrows: plain small text, no pill, no pulsing dot. The home one is dropped (it only repeated "marketplace"). */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth) .eyebrow{
+  display:inline;padding:0;border:0;border-radius:0;background:none;color:var(--muted);
+  font-size:13px;font-weight:500;letter-spacing:0;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth) .eyebrow::before{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .brandrow .eyebrow{display:none}
+
+/* ---------- 3. buttons ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail,.auth,.miniCheckout,.payModal) :is(button,.button){
+  border-radius:var(--r-m);font-weight:600;letter-spacing:0;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop .button,.shop .primary,.shop .checkoutButton,.detail .stickyActions button:not(.secondary),.miniCheckout button,.auth .login>button:not(.googleBtn):not(.textBtn)){
+  background:var(--purple);background-image:none;color:#fff;border:1px solid var(--purple);border-radius:var(--r-m);box-shadow:none;
+  transition:background-color .15s,border-color .15s,transform .1s;
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop .button,.shop .primary,.shop .checkoutButton,.detail .stickyActions button:not(.secondary),.miniCheckout button,.auth .login>button:not(.googleBtn):not(.textBtn))::after{content:none;display:none;animation:none}
+@media (hover:hover){
+  html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop .button,.shop .primary,.shop .checkoutButton,.detail .stickyActions button:not(.secondary),.miniCheckout button,.auth .login>button:not(.googleBtn):not(.textBtn)):hover{
+    background:var(--blue-deep);border-color:var(--blue-deep);box-shadow:none}
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(button,.button):not(:disabled):active{transform:translateY(1px)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail) .secondary{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail) .icon{
+  background:#fff;border:1px solid var(--line);border-radius:var(--r-m);box-shadow:none;color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail) .textBtn{background:none;color:var(--purple);border:0}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(button,a,input,textarea,select,summary):focus-visible{outline:2px solid var(--purple);outline-offset:2px;box-shadow:none}
+
+/* ---------- 4. inputs ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.auth) :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),textarea,select){
+  border-radius:var(--r-m);background:#fff;border:1px solid var(--line);box-shadow:none;transform:none;
+  transition:border-color .15s,box-shadow .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.auth) :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),textarea,select):focus{
+  background:#fff;border-color:var(--purple);box-shadow:0 0 0 3px rgba(46,70,180,.16);transform:none}
+
+/* ---------- 5. top bar + dock ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail) .top{
+  top:8px;height:56px;padding:0 8px;border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page)[data-scrolled] .shop .top{background:#fff;box-shadow:0 1px 0 var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail) .top>b{font-family:var(--yn-display);font-size:18px;letter-spacing:-.02em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shop,.detail) .miniLogo{background:#fff;box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .notificationButton::after{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .avatar{background:var(--blue-tint);color:var(--purple);box-shadow:none;border-radius:var(--r-m);transition:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .avatar:hover{transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .homeActions :is(.icon,.avatar){border-radius:var(--r-m)}
+
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom{
+  padding:5px;border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:0 -1px 0 rgba(22,26,38,.04)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom::before{
+  top:5px;bottom:5px;border-radius:var(--r-m);background:var(--blue-tint);box-shadow:none;
+  transition:transform .25s cubic-bezier(.3,.7,.3,1),width .2s,opacity .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom a{border-radius:var(--r-m);color:var(--muted);font-weight:600;transition:color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom a.active,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom a.on{background:transparent;color:var(--purple);font-weight:700}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom a.active svg{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bottom a:not(.active):hover{color:var(--ink)}
+
+/* ---------- 6. home ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .search{
+  border:1px solid var(--line);border-radius:var(--r-m);min-height:50px;padding:0 14px;margin:18px 0 16px;
+  background:#fff;box-shadow:none;transform:none;animation:none;transition:border-color .15s,box-shadow .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .search:focus-within{
+  background:#fff;border-color:var(--purple);box-shadow:0 0 0 3px rgba(46,70,180,.16);transform:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .search svg,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .search:focus-within svg{color:var(--muted);transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .searchClear{background:var(--soft);color:var(--ink)}
+
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .bannerSlider{border-radius:var(--r-l);border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .bannerSlider::after{box-shadow:none;background:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .bannerSlide img{animation:none}
+
+/* hero / big colour panels: one flat ink-blue sheet, no mesh, no sheen, no floating orb */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.hero,.walletHero,.debtHero){
+  background:var(--blue-deep);background-image:none;animation:none;border-radius:var(--r-l);box-shadow:none;color:#fff}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.hero,.walletHero,.debtHero)::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .hero{min-height:0;padding:24px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.hero h2,.walletHero h1){font-family:var(--yn-display);letter-spacing:-.03em;color:#fff;-webkit-text-fill-color:currentColor}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .orb,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .walletGlow{animation:none;box-shadow:none;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .walletHero{min-height:0}
+
+/* categories: small tabs, active = solid ink. No emoji, no lift. */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .categoryRail{padding:2px 2px 14px;margin:0 -2px;gap:8px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .categoryRail button{
+  background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 14px;font-size:14px;font-weight:600;
+  box-shadow:none;transform:none;transition:background-color .15s,color .15s,border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .categoryRail button:hover{transform:none;box-shadow:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .categoryRail button.on{
+  background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:none;transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .categoryRail button[data-kind]::before{content:none;display:none;margin:0}
+
+/* ---------- 7. product cards: catalogue tiles ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .grid{gap:14px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product{
+  border-radius:var(--r-m);background:#fff;border:1px solid var(--line);box-shadow:none;
+  transition:border-color .15s;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .grid>.product,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .grid>.product:nth-child(n){animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product::after{content:none;display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product>img,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product>.ph{
+  width:100%;margin:0;border-radius:0;border-bottom:1px solid var(--line);aspect-ratio:1/1;background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pcopy{padding:10px 12px 13px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pcopy strong{font-size:14.5px;font-weight:600;letter-spacing:0;line-height:1.3}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pcopy>div{margin-top:4px;gap:8px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pcopy span{font-size:16px;font-weight:700;color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pcopy del{color:var(--muted)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product .heart{
+  right:10px;top:10px;width:36px;height:36px;border-radius:var(--r-s);color:var(--ink);background:#fff;border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product .heart.liked{background:var(--sale);border-color:var(--sale);color:#fff;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleTag,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleItem .saleTag{
+  left:10px;top:10px;padding:4px 8px;border-radius:var(--r-s);background:var(--sale);background-image:none;color:#fff;
+  font-size:12px;font-weight:700;letter-spacing:0;box-shadow:none;transform:none;animation:none}
+@media (hover:hover){
+  html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product:hover{transform:none;box-shadow:none;border-color:var(--ink)}
+  html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product:hover>img{transform:none}
+  html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleItem .product:hover{transform:none;box-shadow:none}
+}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .product:active{transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .marketLoading{border-radius:var(--r-l);border:1px solid var(--line);background:#fff;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .productSkel{background:#fff;border:1px solid var(--line);border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .productSkel :is(span,i){background:var(--soft);animation:none;border-radius:var(--r-s)}
+
+/* on sale: a plain bordered shelf with a red rule, instead of the purple flame band */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleRail{
+  background:#fff;background-image:none;border:1px solid var(--line);border-top:3px solid var(--sale);border-radius:var(--r-m);
+  box-shadow:none;padding:16px 0 2px;margin:6px 0 20px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleRail::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleRail::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleRail .sectionHead h2{color:var(--ink);font-size:21px;letter-spacing:-.02em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleRail .sectionHead h2::before{content:none;display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleRail .saleUpTo,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .saleUpTo{
+  background:var(--sale);background-image:none;color:#fff;border-radius:var(--r-s);box-shadow:none;animation:none;font-weight:700;padding:5px 10px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleItem .product{box-shadow:none;border:1px solid var(--line);border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .saleItem .pcopy span{color:var(--sale);font-size:16px}
+
+/* ---------- 8. product page ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail{gap:20px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .gallery{border-radius:var(--r-l);border:1px solid var(--line);box-shadow:none;background:#fff}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryViewport{background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryViewport:hover>img{transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryArrow{background:#fff;border:1px solid var(--line);color:var(--ink);box-shadow:none;border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryArrow:hover{transform:translateY(-50%);background:#fff;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryThumbs{background:#fff;border-top:1px solid var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryThumbs button{border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .galleryThumbs button.active{border-color:var(--ink);box-shadow:none;transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .detailCard{border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .detailCard h1{font-size:clamp(26px,4.6vw,38px);line-height:1.1;letter-spacing:-.03em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .price{font-size:30px;font-weight:700;color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .price del{font-size:16px;font-weight:500;color:var(--muted);-webkit-text-fill-color:var(--muted)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .desc{color:var(--muted);line-height:1.65;max-width:62ch}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .chips button{
+  border-radius:var(--r-s);border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;box-shadow:none;transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .chips button:hover{transform:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .chips button.on{background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:none;transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .qty{border-radius:var(--r-m);background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .qty button{border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .detail .stickyActions button{min-height:50px;border-radius:var(--r-m);font-size:15px}
+
+/* ---------- 9. cart + checkout ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartBadge{border-radius:var(--r-m);background:var(--blue-tint);border:1px solid var(--line);box-shadow:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartBadge b{background:var(--purple);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartItem{
+  border-radius:var(--r-m);background:#fff;border:1px solid var(--line);box-shadow:none;transform:none;transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartItem:hover{transform:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartItem.selected{background:#fff;border:1px solid var(--purple);box-shadow:inset 0 0 0 1px var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartImage{border-radius:var(--r-s);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartSelect span{border-radius:5px;border-color:#aab0bf}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartSelect input:checked+span{background:var(--purple);border-color:var(--purple);animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartRemove{border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .cartRemove:hover{background:#fde8e5;color:var(--sale);transform:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .qtyControl{border-radius:var(--r-m);background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .qtyControl button{border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.cartSummary,.orderSummary){
+  border-radius:var(--r-l);border:1px solid var(--line);box-shadow:none;background:#fff;background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .summaryTotal{color:var(--ink);font-size:1.15em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .summaryHint{border-radius:var(--r-m);background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .miniCheckout{
+  border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:0 4px 18px rgba(22,26,38,.10);animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .checkoutButton,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .miniCheckout button{border-radius:var(--r-m);min-height:48px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.panel,.glass,.locationPanel,.walletPayPanel,.profilePanel){
+  border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.paymentChoice,.abaPaymentButton,.paywayButton,.payOption){
+  border-radius:var(--r-m);border:1px solid var(--line);background:#fff;box-shadow:none;transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.paymentChoice,.abaPaymentButton,.paywayButton):hover{transform:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.checkoutQr,.walletDirectPay,.qrBanner){border-radius:var(--r-l);background:#fff;background-image:none;border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.upload,.receiptUpload){border-radius:var(--r-m);border:1px dashed #aab0bf;background:#fff;transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.upload,.receiptUpload):hover{border-color:var(--purple);background:#fff;transform:none}
+
+/* pop-ups */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body:not(:has(.admin)) .payModal{background:rgba(22,26,38,.55);animation:ynFade .15s ease backwards}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body:not(:has(.admin)) .payModalCard{
+  border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:0 12px 40px rgba(22,26,38,.25);animation:ynFade .18s ease backwards}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) body:not(:has(.admin)) .qrFrame{border-radius:var(--r-m);box-shadow:none;border:1px solid var(--line)}
+
+/* ---------- 10. orders ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .ordercard{
+  border-radius:var(--r-m);padding:18px 18px 16px 22px;background:#fff;border:1px solid var(--line);box-shadow:none;transform:none;transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .ordercard::before{width:4px;background:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .ordercard:hover{transform:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .ordercard .line b{font-family:var(--yn-display);font-size:17px;letter-spacing:-.01em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .ordercard .total b{font-size:20px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .miniitem img{border-radius:var(--r-s);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .status{border-radius:var(--r-s);letter-spacing:0;padding:4px 9px;font-weight:600}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .status::before{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .trackingCard{border-radius:var(--r-m)}
+
+/* ---------- 11. wallet, debt, rewards ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .walletHero{border-radius:var(--r-l)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .wlTile{border-radius:var(--r-m);animation:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .wlTile::after{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .wlTile:hover{transform:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlPanel{border-radius:var(--r-l);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlPanel::before{background:var(--purple);animation:none;opacity:1}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .sectionHead h2::after{background:var(--purple);animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlForm .wide::after,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqAbaBtn.primary::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .transaction{border-radius:var(--r-m);box-shadow:none;transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .transaction:hover{transform:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.debtHero,.debtPayCard,.debtEmptyCard){border-radius:var(--r-l);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .rewardTabs{border-radius:var(--r-m);background:var(--soft);border:0;box-shadow:none;padding:4px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .rewardTabs button{border-radius:var(--r-s);transition:background-color .15s,color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .rewardTabs button.on{background:#fff;color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.couponCard,.rewardStandalone){
+  border-radius:var(--r-m);background:#fff;background-image:none;border:1px dashed #aab0bf;box-shadow:none;transition:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.couponCard,.rewardStandalone):hover{transform:none;box-shadow:none}
+
+/* ---------- 12. profile, notifications, support ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .profileHero{border-radius:var(--r-l);border:1px solid var(--line);box-shadow:none;background:#fff;background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .profileHero::before{content:none;display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .profileAvatar{background:var(--blue-tint);color:var(--purple);border-radius:var(--r-l);box-shadow:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .profileHero h1{font-size:clamp(24px,5vw,30px)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.profileStats a,.profileQuickGrid a){
+  border-radius:var(--r-m);background:#fff;border:1px solid var(--line);box-shadow:none;transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.profileStats a,.profileQuickGrid a):hover{transform:none;box-shadow:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.profileStats a,.profileQuickGrid a)::after{content:none;display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .profileStats b{font-size:26px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .profileQuickGrid a>svg:first-child{background:var(--blue-tint);color:var(--purple);border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .notificationCard{border-radius:var(--r-m);border:1px solid var(--line);background:#fff;box-shadow:none;transition:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .notificationCard:hover{transform:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .notificationCard.unread{background:var(--blue-tint);border-color:#c3ccee}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .notificationIcon{background:var(--blue-tint);color:var(--purple);border-radius:var(--r-s);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .notifTabs em{background:var(--purple);background-image:none;border-radius:var(--r-s)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .chatPanel{border-radius:var(--r-l);border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .chatMessages{background:var(--paper)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .chatBubble{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .chatBubble.mine{background:var(--purple);background-image:none;color:#fff;border-radius:14px 14px 4px 14px;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .chatBubble.theirs{background:#fff;border:1px solid var(--line);border-radius:14px 14px 14px 4px;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .chatComposer textarea{border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .supportThread{border-radius:var(--r-m);transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .supportThread:hover{transform:none;box-shadow:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .empty{border-radius:var(--r-l);border:1px dashed #aab0bf;background:transparent;padding:44px 20px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .empty svg{color:var(--muted);animation:none}
+
+/* reviews, ratings, rails (growth.css) */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .reviewWriteBtn{background:var(--purple);background-image:none;border-radius:var(--r-m);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .reviewAvatar{background:var(--blue-tint);background-image:none;color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.reviewsSkel i,.notifSkel span,.notifSkel i){background:var(--soft);animation:none}
+
+/* ---------- 13. sign in ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .authBrand .logo{border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .authBrand h1{
+  font-family:var(--yn-display);font-size:clamp(38px,6.4vw,68px);line-height:1;letter-spacing:-.04em;
+  background:none;-webkit-background-clip:initial;background-clip:initial;-webkit-text-fill-color:currentColor;color:var(--ink);animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .authBrand p{color:var(--muted)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .login{border-radius:var(--r-l);background:#fff;border:1px solid var(--line);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .login h2{font-size:28px;letter-spacing:-.03em}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .googleBtn{border-radius:var(--r-m);transition:border-color .15s}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .googleBtn:hover{transform:none;border-color:var(--ink)}
+
+/* ---------- 14. software + services pages ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swBlob{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swBtn.buy{background:var(--purple);background-image:none;box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swBtn.buy::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swBtn.dl{background:var(--ok);background-image:none;box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swIcon{background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swCard:hover{transform:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swSkel i{background:var(--soft);animation:none}
+
+/* ---------- 15. motion: no staggered fly-ins, blurs or idle loops ---------- */
+.routeFx>main{animation:ynFade .18s ease backwards}
+.routeFx>main>*:not(.miniCheckout){animation:none!important}
+.routeFx>main>.miniCheckout{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(main.shop,.detail,.cartPage,.ordersPage,.walletPage,.profilePage)>*{animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop :is(.hero,.orb,.cartBadge,.profileAvatar,.walletGlow,.brandrow h1,.empty svg){animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cartTopButton::before{animation:none}
+
+/* ---------- 16. mobile ---------- */
+@media (max-width:560px){
+  html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .grid{gap:10px}
+  html:not([data-secret-theme="on"]):not(.yn-admin-page) .shop .pcopy{padding:9px 10px 11px}
+}
+
+/* =====================================================================
+   17+ : the rest of the customer screens (services, software, CV maker, book cover,
+   invitations, wallet extras, reviews, notifications, push, order tracking, scenes).
+   Same rules as above: flat fills, 1px borders, one blue, no shimmer sweeps, no glow.
+   Illustrations and product art (covers, invitation art, goal colours) are left alone.
+   ===================================================================== */
+
+/* ---------- 17. services + service shop ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcInk,html:not([data-secret-theme="on"]):not(.yn-admin-page) .swIcon{background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcTags li{border-color:var(--line);background:#fff}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcPage .svcAsk{box-shadow:none;border-radius:var(--r-m);padding:11px 18px;font-weight:600}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcPage .svcAsk::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcPage .svcAsk:hover{transform:none;box-shadow:none;filter:brightness(.92)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.svcPage .svcPrimary,.svcSheet .svcPrimary,.ssPayAgain){background:var(--purple);background-image:none;box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.svcPage,.svcSheet,.ssSheet,.ssOrder,.swPage,.swVideoCard,.cvm,.cvmPage) :is(button,a,input,textarea,select,label):focus-visible,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.svcFile:focus-within,.svcDrop:focus-within,.ssLinkBtn:focus-visible){outline:2px solid var(--purple);outline-offset:2px;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.svcField input:focus-visible,.svcField textarea:focus-visible){border-color:var(--purple);box-shadow:0 0 0 3px rgba(46,70,180,.16)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.svcDrop svg,.svcFile svg,.svcMineIcon,.svcAdminFile span,.svcPage .svcLink){color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.svcDrop:hover,.svcFile.has){border-color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcScrim,html:not([data-secret-theme="on"]):not(.yn-admin-page) .swScrim,html:not([data-secret-theme="on"]):not(.yn-admin-page) .reviewModal,html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcPick{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(22,26,38,.55)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcSheet{border-top:1px solid var(--line);border-radius:var(--r-l) var(--r-l) 0 0;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcSweep{background:var(--sale)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .svcAdminTabs button.on{background:var(--purple);border-color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.ssChip.on,.ssBig.on){border-color:var(--purple);box-shadow:none;background:var(--blue-tint)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssBig svg{color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssLinkBtn{border:1px solid var(--purple);color:var(--purple);border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.ssSummary,.saPreview){border:1px dashed var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssTrack li.past::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssTrack li.now::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssTrack li.past i,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssTrack li.now i{background:var(--purple);border-color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ssDownloads button{border:1px solid var(--purple);border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.saTabs button.on,.saBtns button.pri){background:var(--purple);border-color:var(--purple)}
+
+/* ---------- 18. software ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swPage{--sw:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swHero{background:var(--blue-deep);background-image:none;border-radius:var(--r-l);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.swRing,.swOrb,.swFly){animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swRing{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swOrb{background:rgba(255,255,255,.14);background-image:none;box-shadow:none;border:1px solid rgba(255,255,255,.25)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swFly span{-webkit-backdrop-filter:none;backdrop-filter:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swSteps::before{background:repeating-linear-gradient(90deg,var(--line) 0 8px,transparent 8px 15px)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.swStepIc,.swBtn.how svg,.swEmpty svg){color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swStepIc b{background:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swFilters button.on,html:not([data-secret-theme="on"]):not(.yn-admin-page) .swSeg button.on{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swVideoCard{border-top:1px solid var(--line);border-radius:var(--r-l)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swBar{background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .swBar i{background:var(--purple)}
+
+/* ---------- 19. CV maker ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmHero{background:#fff;background-image:none;border:1px solid var(--line);border-radius:var(--r-l)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.cvmSteps li.on i,.cvmLang.on,.cvmPayOpt.on){box-shadow:none;border-color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmCard.on{box-shadow:none;border-color:var(--ink);outline:1px solid var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmPrice{box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmBar{-webkit-backdrop-filter:none;backdrop-filter:none;background:#fff;border-top:1px solid var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmGo.pay{background:var(--ok);background-image:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmLangGlyph{background:var(--blue-tint);background-image:none;color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmAiBtn{background:var(--purple);background-image:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmGenGlow{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmGenScan{background:var(--purple);box-shadow:none;height:2px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .cvmGenBar i{background:var(--purple)}
+
+/* ---------- 20. book cover ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcBasketBar{background:#fff;background-image:none;border:1px solid var(--line);box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcHome .bcBasketBar{box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcAddDesign:not(:disabled)::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcHome .bcHero{background:var(--blue-deep);background-image:none;border-radius:var(--r-l)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcHome .bcHero::after{content:none;display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcShine{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcSwatch.on{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcText.frame{outline-color:rgba(46,70,180,.5)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcText.sel{outline-color:var(--purple);background:rgba(46,70,180,.08)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcaField.sel{box-shadow:0 0 0 3px rgba(46,70,180,.16)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .bcaBtnLink{color:var(--purple)}
+
+/* ---------- 21. invitations ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.ivStyle.on,.ivSwatch.on,.ivTpl.on,.ivSeg button.on,.ivModeSeg button.on){box-shadow:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.ivMusic,.ivTopBar,.ivLang){-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(255,255,255,.96)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .ivRow .ivRowThumb{background-image:none;background-color:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.gl code,.glHead svg,.glLink,.myInvIcon,.cvLType){color:var(--purple)}
+
+/* ---------- 22. reviews, share, push, notifications ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .reviewWriteBtn{background:var(--purple);background-image:none;box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .reviewAvatar{background:var(--blue-tint);background-image:none;color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.shareBtn,.reviewStarWord,.reviewPhotoPick,.reviewYou,.ratingWrite,.reviewsWhy>svg,.reviewItemBtn){color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.reviewsSkel i,.notifSkel span,.notifSkel i){background:var(--soft);background-image:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .reviewsBar i b{background:#d89a1c}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .adminReviewsTabs button.on{background:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .reviewModal{-webkit-backdrop-filter:none;backdrop-filter:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .pushIcon{color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .pushCard>button{background:var(--purple);background-image:none;box-shadow:none;border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifTabs{background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifTabs button.on{color:var(--ink);background:#fff;box-shadow:none;border:1px solid var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifTabs em{background:var(--sale);background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifReadAll{color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifReadAll:hover{background:var(--soft)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifPage .notificationCard>i{box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifPage .notificationCard.unread{border-left:3px solid var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notifSkel{border-color:var(--line)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .notificationButton[data-unread]::after{background:var(--sale)!important;background-image:none!important}
+
+/* ---------- 23. order tracking pictures: flat tints (the drawings on top are untouched) ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.box{background:#e6eaf8}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.warehouse{background:#e3e9f5}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.truck{background:#f6ead2}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.done{background:#e2f1e7}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.wait{background:#f6ecd0}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.cancelled{background:#f6e1e0}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.driver{background:#dff0ec}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osScene.moto{background:#e4eef6}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .osSteps li.now i{background:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .csBelt{background:var(--blue-deep);background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .csLabel{border-color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .csLabel::before{background:var(--purple);background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .csLabel small{color:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .msgBox{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(22,26,38,.55)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .msgBoxCard::before{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .msgBoxCard.wallet{--c:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .payDoneAmt{background:none;-webkit-text-fill-color:currentColor;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .afx-sent{--afx-b:var(--purple)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .afxGlow{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .afxBadge{background-image:none;background:var(--afx-b,var(--purple));box-shadow:none}
+
+/* ---------- 24. wallet extras (these rules were !important upstream) ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.wqBtn,.wqCard .scannerStart button,.wqCard .scannerFallback button,.wqWho i,.wqStripBtn.primary){background:var(--purple)!important;background-image:none!important;border-color:var(--purple)!important;box-shadow:none!important}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.wqLink){color:var(--purple)!important}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.wqTabs button.on,.wqChips button.on,.wqCard input:focus){border-color:var(--purple)!important;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqAmount:focus-within{border-color:var(--purple);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqPanel.wqAba{background:var(--blue-deep)!important;background-image:none!important;border-radius:var(--r-l);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqPanel.wqAba::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqPanel.wqAba::after,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqAbaBtn.primary::after,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqAba .wqQrBox::after{content:none!important;display:none!important;animation:none!important}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqAbaBtn.primary{color:var(--blue-deep)!important}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqAba .wqEyebrow{-webkit-backdrop-filter:none;backdrop-filter:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqFrame{box-shadow:0 0 0 999px rgba(0,0,0,.35);border-color:#fff}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqNode i,html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqNode.from i{background:var(--purple);background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqNode.from i{background:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wqGot{background:var(--ok);background-image:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlTile{-webkit-backdrop-filter:none;backdrop-filter:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlTile::after,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlPanel::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlForm .wide:not(:disabled)::after,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .sectionHead h2::after{content:none;display:none;animation:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .walletPage .wlField:focus-within{box-shadow:0 0 0 3px rgba(46,70,180,.16)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.top .icon.walletQrTop,.top a.icon.cartTopButton){background:#fff;background-image:none;border:1px solid var(--line);color:var(--ink);box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .top .icon.walletQrTop::before,
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .top a.icon.cartTopButton::before{content:none;display:none;animation:none}
+
+/* ---------- 25. savings goals ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgPlus{background:var(--purple);background-image:none;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgSave,html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgSave{background:var(--purple)!important;background-image:none!important;box-shadow:none!important}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.wgPct,.wgGlass,.wgOverlay.in){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgOverlay.in{background:rgba(22,26,38,.55)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgCard.done::after{content:none;display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.wgPrice:focus-within,.wgSheet input.wgText:focus){border-color:var(--purple)!important;box-shadow:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgSkel{background:var(--soft);background-image:none;animation:none}
+
+/* ---------- 26. global motion leftovers ---------- */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .mvRipple{display:none}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .mvProgress{background:var(--purple);background-image:none;box-shadow:none;height:2px}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(input,textarea):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus{box-shadow:0 0 0 3px rgba(46,70,180,.16)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wlField:focus-within{box-shadow:0 0 0 3px rgba(46,70,180,.16)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.cartItem,.ordercard,.transaction,.notificationCard,.cartrow):hover{box-shadow:none;transform:none;border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .skeleton,html:not([data-secret-theme="on"]):not(.yn-admin-page) .shimmer{animation:none}
+
+/* goals: shop picker */
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgShopBtn{border:1px solid var(--line);border-radius:var(--r-m)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgShopBtn:hover,html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgShopItem:hover{border-color:var(--ink)}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) :is(.wgShopItem,.wgShopBack,.wgShopSearch){border:1px solid var(--line);border-radius:var(--r-m);background:#fff}
+html:not([data-secret-theme="on"]):not(.yn-admin-page) .wgShopImg{background-color:var(--soft)}

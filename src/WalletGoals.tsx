@@ -1,11 +1,11 @@
-/* Wallet Goals: pick a category (or your own picture) + a price, then watch the picture fill with colour as the wallet grows.
+/* Wallet Goals: pick a product from the shop, a category or your own picture + a price, then watch the picture fill with colour as the wallet grows.
    A goal never moves money. Progress = the wallet balance in the goal's currency compared with the goal price.
    Saved in Supabase (supabase-wallet-goals.sql); until that file is run, goals are kept on this device so it still works. */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, X, Check, Sparkles, ImagePlus, Trash2, Smartphone, Laptop, Plane, Bike, Home, GraduationCap, Gift, Shirt,
-  Gamepad2, Camera, Heart, ShieldCheck, PartyPopper,
+  Gamepad2, Camera, Heart, ShieldCheck, PartyPopper, Store, Search, ChevronLeft,
 } from 'lucide-react';
 import { supabase } from './supabase';
 import { tr } from './lang';
@@ -185,6 +185,52 @@ function AddTile({ big, onClick }: { big?: boolean; onClick: () => void }) {
   );
 }
 
+
+/* ----------------------------------------------------------------- pick a product from the shop */
+type ShopItem = { id: string; name: string; price: number; original_price: number | null; image: string | null; currency: Cur };
+let shopCache: ShopItem[] | null = null;
+function ShopPicker({ onBack, onPick }: { onBack: () => void; onPick: (p: ShopItem) => void }) {
+  const [items, setItems] = useState<ShopItem[] | null>(shopCache);
+  const [failed, setFailed] = useState(false);
+  const [q, setQ] = useState('');
+  useEffect(() => {
+    let on = true;
+    (async () => {
+      const r = await supabase.from('products').select('id,name,price,original_price,main_image_url,currency,store_page').eq('status', 'published').order('created_at', { ascending: false }).limit(400);
+      if (!on) return;
+      if (r.error) { if (!shopCache) setFailed(true); return; }
+      /* same list as Home: products made for the Snacks page are not part of it */
+      shopCache = (r.data || []).filter((x: any) => !x.store_page && Number(x.price) > 0).map((x: any) => ({ id: x.id, name: String(x.name || ''), price: Number(x.price), original_price: x.original_price ? Number(x.original_price) : null, image: x.main_image_url || null, currency: x.currency === 'KHR' ? 'KHR' : 'USD' } as ShopItem));
+      setItems(shopCache);
+    })();
+    return () => { on = false; };
+  }, []);
+  const list = useMemo(() => { const t = q.trim().toLowerCase(); return (items || []).filter(x => !t || x.name.toLowerCase().includes(t)); }, [items, q]);
+  return (
+    <div className="wgShop">
+      <div className="wgShopHead">
+        <button type="button" className="wgShopBack" onClick={onBack} aria-label={tr('Back', 'ត្រឡប់ក្រោយ')}><ChevronLeft /></button>
+        <h3>{tr('Choose from the shop', 'ជ្រើសពីហាង')}</h3>
+      </div>
+      <label className="wgShopSearch"><Search /><input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Search products', 'ស្វែងរកទំនិញ')} aria-label={tr('Search products', 'ស្វែងរកទំនិញ')} /></label>
+      {items === null && !failed && <div className="wgShopGrid" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div className="wgSkel" key={i} />)}</div>}
+      {failed && <p className="wgErr">{tr('The shop could not be loaded. Check your connection and try again.', 'មិនអាចផ្ទុកហាងបានទេ។ សូមពិនិត្យអ៊ីនធឺណិត រួចព្យាយាមម្តងទៀត។')}</p>}
+      {items && list.length === 0 && <p className="wgShopEmpty">{q ? tr('No product matches "' + q.trim() + '".', 'រកមិនឃើញទំនិញ "' + q.trim() + '" ទេ។') : tr('There are no products in the shop yet.', 'មិនទាន់មានទំនិញក្នុងហាងទេ។')}</p>}
+      {items && list.length > 0 && (
+        <div className="wgShopGrid">
+          {list.map(x => (
+            <button type="button" key={x.id} className="wgShopItem" onClick={() => onPick(x)}>
+              <span className="wgShopImg" style={x.image ? { backgroundImage: `url("${x.image.replace(/"/g, '%22')}")` } : undefined}>{!x.image && <Store />}</span>
+              <b>{x.name}</b>
+              <small>{fmt(x.price, x.currency)}{x.original_price && x.original_price > x.price ? <del>{fmt(x.original_price, x.currency)}</del> : null}</small>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------------- the sheet (new / edit) */
 function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: () => void; onSave: (d: Draft, id?: string) => Promise<string | null>; onDelete: (id: string) => void }) {
   const [shown, setShown] = useState(false);
@@ -197,6 +243,7 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
   const [amountTouched, setAmountTouched] = useState(!!goal);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [shop, setShop] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
   const drag = useRef<{ y0: number; dy: number } | null>(null);
@@ -224,6 +271,10 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
     if (n === cur) return;
     setCur(n);
     if (!amountTouched) setAmount(String(defaultPrice(c, n) || ''));
+  }
+  function pickProduct(p: ShopItem) {
+    setCat('custom'); setCur(p.currency); setTitle(p.name.slice(0, 60)); setAmount(String(p.price)); setImage(p.image);
+    setTitleTouched(true); setAmountTouched(true); setErr(''); setShop(false);
   }
   async function onFile(f?: File | null) {
     if (!f) return;
@@ -256,6 +307,7 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
         <div className="wgGrab" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}><i /></div>
         <button type="button" className="wgX" onClick={close} aria-label={tr('Close', 'បិទ')}><X /></button>
 
+        {shop ? <ShopPicker onBack={() => setShop(false)} onPick={pickProduct} /> : <>
         <div className="wgPreview" style={{ '--c1': c.a, '--c2': c.b } as React.CSSProperties}>
           <div className="wgPreviewArt" key={cat + (image ? 'p' : 'c')}><Art image={image} cat={c} /></div>
           <div className="wgPreviewShade" />
@@ -266,6 +318,8 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
           </div>
           <input ref={file} type="file" accept="image/*" hidden onChange={e => { onFile(e.target.files?.[0]); e.target.value = ''; }} />
         </div>
+
+        <button type="button" className="wgShopBtn" onClick={() => setShop(true)}><Store />{tr('Choose a product from the shop', 'ជ្រើសទំនិញពីហាង')}</button>
 
         <div className="wgCats" role="listbox" aria-label={tr('Category', 'ប្រភេទ')}>
           {cats.map((x, i) => (
@@ -289,6 +343,7 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
           <button type="button" className="wgSave" disabled={!ok || busy} onClick={submit}>{busy ? tr('Saving…', 'កំពុងរក្សាទុក…') : goal ? tr('Save', 'រក្សាទុក') : tr('Create goal', 'បង្កើតគោលដៅ')}<PartyPopper /></button>
           {goal && <button type="button" className="wgDel" onClick={() => { onDelete(goal.id); close(); }}><Trash2 />{tr('Delete goal', 'លុបគោលដៅ')}</button>}
         </div>
+        </>}
       </div>
     </div>,
     document.body,

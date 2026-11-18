@@ -2,6 +2,16 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: goals can be picked from the shop
+- In the goal sheet (Wallet, Goals) a new **Choose a product from the shop** button opens a searchable list of your published products (same list as Home, Snacks-only items left out). Tapping one fills in the goal's name, picture and price (in the product's currency). You can still edit any of them before saving.
+- `src/WalletGoals.tsx`, `src/walletGoals.css`, `src/restyle.css`. No SQL change: the goal stores the product's name, picture link and price, not the product itself, so it keeps its price if the product later changes.
+
+## Unreleased: customer side "market stall" restyle
+- Customer screens now use a flat paper-and-ink look instead of the purple Aurora gradients: one ink blue, one sale red, 1px borders instead of glow shadows, no glass blur, no shimmer sweeps or idle floating.
+- New `src/restyle.css`, imported LAST in `main.tsx`; every rule is scoped to customer screens, so admin and the secret themes (Chiikawa, Spidey, Coraline) are unchanged. Covers home, product, cart, checkout, orders, wallet, goals, profile, notifications, sign in, services, software, CV maker, book cover, invitations and reviews.
+- Fonts: Bricolage Grotesque (headings), Instrument Sans (text), Noto Sans Khmer (Khmer text), added to `index.html`. Splash screen, `theme-color` and the web manifest colour updated to match.
+- To undo: remove the `import'./restyle.css'` line in `main.tsx`.
+
 ## Unreleased: YN Vision (search by photo, $0)
 - Camera button inside the home search bar; take or upload a photo and see visually similar products (glass sheet, HarmonyOS-style motion, reduced-motion respected). Free open-source CLIP model runs in the browser: no paid API, no server cost. Text search unchanged. Details in README. Needs one `npm install`.
 
