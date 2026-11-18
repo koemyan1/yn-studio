@@ -188,22 +188,34 @@ function AddTile({ big, onClick }: { big?: boolean; onClick: () => void }) {
 
 /* ----------------------------------------------------------------- pick a product from the shop */
 type ShopItem = { id: string; name: string; price: number; original_price: number | null; image: string | null; currency: Cur };
+/** Home's own price lookup (the first option's price when a product is priced through its options). Passed in from main.tsx so both show the same number. */
+export type ShopPrices = (rows: any[]) => Promise<Map<string, number>>;
 let shopCache: ShopItem[] | null = null;
-function ShopPicker({ onBack, onPick }: { onBack: () => void; onPick: (p: ShopItem) => void }) {
+function ShopPicker({ onBack, onPick, shopPrices }: { onBack: () => void; onPick: (p: ShopItem) => void; shopPrices?: ShopPrices }) {
   const [items, setItems] = useState<ShopItem[] | null>(shopCache);
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState('');
   useEffect(() => {
     let on = true;
     (async () => {
-      const r = await supabase.from('products').select('id,name,price,original_price,main_image_url,currency,store_page').eq('status', 'published').order('created_at', { ascending: false }).limit(400);
+      /* select('*') like Home does, so a column this shop does not have can never stop the list from loading */
+      const r = await supabase.from('products').select('*').eq('status', 'published').order('created_at', { ascending: false }).limit(400);
       if (!on) return;
       if (r.error) { if (!shopCache) setFailed(true); return; }
       /* same list as Home: products made for the Snacks page are not part of it */
-      shopCache = (r.data || []).filter((x: any) => !x.store_page && Number(x.price) > 0).map((x: any) => ({ id: x.id, name: String(x.name || ''), price: Number(x.price), original_price: x.original_price ? Number(x.original_price) : null, image: x.main_image_url || null, currency: x.currency === 'KHR' ? 'KHR' : 'USD' } as ShopItem));
+      const rows: any[] = (r.data || []).filter((x: any) => !x.store_page);
+      /* same price as the card on Home: a product priced through its options has no usable base price */
+      let shown = new Map<string, number>();
+      try { if (shopPrices) shown = await shopPrices(rows); } catch { /* fall back to each product's own price */ }
+      if (!on) return;
+      shopCache = rows.map((x: any) => {
+        const price = Number(shown.has(x.id) ? shown.get(x.id) : x.price) || 0;
+        return { id: x.id, name: String(x.name || ''), price, original_price: x.original_price ? Number(x.original_price) : null, image: x.main_image_url || null, currency: x.currency === 'KHR' ? 'KHR' : 'USD' } as ShopItem;
+      }).filter(x => x.price > 0);
       setItems(shopCache);
     })();
     return () => { on = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const list = useMemo(() => { const t = q.trim().toLowerCase(); return (items || []).filter(x => !t || x.name.toLowerCase().includes(t)); }, [items, q]);
   return (
@@ -232,7 +244,7 @@ function ShopPicker({ onBack, onPick }: { onBack: () => void; onPick: (p: ShopIt
 }
 
 /* ----------------------------------------------------------------- the sheet (new / edit) */
-function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: () => void; onSave: (d: Draft, id?: string) => Promise<string | null>; onDelete: (id: string) => void }) {
+function GoalSheet({ goal, onClose, onSave, onDelete, shopPrices }: { goal?: Goal; onClose: () => void; onSave: (d: Draft, id?: string) => Promise<string | null>; onDelete: (id: string) => void; shopPrices?: ShopPrices }) {
   const [shown, setShown] = useState(false);
   const [cat, setCat] = useState(goal?.category || 'phone');
   const [cur, setCur] = useState<Cur>(goal?.currency || 'USD');
@@ -307,7 +319,7 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
         <div className="wgGrab" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}><i /></div>
         <button type="button" className="wgX" onClick={close} aria-label={tr('Close', 'បិទ')}><X /></button>
 
-        {shop ? <ShopPicker onBack={() => setShop(false)} onPick={pickProduct} /> : <>
+        {shop ? <ShopPicker onBack={() => setShop(false)} onPick={pickProduct} shopPrices={shopPrices} /> : <>
         <div className="wgPreview" style={{ '--c1': c.a, '--c2': c.b } as React.CSSProperties}>
           <div className="wgPreviewArt" key={cat + (image ? 'p' : 'c')}><Art image={image} cat={c} /></div>
           <div className="wgPreviewShade" />
@@ -351,7 +363,7 @@ function GoalSheet({ goal, onClose, onSave, onDelete }: { goal?: Goal; onClose: 
 }
 
 /* ----------------------------------------------------------------- section */
-export default function WalletGoals({ usd, khr, ready }: { usd: number; khr: number; ready: boolean }) {
+export default function WalletGoals({ usd, khr, ready, shopPrices }: { usd: number; khr: number; ready: boolean; shopPrices?: ShopPrices }) {
   const { goals, save, remove } = useGoals();
   const [sheet, setSheet] = useState<null | { goal?: Goal }>(null);
   const [leaving, setLeaving] = useState<string | null>(null);
@@ -374,7 +386,7 @@ export default function WalletGoals({ usd, khr, ready }: { usd: number; khr: num
           {canAdd && <AddTile onClick={() => setSheet({})} />}
         </div>
       )}
-      {sheet && <GoalSheet key={sheet.goal?.id || 'new'} goal={sheet.goal} onClose={() => setSheet(null)} onSave={save} onDelete={del} />}
+      {sheet && <GoalSheet key={sheet.goal?.id || 'new'} goal={sheet.goal} onClose={() => setSheet(null)} onSave={save} onDelete={del} shopPrices={shopPrices} />}
     </section>
   );
 }

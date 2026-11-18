@@ -4,7 +4,8 @@ Newest first. Versioned releases (v3 to v22) are included in full below. Smaller
 
 ## Unreleased: goals can be picked from the shop
 - In the goal sheet (Wallet, Goals) a new **Choose a product from the shop** button opens a searchable list of your published products (same list as Home, Snacks-only items left out). Tapping one fills in the goal's name, picture and price (in the product's currency). You can still edit any of them before saving.
-- `src/WalletGoals.tsx`, `src/walletGoals.css`, `src/restyle.css`. No SQL change: the goal stores the product's name, picture link and price, not the product itself, so it keeps its price if the product later changes.
+- The price is the same one the product card shows on Home (a product priced through its options uses its first option's price), so the goal amount matches the marketplace. Products whose own price is 0 but have option prices are listed too, and the list loads with `select('*')` like Home, so it cannot fail on a missing column.
+- `src/WalletGoals.tsx`, `src/walletGoals.css`, `src/restyle.css`, `src/main.tsx` (hands Home's `displayPrices` to the Goals section). No SQL change: the goal stores the product's name, picture link and price, not the product itself, so it keeps its price if the product later changes.
 
 ## Unreleased: customer side "market stall" restyle
 - Customer screens now use a flat paper-and-ink look instead of the purple Aurora gradients: one ink blue, one sale red, 1px borders instead of glow shadows, no glass blur, no shimmer sweeps or idle floating.

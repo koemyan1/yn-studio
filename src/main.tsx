@@ -602,7 +602,7 @@ function WalletPage(){
      <div className="wlTile"><div className="wlLabel"><i className="wlCoin">៛</i>{tr('Riel wallet','កាបូបរៀល')}</div><div className="wlAmt"><RollNumber n={fmtCur(w?.balance_khr,'KHR')}/></div><button type="button" className="wlAdd" onClick={()=>addTo('KHR')}><Plus/>{tr('Add','បន្ថែម')}</button></div>
     </div>
    </section>
-   <WalletGoals usd={Number(w?.balance||0)} khr={Number(w?.balance_khr||0)} ready={!!w}/>
+   <WalletGoals usd={Number(w?.balance||0)} khr={Number(w?.balance_khr||0)} ready={!!w} shopPrices={displayPrices}/>
    <section className="walletPayPanel wlPanel" id="wlTopUp">
     <h2>{tr('Add money','បញ្ចូលប្រាក់')}</h2>
     
