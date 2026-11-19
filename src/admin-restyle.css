@@ -456,3 +456,4 @@ html .admin .lvPage .lvPin .lvPulse{background:rgba(46,70,180,.35)}
 html:root .admin.admin-dark .bcaBadge.paid,html:root .admin.admin-dark .bcaBadge.submitted{background:var(--a-warn-bg);color:var(--a-warn)}
 html:root .admin.admin-dark .bcaBadge.printed,html:root .admin.admin-dark .bcaBadge.delivered{background:var(--a-ok-bg);color:var(--a-ok)}
 html:root .admin.admin-dark .bcaBadge.cancelled{background:var(--a-bad-bg);color:var(--a-bad)}
+html .admin main div.wbF{color:var(--a-text);font-weight:600}

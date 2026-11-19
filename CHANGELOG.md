@@ -2,6 +2,12 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: admin can change the cover name frame
+- Admin, Wedding editor, **Cover** tab: new **Names picture** field (the gold frame on the invitation's front cover). Upload a picture (a PNG with a see-through background looks best), paste a link, **Remove** it to show the plain text names instead, or press **Use the default** to go back to the built-in frame. The preview next to it updates at once (press **Cover** above the preview to see it); it is saved with the invitation like every other field.
+- The text names field is now labelled as the fallback used only when there is no picture.
+- Picture paths written relatively in `content.js` (`img/...`) are turned into absolute ones in the editor (also for invitations saved earlier), so the small preview of the frame shows. No SQL change.
+- `src/AdminWeddingBraya.tsx`, `src/admin-wedding-braya.css` (wide thumbnail), `src/admin-restyle.css` (label weight).
+
 ## Unreleased: new gold name frame on the Barang & Navin cover
 - `public/wedding/braya/img/cover-names.png` (the gold frame with the two names on the invitation's front cover) is replaced by the new frame. The empty transparent border around it was trimmed so it shows at the same size and place as before (315 x 210 px on a 390px phone). The file is also about half the size (553 KB, was 1043 KB). No code change.
 - If an invitation was saved from the editor with its own uploaded names picture, that saved picture still wins: use Cover, Names picture, Upload to swap it there.

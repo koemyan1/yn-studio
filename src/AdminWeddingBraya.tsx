@@ -25,6 +25,9 @@ function setAt(o: Doc, path: string, v: any) {
   for (const k of keys) cur = cur[k] ??= {};
   cur[last] = v;
 }
+/** Pictures named relatively in content.js (img/…) live in /wedding/braya/: make them absolute so the thumbnails and the preview find them. */
+const BASE_IMAGES = ['bgImage', 'cover.bgImage', 'cover.namesImage'];
+const absImages = (d: Doc): Doc => { for (const p of BASE_IMAGES) { const v = getAt(d, p); if (typeof v === 'string' && v && !/^(https?:|data:|\/)/.test(v)) setAt(d, p, BASE + 'braya/' + v); } return d; };
 /** Invitations saved before the gold update hold the old brown / grey text colours: swap them for the new gold defaults. */
 const OLD_COLORS: Record<string, string> = { text: '#3d3a2e', muted: '#6f6a58', card: 'rgba(255,255,255,0.55)' };
 const fixOld = (d: Doc, def: Doc): Doc => { const c = d.colors || (d.colors = {}); for (const k in OLD_COLORS) if (c[k] === OLD_COLORS[k]) c[k] = def.colors?.[k]; return d; };
@@ -98,7 +101,7 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
       const def = await loadDefaults();
       if (!live) return;
       if (!def) { setErr('Could not load /wedding/braya/content.js.'); return; }
-      for (const p of ['bgImage', 'cover.bgImage']) { const v = getAt(def, p); if (typeof v === 'string' && !/^(https?:|data:|\/)/.test(v)) setAt(def, p, BASE + 'braya/' + v); }
+      absImages(def);
       setBase(def);
       let start = clone(def), t = '';
       if (invParam) {
@@ -110,7 +113,7 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
         setRow({ id: r.data.id, title: r.data.title, status: r.data.status, owner_id: r.data.owner_id }); t = r.data.title || '';
       }
       try { const s = localStorage.getItem(draftKey); if (s) { start = merge(clone(def), JSON.parse(s)); setDirty(true); say('Restored your unsaved edits'); } } catch { /* ignore */ }
-      fixOld(start, def); setD(start); setTitle(t || `${start.groom?.en || ''} & ${start.bride?.en || ''}`.trim());
+      fixOld(start, def); absImages(start); setD(start); setTitle(t || `${start.groom?.en || ''} & ${start.bride?.en || ''}`.trim());
     })();
     return () => { live = false; };
   }, [invParam, draftKey, say]);
@@ -147,16 +150,18 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
   const Color = (label: string, path: string) => { const v = getAt(D!, path); return <label className="wbF" key={path}>{label}
     <input type="color" value={/^#[0-9a-f]{6}$/i.test(v) ? v : '#000000'} onChange={e => update(path, e.target.value)} /></label>; };
   const Check = (label: string, path: string) => <label className="wbCk" key={path}><input type="checkbox" checked={getAt(D!, path) !== false} onChange={e => update(path, e.target.checked)} />{label}</label>;
-  const Img = (label: string, path: string) => {
+  const Img = (label: string, path: string, opts?: { wide?: boolean; resetTo?: string }) => {
     const v = getAt(D!, path) as string | undefined;
+    const reset = opts?.resetTo;
     return <div className="wbF" key={path}>{label}
       <div className="wbRow">
-        {v ? <img className="wbThumb" src={v} alt="" /> : null}
+        {v ? <img className={'wbThumb' + (opts?.wide ? ' wide' : '')} src={v} alt="" /> : null}
         <label className="button secondary wbUp"><ImagePlus />Upload<input type="file" accept="image/*" hidden onChange={async e => {
           const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
           try { update(path, await uploadPicture(f)); say('Picture added'); } catch (x: any) { say(x.message || 'Upload failed'); }
         }} /></label>
         {v ? <button type="button" className="secondary" onClick={() => update(path, '')}>Remove</button> : null}
+        {reset && v !== reset ? <button type="button" className="secondary" onClick={() => update(path, reset)}><RotateCcw />Use the default</button> : null}
       </div>
       <input placeholder="…or paste an image link" value={v && v.startsWith('data:') ? '' : v ?? ''} onChange={e => update(path, e.target.value)} />
     </div>;
@@ -217,7 +222,9 @@ export default function AdminWeddingBraya({ Shell }: { Shell: Shell }) {
 
   const pane: Record<Tab, React.ReactNode> = {
     Cover: <>
-      {Text('Names (new line = new line)', 'cover.names', true)}
+      {Img('Names picture: the gold frame on the cover (replaces the text names)', 'cover.namesImage', { wide: true, resetTo: base.cover?.namesImage })}
+      {Text('Names text, used only when there is no names picture (new line = new line)', 'cover.names', true)}
+      <p className="muted">Tip: a PNG with a see-through background looks best. Use the Cover button above the preview to see it.</p>
       {Text('Cover background video link (.mp4)', 'cover.video')}
       {Img('Cover background picture', 'cover.bgImage')}
       {Text('Label above guest name', 'cover.guestLabel')}

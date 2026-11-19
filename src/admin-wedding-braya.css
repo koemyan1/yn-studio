@@ -20,6 +20,7 @@
 .wbCk{display:flex;align-items:center;gap:8px;font-size:14px}.wbCk input{width:auto}
 .wbRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.wbRow .grow{flex:1;min-width:0}
 .wbThumb{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--a-line);background:var(--a-card2)}
+.wbThumb.wide{width:112px;height:64px;object-fit:contain;padding:4px}
 .wbUp{cursor:pointer}
 .wbItem{display:grid;gap:10px;padding:12px;border:1px solid var(--a-line);border-radius:14px;background:var(--a-card2)}
 .wbItem.wbRow{display:flex}
