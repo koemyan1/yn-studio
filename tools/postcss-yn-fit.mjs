@@ -11,7 +11,7 @@
  */
 const FIT = ':where(html[data-yn-fit])';
 const NOT_FIT = ':where(html:not([data-yn-fit]))';
-const SKIP_FILES = /admin\.css$/;
+const SKIP_FILES = /admin(-restyle)?\.css$/;
 
 function withPrefix(sel, prefix, htmlForm) {
   const s = sel.trim();

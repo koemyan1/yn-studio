@@ -2,6 +2,19 @@
 
 Newest first. Versioned releases (v3 to v22) are included in full below. Smaller feature notes are indexed at the end; each one is a full file in [`docs/changelog/`](docs/changelog/).
 
+## Unreleased: new gold name frame on the Barang & Navin cover
+- `public/wedding/braya/img/cover-names.png` (the gold frame with the two names on the invitation's front cover) is replaced by the new frame. The empty transparent border around it was trimmed so it shows at the same size and place as before (315 x 210 px on a 390px phone). The file is also about half the size (553 KB, was 1043 KB). No code change.
+- If an invitation was saved from the editor with its own uploaded names picture, that saved picture still wins: use Cover, Names picture, Upload to swap it there.
+
+## Unreleased: admin "market stall" restyle
+- The admin now matches the customer side: flat paper ground, white sheets with 1px rules, one ink blue (sale red for danger), Bricolage Grotesque headings and Instrument Sans text, small radii, no gradients, glass blur, glow, aurora, shimmer or idle motion. Light and dark mode both done (dark is the same system on an ink ground, toggle unchanged).
+- New `src/admin-restyle.css`, imported right after `restyle.css` in `main.tsx`. Every rule is scoped to `.admin`, so the customer side and the secret themes are untouched. It covers the sidebar (also the phone drawer), top bar, stat tiles, welcome strip, quick links, tables, forms, buttons, status pills, notices, orders, customers, debt, categories, themes, support chat, live visitors (including map pins), toast and save bars, book-cover admin, service-shop admin and the wedding editor's controls.
+- The three admin skin sheets `admin-motion.css`, `admin-v3.css` and `admin-aurora.css` are no longer imported (their purple gradients and one catch-all button rule fought every other component). The files and `adminMotion.tsx` are still in `src/`; the cursor glow and click ripples it creates are hidden by CSS.
+- Kept on purpose: the illustrated page banners and action scenes keep their own colours and animation; the wedding heart badge keeps its rose and gold; theme previews show the theme's own colours.
+- Also fixed: below 1000px the support-chat thread list was pinned to the bottom of the screen by an old `.admin aside` rule; it now sits in the page.
+- `tools/postcss-yn-fit.mjs`: `admin-restyle.css` is skipped like `admin.css` (the fit mode never runs in the admin).
+- To undo: remove the `import'./admin-restyle.css'` line in `main.tsx` and put back `import'./admin-motion.css';import'./admin-v3.css';import'./admin-aurora.css';` (they went before `growth.css`).
+
 ## Unreleased: goals can be picked from the shop
 - In the goal sheet (Wallet, Goals) a new **Choose a product from the shop** button opens a searchable list of your published products (same list as Home, Snacks-only items left out). Tapping one fills in the goal's name, picture and price (in the product's currency). You can still edit any of them before saving.
 - The price is the same one the product card shows on Home (a product priced through its options uses its first option's price), so the goal amount matches the marketplace. Products whose own price is 0 but have option prices are listed too, and the list loads with `select('*')` like Home, so it cannot fail on a missing column.

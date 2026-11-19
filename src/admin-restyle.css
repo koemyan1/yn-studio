@@ -1,0 +1,458 @@
+/* =====================================================================
+   YN Studio — admin, "market stall" restyle.
+   Same direction as src/restyle.css (the customer side), applied to the admin so both halves feel like one shop:
+     - flat paper ground, white sheets, 1px ink-blue-grey rules
+     - one accent (ballpoint ink blue) + one signal colour (sale red)
+     - no gradients, no gradient text, no glass blur, no glow shadows, no aurora
+     - small radii (6–14px), real borders instead of shadows
+     - no idle motion: nothing floats, tilts, shines or pulses (the illustrated scenes keep their own animation)
+   Dark mode (the admin's own toggle) is the same system on an ink ground.
+
+   This file REPLACES admin-motion.css, admin-v3.css and admin-aurora.css (they are no longer imported in
+   main.tsx; the files are kept so the old look can be restored — see CHANGELOG). It is loaded after
+   restyle.css. Every rule is scoped to  .admin  so the customer side is untouched.
+
+   Plain CSS on purpose (no nesting): the admin also runs inside the Android / iOS shells.
+   ===================================================================== */
+
+/* ---------- 0. tokens ---------- */
+html .admin{
+  --paper:#f1f2ef;--sheet:#fff;--ink:#161a26;--muted:#626877;--line:#d8dbe2;--soft:#e9ecf3;
+  --blue:#2e46b4;--blue-deep:#22338a;--blue-tint:#e6eaf8;--sale:#d23a2a;--ok:#1f7a4d;
+  --r-s:6px;--r-m:10px;--r-l:14px;
+  --yn-display:'Bricolage Grotesque','Instrument Sans','Noto Sans Khmer',ui-sans-serif,system-ui,sans-serif;
+  --yn-body:'Instrument Sans','Noto Sans Khmer',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+
+  /* the admin's own variables (admin.css) */
+  --a-bg:#f1f2ef;--a-card:#fff;--a-card2:#f7f8f6;--a-line:#d8dbe2;--a-line2:#c6cad5;
+  --a-text:#161a26;--a-mute:#626877;--a-soft:#e9ecf3;--a-accent:#2e46b4;--a-accent2:#2e46b4;
+  --a-shadow:none;--a-radius:14px;--a-side:248px;
+  /* new ones used below */
+  --a-btn:#2e46b4;--a-btn-h:#22338a;--a-on:#fff;--a-ring:rgba(46,70,180,.18);
+  --a-tint:#e6eaf8;--a-tint-line:#c3ccee;--a-tint-ink:#22338a;
+  --a-ok-bg:#e2f1e7;--a-ok:#1f7a4d;--a-warn-bg:#f6ecd0;--a-warn:#8a5a00;--a-bad-bg:#f6e1e0;--a-bad:#b3281b;
+  --a-neutral-bg:#e9ecf3;--a-neutral:#4a5163;--a-sale:#d23a2a;--a-pop:0 4px 18px rgba(22,26,38,.12);
+
+  /* older sheets read these names (style.css / cool.css / services / software …) */
+  --purple:#2e46b4;--purple2:#2e46b4;--card:#fff;--shadow:none;--panel:#fff;
+  --admin-bg:#f1f2ef;--admin-card:#fff;--admin-card2:#f7f8f6;--admin-line:#d8dbe2;--admin-soft:#e9ecf3;
+  --admin-text:#161a26;--admin-muted:#626877;
+  --svc:#2e46b4;--svc-line:#d8dbe2;--sw:#2e46b4;--sw-line:#d8dbe2;
+  --am-ease:cubic-bezier(.2,.7,.2,1);--am-spring:cubic-bezier(.2,.7,.2,1);
+
+  font-family:var(--yn-body);color:var(--a-text);
+}
+html .admin:not(.csOverlay){background:var(--a-bg)}
+
+html:root .admin.admin-dark{
+  --paper:#0f1218;--sheet:#171b24;--ink:#eceef4;--muted:#9aa1b3;--line:#272d3b;--soft:#212736;
+  --blue:#93a5f4;--blue-deep:#c2ccfa;--blue-tint:#1f2848;--sale:#ef6a5a;--ok:#6fd09a;
+  --a-bg:#0f1218;--a-card:#171b24;--a-card2:#1c212c;--a-line:#272d3b;--a-line2:#353c4e;
+  --a-text:#eceef4;--a-mute:#9aa1b3;--a-soft:#212736;--a-accent:#93a5f4;--a-accent2:#93a5f4;
+  --a-btn:#3c56cc;--a-btn-h:#4a64d8;--a-on:#fff;--a-ring:rgba(147,165,244,.28);
+  --a-tint:#1f2848;--a-tint-line:#33407a;--a-tint-ink:#c2ccfa;
+  --a-ok-bg:#15301f;--a-ok:#6fd09a;--a-warn-bg:#3a2d12;--a-warn:#e8bd62;--a-bad-bg:#3b1a1a;--a-bad:#f0968c;
+  --a-neutral-bg:#232938;--a-neutral:#b4bacb;--a-sale:#ef6a5a;--a-pop:0 8px 28px rgba(0,0,0,.45);
+  --purple:#93a5f4;--purple2:#93a5f4;--card:#171b24;--panel:#171b24;
+  --admin-bg:#0f1218;--admin-card:#171b24;--admin-card2:#1c212c;--admin-line:#272d3b;--admin-soft:#212736;
+  --admin-text:#eceef4;--admin-muted:#9aa1b3;
+  --svc:#93a5f4;--svc-line:#272d3b;--sw:#93a5f4;--sw-line:#272d3b;
+  color-scheme:dark;
+}
+html:root .admin.admin-dark:not(.csOverlay){background:var(--a-bg)!important}
+html:root .admin.admin-dark main{background:transparent}
+
+/* the page behind the admin (set on <html>/<body> by AdminShell) */
+html.yn-admin-page,html.yn-admin-page body.yn-admin-page{background:#f1f2ef!important;color:#161a26!important}
+html.yn-admin-dark-page,html.yn-admin-dark-page body.yn-admin-dark-page{background:#0f1218!important;color:#eceef4!important}
+
+/* aurora, scroll bar, cursor glow and click ripples: gone */
+html .admin::before,html .admin::after{content:none;display:none;animation:none}
+html .amCursor,html .amRipple{display:none!important}
+
+/* ---------- 1. type ---------- */
+html .admin :is(h1,h2,h3){font-family:var(--yn-display);font-weight:700;letter-spacing:-.025em;color:var(--a-text);
+  background:none;-webkit-background-clip:initial;background-clip:initial;-webkit-text-fill-color:currentColor}
+html .admin :is(button,input,textarea,select){font-family:inherit}
+html .admin :is(button,a,input,textarea,select,summary):focus-visible{outline:2px solid var(--a-accent);outline-offset:2px;box-shadow:none}
+html .admin .muted,html .admin small{color:var(--a-mute)}
+
+/* eyebrows: small quiet label, no accent colour, no pill */
+html .admin .eyebrow{display:inline;padding:0;border:0;border-radius:0;background:none;color:var(--a-mute);
+  font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;animation:none}
+html .admin .eyebrow::before{content:none;display:none;animation:none}
+
+/* ---------- 2. sidebar: a white sheet, like the customer top bar ---------- */
+html .admin>aside{
+  position:sticky;top:10px;height:calc(100svh - 20px);margin:10px 0 10px 10px;padding:12px 10px 10px;
+  background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none;overflow:hidden}
+html:root .admin.admin-dark>aside{background:var(--a-card);border-color:var(--a-line)}
+html .admin .adminBrand{padding:6px 8px 14px}
+html .admin .adminBrand .miniLogo{width:38px;height:38px;border-radius:var(--r-m);background:#fff;border:1px solid var(--a-line);
+  box-shadow:none;animation:none;overflow:hidden}
+html .admin .adminBrand .miniLogo::before,html .admin .adminBrand .miniLogo::after{content:none;display:none;animation:none}
+html .admin .adminBrand b{font-family:var(--yn-display);font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--a-text)}
+html .admin .adminBrand small{font-size:12px;color:var(--a-mute)}
+html .admin .adminNavLabel{padding:0 12px 6px;font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--a-mute);opacity:1}
+html .admin .adminNav a{padding:9px 12px;border-radius:var(--r-m);font-size:14px;font-weight:600;color:var(--a-mute);
+  background:transparent;box-shadow:none;transition:background-color .12s,color .12s}
+html .admin .adminNav a svg{opacity:1;animation:none}
+html .admin .adminNav a:hover{background:var(--a-soft);color:var(--a-text)}
+html .admin .adminNav a.active,html:root .admin.admin-dark .adminNav a.active{background:var(--a-tint);color:var(--a-accent);font-weight:700}
+html .admin .adminNav a.active::before{content:none;display:none}
+html .admin .adminNav a.active::after{content:none;display:none;animation:none}
+html .admin .adminAsideBottom{border-top:1px solid var(--a-line)}
+html .admin aside .adminAsideBottom .adminBtn{border-radius:var(--r-m);font-weight:600;color:var(--a-mute);background:transparent;border:1px solid transparent;box-shadow:none}
+html .admin aside .adminAsideBottom .adminBtn:hover{background:var(--a-soft);color:var(--a-text)}
+html .admin aside .adminAsideBottom .adminLogout:hover{background:var(--a-bad-bg);color:var(--a-bad)}
+html:root .admin.admin-dark aside .adminAsideBottom .adminLogout:hover{background:var(--a-bad-bg);color:var(--a-bad)}
+html .admin .adminNav{scrollbar-color:var(--a-line2) transparent}
+
+/* ---------- 3. top bar ---------- */
+html .admin>main{padding:0 clamp(14px,2.6vw,28px) 48px}
+html .admin .adminTop{
+  top:10px;margin:10px 0 16px;padding:8px 10px 8px 18px;min-height:58px;
+  background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+html .admin .adminTop h1{margin:0;font-size:clamp(20px,2.3vw,25px);font-weight:700;letter-spacing:-.03em;line-height:1.15;color:var(--a-text)}
+html .admin .adminTop .eyebrow{display:none}
+html .admin .adminTopActions .secondary,html .admin .adminTopActions .button{height:40px;border-radius:var(--r-m)}
+html .admin .adminMenuBtn{border-radius:var(--r-m)}
+
+/* ---------- 4. sheets: panels, tables, stats ---------- */
+html .admin .panel,html .admin .table,html .admin .stat,html .admin .quickGrid a,html .admin .adminToolbar,
+html:root .admin.admin-dark .panel,html:root .admin.admin-dark .table,html:root .admin.admin-dark .stat,html:root .admin.admin-dark .quickGrid a,html:root .admin.admin-dark .adminToolbar{
+  background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+html .admin .panel{padding:20px;margin-bottom:16px}
+html .admin .panel:hover,html .admin .stat:hover{box-shadow:none;transform:none}
+html .admin .panel h2,html .admin .sectionHead h2{margin:0 0 6px;font-size:20px;letter-spacing:-.02em}
+html .admin .panel h2::after,html .admin .sectionHead h2::after{content:none;display:none;animation:none}
+html .admin .adminToolbar{padding:14px 16px}
+html .admin .tr{padding:12px 16px;border-color:var(--a-line);transition:none}
+html .admin .tr:hover{background:var(--a-card2);box-shadow:none;transform:none}
+html .admin .tr::before{content:none;display:none}
+html .admin .tr>img,html .admin .tr .thumb{width:52px;height:52px;border-radius:var(--r-s);border:1px solid var(--a-line);object-fit:cover;background:var(--a-soft);transform:none}
+html .admin .tr small{text-transform:capitalize}
+html .admin .stats{gap:14px}
+html .admin .stat{padding:18px;gap:14px}
+html .admin .statIcon{width:44px;height:44px;border-radius:var(--r-m);background:var(--a-tint);color:var(--a-accent);box-shadow:none;animation:none}
+html .admin .statIcon::before,html .admin .statIcon::after{content:none;display:none;animation:none}
+html .admin .stat small{font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--a-mute)}
+html .admin .stat strong{margin-top:3px;font-family:var(--yn-display);font-size:28px;font-weight:700;letter-spacing:-.03em;color:var(--a-text);
+  background:none;-webkit-text-fill-color:currentColor;font-variant-numeric:tabular-nums}
+/* welcome strip = the customer "hero": flat deep blue, white type */
+html .admin .welcome,html:root .admin.admin-dark .welcome{margin-top:16px;padding:26px 28px;border:0;border-radius:var(--r-l);box-shadow:none;
+  background:#22338a;color:#fff;animation:none}
+html:root .admin.admin-dark .welcome{background:#27388f}
+html .admin .welcome::before,html .admin .welcome::after{content:none;display:none;animation:none}
+html .admin .welcome h2,html:root .admin.admin-dark .welcome h2{color:#fff;font-size:clamp(22px,3vw,28px);-webkit-text-fill-color:#fff}
+html .admin .welcome p,html:root .admin.admin-dark .welcome p{color:rgba(255,255,255,.82)}
+html .admin .welcome .eyebrow{color:rgba(255,255,255,.7)}
+html .admin .welcome .button{background:#fff!important;color:#22338a!important;box-shadow:none!important;border:0}
+html .admin .welcome .button:hover{background:#e6eaf8!important}
+html .admin .quickGrid{gap:14px;margin-top:16px}
+html .admin .quickGrid a{padding:16px;transition:border-color .12s;animation:none}
+html .admin .quickGrid a:hover{transform:none;border-color:var(--a-text);box-shadow:none}
+html .admin .quickGrid svg{width:36px;height:36px;padding:8px;margin-bottom:8px;border-radius:var(--r-s);background:var(--a-tint);color:var(--a-accent)}
+html .admin .quickGrid b{font-family:var(--yn-display);font-size:16px;letter-spacing:-.01em}
+
+/* ---------- 5. buttons ----------
+   Primary = solid ink blue. It is applied to plain <button> (no class), .button and the few "primary" classes only.
+   Every other classed control (chat threads, chips, tabs, switches, row buttons …) keeps the styling of its own
+   rule, which the sections below restyle one by one — nothing is flattened by a catch-all. */
+html .admin :is(button,.button):not(:disabled):hover{transform:none;box-shadow:none}
+html .admin :is(button,.button):active{transform:none}
+/* a plain <button> (no class) is primary. Written at the lowest possible weight (:where) so that it beats the old
+   base `button{…gradient}` by source order only, and ANY component class rule — toggles, tabs, chips — still wins. */
+:where(html .admin main) button:where(:not([class]),[class=""]){
+  background:var(--a-btn);background-image:none;color:var(--a-on);border:1px solid var(--a-btn);border-radius:var(--r-m);
+  font-weight:600;letter-spacing:0;box-shadow:none;filter:none;transition:background-color .12s,border-color .12s,color .12s}
+:where(html .admin main) button:where(:not([class]),[class=""]):hover:not(:disabled){background:var(--a-btn-h);border-color:var(--a-btn-h)}
+/* .button (links) and the explicit primary classes */
+html .admin main :is(.button:not(.secondary):not(.icon),button.primary,button.wide,button.full,button.pri){
+  background:var(--a-btn);background-image:none;color:var(--a-on);border:1px solid var(--a-btn);border-radius:var(--r-m);
+  font-weight:600;letter-spacing:0;box-shadow:none;filter:none;transition:background-color .12s,border-color .12s,color .12s}
+html .admin main :is(.button:not(.secondary):not(.icon),button.primary,button.wide,button.full,button.pri):hover:not(:disabled){
+  background:var(--a-btn-h);background-image:none;border-color:var(--a-btn-h);box-shadow:none;filter:none}
+html .admin main :is(.button,button)::after{content:none;display:none;animation:none}
+html .admin main :is(button,.button):disabled{opacity:.5;cursor:not-allowed}
+html .admin main .secondary,html:root .admin.admin-dark main .secondary{background:var(--a-card);background-image:none;color:var(--a-text);border:1px solid var(--a-line);border-radius:var(--r-m);box-shadow:none;font-weight:600}
+html .admin main .secondary:hover:not(:disabled){background:var(--a-card);border-color:var(--a-text);box-shadow:none}
+html .admin main .icon,html:root .admin.admin-dark main .icon{background:var(--a-card);background-image:none;color:var(--a-text);border:1px solid var(--a-line);border-radius:var(--r-m);box-shadow:none}
+html .admin main .icon:hover:not(:disabled){background:var(--a-card);border-color:var(--a-text)}
+html .admin main .icon.danger,html .admin main .danger.icon,html:root .admin.admin-dark main .icon.danger{color:var(--a-sale)}
+html .admin main .icon.danger:hover,html .admin main .secondary.danger:hover{background:var(--a-bad-bg);border-color:var(--a-sale)}
+html .admin main .secondary.danger,html .admin main .danger:not(.icon):not(.button){color:var(--a-sale)}
+html .admin main .textBtn{background:none;color:var(--a-accent);box-shadow:none;border:0;font-weight:600}
+html .admin main .editProductButton{border-radius:var(--r-m);background:var(--a-tint);color:var(--a-tint-ink);border:1px solid var(--a-tint-line);box-shadow:none;font-weight:600}
+html .admin main .editProductButton:hover{background:var(--a-tint);border-color:var(--a-accent);box-shadow:none}
+html .admin main :is(.button,button,a) svg{animation:none}
+/* the three reward toggles in the support chat: off = outline, on = solid */
+html .admin main .adminChatActions button{background:var(--a-card);color:var(--a-text);border:1px solid var(--a-line);border-radius:var(--r-m);box-shadow:none;font-weight:600}
+html .admin main .adminChatActions button.on{background:var(--a-btn);color:var(--a-on);border-color:var(--a-btn)}
+
+/* ---------- 6. form controls ---------- */
+html .admin main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+html .admin main select,html .admin main textarea,
+html:root .admin.admin-dark main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+html:root .admin.admin-dark main select,html:root .admin.admin-dark main textarea{
+  background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-m);color:var(--a-text);box-shadow:none;transform:none;
+  transition:border-color .12s,box-shadow .12s}
+html .admin main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):focus,
+html .admin main select:focus,html .admin main textarea:focus{
+  background:var(--a-card);border-color:var(--a-accent);box-shadow:0 0 0 3px var(--a-ring);transform:none}
+html .admin main input::placeholder,html .admin main textarea::placeholder{color:var(--a-mute);opacity:.75}
+html .admin main input[type=checkbox],html .admin main input[type=radio],html .admin main input[type=range]{accent-color:var(--a-btn)}
+html .admin main label{color:var(--a-text)}
+html .admin .drop,html:root .admin.admin-dark .drop{border:1.5px dashed var(--a-line2);border-radius:var(--r-m);background:var(--a-card2);color:var(--a-mute);box-shadow:none}
+html .admin .drop:hover{border-color:var(--a-accent);background:var(--a-tint)}
+html .admin .navToggleRow{border:1px solid var(--a-line);border-radius:var(--r-m);background:var(--a-card);font-weight:600}
+html .admin .navToggleRow input{accent-color:var(--a-btn)}
+html .admin .catSwitch{background:var(--a-line2);box-shadow:none}
+html .admin .catSwitch i{box-shadow:none}
+html .admin .catSwitch.on{background:var(--a-btn)}
+
+/* ---------- 7. pills + notices ---------- */
+html .admin .status{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:var(--r-s);font-size:12px;font-weight:600;letter-spacing:0;
+  background:var(--a-neutral-bg);color:var(--a-neutral);border:0;box-shadow:none;animation:none}
+html .admin .status::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;animation:none}
+html .admin .status.approved,html .admin .status.paid,html .admin .status.completed,html .admin .status.delivered,html .admin .status.published,
+html:root .admin.admin-dark .status.approved,html:root .admin.admin-dark .status.paid,html:root .admin.admin-dark .status.completed,html:root .admin.admin-dark .status.delivered,html:root .admin.admin-dark .status.published{background:var(--a-ok-bg);color:var(--a-ok)}
+html .admin .status.pending,html .admin .status.processing,html .admin .status.shipped,
+html:root .admin.admin-dark .status.pending,html:root .admin.admin-dark .status.processing,html:root .admin.admin-dark .status.shipped{background:var(--a-warn-bg);color:var(--a-warn)}
+html .admin .status.rejected,html .admin .status.cancelled,html .admin .status.unpublished,
+html:root .admin.admin-dark .status.rejected,html:root .admin.admin-dark .status.cancelled,html:root .admin.admin-dark .status.unpublished{background:var(--a-bad-bg);color:var(--a-bad)}
+html .admin .status[style]{background:color-mix(in srgb,var(--status-color,#2e46b4) 12%,var(--a-card));color:var(--status-color,#2e46b4);border:1px solid color-mix(in srgb,var(--status-color,#2e46b4) 22%,var(--a-card))}
+html .admin .notice{padding:11px 14px;border-radius:var(--r-m);background:var(--a-tint);color:var(--a-tint-ink);border:1px solid var(--a-tint-line);font-weight:600;animation:none}
+html:root .admin.admin-dark .notice{color:var(--a-tint-ink)}
+html .admin .rolePill,html:root .admin.admin-dark .rolePill{padding:4px 9px;border-radius:var(--r-s);background:var(--a-tint);color:var(--a-tint-ink);font-weight:600;font-size:12px}
+html .admin .empty{animation:none;color:var(--a-mute)}
+html .admin .empty svg{animation:none}
+html .admin .avatar,html:root .admin.admin-dark .avatar{background:var(--a-tint);color:var(--a-tint-ink);border-radius:var(--r-m);font-family:var(--yn-display);font-weight:700}
+
+/* ---------- 8. illustrated page banner (the pictures keep moving; the frame is flat) ---------- */
+html .admin .asBanner{border:1px solid var(--a-line);border-radius:var(--r-l);background:var(--a-card);box-shadow:none;animation:none}
+html .admin .asBanner::before,html .admin .asBanner::after{content:none;display:none;animation:none}
+html .admin .asText b{font-family:var(--yn-display);font-weight:700;letter-spacing:-.025em;color:var(--a-text);animation:none;-webkit-text-fill-color:currentColor;background:none}
+html .admin .asText small{color:var(--a-mute);animation:none}
+html .admin .asText .eyebrow{color:var(--a-mute);animation:none}
+html .admin .asHide{background:var(--a-soft);color:var(--a-mute);border:0;border-radius:var(--r-s);box-shadow:none}
+html .admin .asHide:hover{background:var(--a-line);color:var(--a-text)}
+html .admin .asChip{border:1px dashed var(--a-line2);border-radius:var(--r-s);background:transparent;color:var(--a-mute);box-shadow:none}
+html .admin .adminContent,html .admin .adminContent>*{animation:none}
+
+/* ---------- 9. orders ---------- */
+html .admin .orderAdminHead h2{font-size:28px}
+html .admin .orderAdminStats,html:root .admin.admin-dark .orderAdminStats{border:1px solid var(--a-line);background:var(--a-card);border-radius:var(--r-l);box-shadow:none}
+html .admin .orderAdminStats div+div{border-color:var(--a-line)}
+html .admin .orderAdminStats b{font-family:var(--yn-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+html .admin .adminOrderCard,html:root .admin.admin-dark .adminOrderCard{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none}
+html .admin .adminOrderTop,html:root .admin.admin-dark .adminOrderTop,html .admin .adminOrderItems>div,html:root .admin.admin-dark .adminOrderItems>div{border-color:var(--a-line)}
+html .admin .orderIcon,html:root .admin.admin-dark .orderIcon{border-radius:var(--r-m);background:var(--a-tint);color:var(--a-accent)}
+html .admin .adminOrderStatus>b{font-family:var(--yn-display);font-size:20px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+html .admin .adminOrderCustomer,html:root .admin.admin-dark .adminOrderCustomer,html .admin .adminOrderBottom,html:root .admin.admin-dark .adminOrderBottom{background:var(--a-card2);border-color:var(--a-line)}
+html .admin .adminOrderCustomer>span,html:root .admin.admin-dark .adminOrderCustomer>span{border-radius:var(--r-s);background:var(--a-tint);color:var(--a-tint-ink);font-weight:600;font-size:12px}
+html .admin .orderThumb{border-radius:var(--r-s);border:1px solid var(--a-line);background:var(--a-soft);color:var(--a-mute)}
+html .admin .adminOrderItems .orderOpt{border-radius:var(--r-s);font-weight:600}
+html .admin .receiptLink,html:root .admin.admin-dark .receiptLink{color:var(--a-accent)}
+html .admin .orderLookup,html .admin .scanResult{border-radius:var(--r-l)}
+html .admin .orderLookupInput{border-radius:var(--r-m)}
+html .admin .orderLookupInput input{border:0;box-shadow:none;background:transparent}
+html .admin .orderAdminHead p{margin:6px 0 14px;color:var(--a-mute)}
+
+/* ---------- 10. customers, wallet, debt ---------- */
+html .admin .customerAdminHeader>b,html:root .admin.admin-dark .customerAdminHeader>b{border-radius:var(--r-m);background:var(--a-tint);color:var(--a-tint-ink);font-weight:600}
+html .admin .customerAdminCard{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none;transition:none}
+html .admin .customerAdminCard:hover{transform:none;box-shadow:none;border-color:var(--a-line2)}
+html .admin .customerMetrics,html:root .admin.admin-dark .customerMetrics{border:1px solid var(--a-line);border-radius:var(--r-m);background:var(--a-card2)}
+html .admin .customerMetrics div+div,html:root .admin.admin-dark .customerMetrics div+div{border-color:var(--a-line)}
+html .admin .walletAdjust{border-radius:var(--r-m);background:var(--a-soft)}
+html:root .admin.admin-dark .walletDirectPay{background:var(--a-card2);border-color:var(--a-line)}
+html .admin .debtAdminHead h2{font-size:26px}
+html .admin .debtAdminStats>div,html .admin .debtAdminList,html .admin .debtAdminEditor{border-color:var(--a-line);box-shadow:none}
+html .admin .debtAdminStats>div{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l)}
+html .admin .debtAdminStats b{font-family:var(--yn-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+html .admin .debtAdminRow{background:transparent;border:1px solid transparent;border-radius:var(--r-m);color:var(--a-text);box-shadow:none}
+html .admin .debtAdminRow:hover{background:var(--a-card2)}
+html .admin .debtAdminRow.active{background:var(--a-tint);border-color:var(--a-tint-line)}
+html .admin .debtAdminAvatar{border-radius:var(--r-m);background:var(--a-tint);color:var(--a-tint-ink)}
+html .admin .debtPaymentBox{border:1px solid var(--a-line);border-radius:var(--r-m);background:var(--a-card2)}
+html .admin .debtMethodTabs .secondary.active{background:var(--a-tint);border-color:var(--a-tint-line);color:var(--a-tint-ink)}
+html .admin .debtEnabled{color:var(--a-ok)}
+
+/* ---------- 11. categories ---------- */
+html .admin .catAdd,html .admin .catCard,html .admin .catStats>div,html:root .admin.admin-dark .catAdd,html:root .admin.admin-dark .catCard,html:root .admin.admin-dark .catStats>div{
+  background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none}
+html .admin .catStats b{font-family:var(--yn-display);color:var(--a-text);letter-spacing:-.02em}
+html .admin .catStats span{font-size:12.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--a-mute)}
+html .admin .catAdd>svg{color:var(--a-mute)}
+html .admin .catIcon{background:var(--a-tint);color:var(--a-accent);border-radius:var(--r-m)}
+html .admin .catRow{background:var(--a-card2);border:1px solid var(--a-line);border-radius:var(--r-m)}
+html .admin .catStatus{border-radius:var(--r-s);font-weight:600;background:var(--a-neutral-bg);color:var(--a-neutral)}
+html .admin .catStatus.on{background:var(--a-ok-bg);color:var(--a-ok)}
+html .admin main .catDelete{background:var(--a-card);background-image:none;color:var(--a-sale);border:1px solid var(--a-line);border-radius:var(--r-m);box-shadow:none}
+html .admin main .catDelete:hover{background:var(--a-bad-bg);border-color:var(--a-sale)}
+html .admin main .catChip{background:var(--a-card);background-image:none;color:var(--a-text);border:1px solid var(--a-line);border-radius:var(--r-m);box-shadow:none;font-weight:600}
+html .admin main .catChip:hover{border-color:var(--a-text)}
+html .admin main .catChip.on{background:var(--a-tint);color:var(--a-tint-ink);border-color:var(--a-tint-line)}
+html .admin .catThemeOnlyTag{border-radius:var(--r-s);background:var(--a-bad-bg);color:var(--a-bad);font-weight:600}
+
+/* ---------- 12. themes gallery ---------- */
+html .admin .thStats>div,html .admin .thBar,html .admin .thCard,html:root .admin.admin-dark .thCard{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none}
+html .admin .thStats b{font-family:var(--yn-display);color:var(--a-text);letter-spacing:-.02em}
+html .admin .thStats span{font-size:12.5px;font-weight:500;letter-spacing:0;text-transform:none}
+html .admin .thSearch{border-radius:var(--r-m);background:var(--a-card);border:1px solid var(--a-line)}
+html .admin .thSeg{background:var(--a-soft);border-radius:var(--r-m)}
+html .admin .thSeg button{border-radius:var(--r-s)!important;font-weight:600}
+html .admin .thSeg button.on{background:var(--a-card)!important;color:var(--a-text)!important;box-shadow:none!important;outline:1px solid var(--a-line)}
+html .admin .thCard{transition:none}
+html .admin .thCard:hover{transform:none;border-color:var(--a-line2)}
+html .admin .thPrevWrap{background:var(--a-soft)}
+html .admin .thSkel{animation:none;background:var(--a-soft)}
+html .admin .thBadge{border-radius:var(--r-s);backdrop-filter:none;-webkit-backdrop-filter:none;font-weight:600}
+html .admin .thBadge.on{background:var(--a-ok)}
+html:root .admin.admin-dark .thBadge.on{background:#1f7a4d;color:#fff}
+html .admin main .thDarkBtn{border-radius:var(--r-s)}
+html .admin .thName b{font-family:var(--yn-display);letter-spacing:-.015em}
+html .admin .thSwatches i{border-radius:var(--r-s)}
+html .admin .thCode{border-radius:var(--r-m);background:var(--a-card2);border-color:var(--a-line2)}
+html .admin .thTags span,html:root .admin.admin-dark .thTags span{border-radius:var(--r-s);background:var(--a-tint);color:var(--a-tint-ink);font-weight:600}
+html .admin .thEmpty{border-radius:var(--r-l);border-color:var(--a-line2)}
+html .admin .thEmpty svg{color:var(--a-mute)}
+
+/* ---------- 13. support chat ---------- */
+html .admin .adminChatThreads,html .admin .adminChatPanel{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none}
+html .admin main .adminChatThread{background:transparent;background-image:none;color:var(--a-text);border:1px solid transparent;border-radius:var(--r-m);box-shadow:none;filter:none;transition:background-color .12s}
+html .admin main .adminChatThread:hover{background:var(--a-card2)}
+html .admin main .adminChatThread.active{background:var(--a-tint);border-color:var(--a-tint-line);color:var(--a-text)}
+html .admin .chatHeader,html:root .admin.admin-dark .chatHeader{background:var(--a-card);background-image:none;border-color:var(--a-line)}
+html .admin .chatComposer{background:var(--a-card);border-color:var(--a-line)}
+html .admin .chatAttach{color:var(--a-accent);border-radius:var(--r-m)}
+html .admin .supportThreadIcon{border-radius:var(--r-m);background:var(--a-tint);color:var(--a-accent)}
+html .admin .chatBubble.theirs{background:var(--a-soft);color:var(--a-text);border-radius:var(--r-m)}
+html .admin .chatBubble.mine{background:var(--a-btn);color:var(--a-on);border-radius:var(--r-m)}
+html .admin .chatBubble{box-shadow:none;animation:none}
+html .admin .chatMessages{background:var(--a-card2)}
+html .admin main .adminNotification{box-shadow:none;background-image:none;border-radius:var(--r-m)}
+
+/* ---------- 14. live visitors ---------- */
+html .admin .lvHero{background:var(--a-card)}
+html .admin .lvNow strong,html .admin .lvHero strong{font-family:var(--yn-display);color:var(--a-text);background:none;-webkit-text-fill-color:currentColor}
+html .admin .lvDot,html .admin .lvLive i,html .admin .lvDot::after,html .admin .lvLive i::after{animation:none}
+html .admin .lvBars i,html .admin .lvBar i{background:var(--a-accent);background-image:none;animation:none}
+html .admin .lvLive{color:var(--a-ok);background:var(--a-ok-bg);border-radius:var(--r-s);animation:none}
+
+/* ---------- 15. floating bits: toast, save bars, sheets ---------- */
+html .admin .adminLiveToast{background:var(--a-card);color:var(--a-text);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:var(--a-pop);
+  -webkit-backdrop-filter:none;backdrop-filter:none;animation:adFade .18s ease backwards}
+html .admin .adminLiveToastIcon{background:var(--a-tint);color:var(--a-accent);border-radius:var(--r-m);animation:none}
+html .admin .adminLiveToastIcon svg{animation:none}
+html .admin .adminLiveToast::after{background:var(--a-accent);background-image:none}
+html .admin .pmxSave{background:var(--a-card);border-color:var(--a-line);box-shadow:var(--a-pop);border-radius:var(--r-l)}
+html .admin .pmxSave.dirty{border-color:var(--a-accent)}
+html .admin .pmxSheetBack{background:rgba(22,26,38,.45);-webkit-backdrop-filter:none;backdrop-filter:none;animation:adFade .15s ease backwards}
+html .admin .pmxSheet{background:var(--a-card);color:var(--a-text);border-radius:var(--r-l);animation:none}
+html .admin .adminScrim{background:rgba(22,26,38,.45);-webkit-backdrop-filter:none;backdrop-filter:none}
+@keyframes adFade{from{opacity:0}to{opacity:1}}
+@keyframes amFade{from{opacity:0}to{opacity:1}}
+
+/* ---------- 16. phone ---------- */
+@media(max-width:999px){
+  html .admin>aside{position:fixed;inset:0 auto 0 0;top:0;height:100svh;margin:0;border-radius:0 var(--r-l) var(--r-l) 0;border-width:0 1px 0 0;width:min(300px,86vw)}
+  html .admin.navOpen>aside{box-shadow:var(--a-pop)}
+  html .admin>main{padding:0 14px 40px}
+  html .admin .adminTop{top:8px;margin:8px 0 14px;padding:8px 8px 8px 10px;gap:8px}
+  html .admin .adminTop h1{font-size:20px}
+}
+@media(max-width:999px){
+  /* style.css (old bottom-bar rule) pins EVERY <aside> inside .admin; only the sidebar should be a drawer */
+  html .admin main aside{position:static;inset:auto;z-index:auto;height:auto;padding:8px;flex-direction:column;overflow-x:visible;transform:none}
+}
+@media(max-width:700px){
+  html .admin .panel{padding:16px;border-radius:var(--r-l)}
+  html .admin .welcome{padding:20px}
+}
+
+/* ---------- 17. calm motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  html .admin *,html .admin *::before,html .admin *::after{transition-duration:.01ms!important}
+}
+
+/* ---------- 18. dark: older dark-only rules (style.css / admin.css) that out-rank the rules above ---------- */
+html:root .admin.admin-dark .adminClose{background:var(--a-card2);color:var(--a-text);border-color:var(--a-line);border-radius:var(--r-m)}
+html:root .admin.admin-dark .adminTopActions .secondary{color:var(--a-text)}
+html:root .admin.admin-dark .chatAttach{color:var(--a-accent);background:var(--a-card);border-color:var(--a-line)}
+html:root .admin.admin-dark .chatMessages{background:var(--a-card2);background-image:none}
+html:root .admin.admin-dark .chatBubble.mine{background:var(--a-btn);background-image:none;box-shadow:none;color:var(--a-on)}
+html:root .admin.admin-dark .chatBubble.theirs{background:var(--a-soft);color:var(--a-text)}
+html:root .admin.admin-dark .catSwitch.on{background:var(--a-btn);background-image:none}
+html:root .admin.admin-dark .ynScope{background:var(--a-tint);border-color:var(--a-accent)}
+html:root .admin.admin-dark .adminLiveToast{border-color:var(--a-line);background:var(--a-card)}
+html:root .admin.admin-dark .adminLiveToastIcon{box-shadow:none;background:var(--a-tint);color:var(--a-accent)}
+html .admin .adminLiveToastIcon{box-shadow:none}
+html .admin .lvEmpty{-webkit-backdrop-filter:none;backdrop-filter:none}
+html .admin .debtMethodTabs .secondary.active{animation:none}
+html:root .admin.admin-dark .adminChatActions button{background:var(--a-card);color:var(--a-text);border-color:var(--a-line)}
+html:root .admin.admin-dark .adminChatActions button.on{background:var(--a-btn);color:var(--a-on);border-color:var(--a-btn)}
+
+/* ---------- 19. small tidy-ups ---------- */
+html .admin .panel>.sectionHead:first-child,html .admin .debtAdminList>.sectionHead,html .admin .debtAdminEditor>.sectionHead{margin-top:0}
+html .admin .thSeg{padding:3px;gap:2px}
+html .admin .thSeg button{border:0;box-shadow:none;background-image:none;color:var(--a-mute);min-height:34px}
+html .admin .thSeg button.on{color:var(--a-text)}
+html .admin main .orderLookupInput input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+html .admin main .orderLookupInput input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):focus{border:0;box-shadow:none;background:transparent}
+html .admin .orderLookupInput:focus-within{border-color:var(--a-accent);box-shadow:0 0 0 3px var(--a-ring)}
+html .admin main .two{row-gap:14px}
+html .admin main label{gap:6px}
+html:root .admin.admin-dark .catSwitch{background:var(--a-line2)}
+html:root .admin.admin-dark .catSwitch.on{background:var(--a-btn)}
+
+/* ---------- 20. admin pages with their own sheets: book covers, service shop, wedding editor, live map ---------- */
+/* book covers (bookCover.css, "bca*") */
+html .admin .bcaTabs button,html .admin .bcaPresets button{background:var(--a-card);color:var(--a-text);border:1px solid var(--a-line);border-radius:var(--r-m);box-shadow:none;font-weight:600}
+html .admin .bcaPresets button{color:var(--a-accent);border-style:dashed;border-color:var(--a-line2)}
+html .admin .bcaTabs button.on,html:root .admin.admin-dark .bcaTabs button.on{background:var(--a-btn);color:var(--a-on);border-color:var(--a-btn)}
+html .admin .bcaTabs em{background:var(--a-sale);border-radius:var(--r-s);font-weight:700}
+html .admin .bcaDesign,html .admin .bcaOrder,html:root .admin.admin-dark .bcaDesign,html:root .admin.admin-dark .bcaOrder{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none;color:var(--a-text)}
+html .admin .bcaField,html:root .admin.admin-dark .bcaField{background:var(--a-card);border:1px solid var(--a-line);border-radius:var(--r-l);color:var(--a-text)}
+html .admin .bcaField.sel,html:root .admin.admin-dark .bcaField.sel{border-color:var(--a-accent);box-shadow:0 0 0 3px var(--a-ring)}
+html .admin .bcaDrop{border:1.5px dashed var(--a-line2);border-radius:var(--r-m);background:var(--a-card2)}
+html .admin .bcaDrop svg,html .admin .bcaGroupName,html .admin .bcaWho a{color:var(--a-accent)}
+html .admin .bcaBadge,html:root .admin.admin-dark .bcaBadge{border-radius:var(--r-s);font-weight:600;background:var(--a-neutral-bg);color:var(--a-neutral)}
+html .admin .bcaBadge.paid,html .admin .bcaBadge.submitted{background:var(--a-warn-bg);color:var(--a-warn)}
+html .admin .bcaBadge.printed,html .admin .bcaBadge.delivered{background:var(--a-ok-bg);color:var(--a-ok)}
+html .admin .bcaBadge.cancelled{background:var(--a-bad-bg);color:var(--a-bad)}
+html .admin .bcaBadge.multi,html:root .admin.admin-dark .bcaBadge.multi{background:var(--a-tint);color:var(--a-tint-ink)}
+html .admin .bcaViewer{background:rgba(22,26,38,.94)}
+html .admin .bcaBtnLink{color:#22338a;border-radius:var(--r-m)}
+
+/* service shop admin (serviceShop.css, "sa*") */
+html .admin .saTabs button,html .admin .saBtns button{border:1px solid var(--a-line);background:var(--a-card);color:var(--a-text);box-shadow:none;font-weight:600}
+html .admin .saTabs button{border-radius:var(--r-m)}
+html .admin .saBtns button{border-radius:var(--r-m)}
+html .admin .saTabs button.on,html .admin .saBtns button.pri{background:var(--a-btn);border-color:var(--a-btn);color:var(--a-on)}
+html .admin .saBtns button.danger{color:var(--a-sale);border-color:var(--a-line)}
+html .admin .saCard,html .admin .saItem{border:1px solid var(--a-line);border-radius:var(--r-l);box-shadow:none}
+html .admin .saCard{background:var(--a-card)}
+html .admin .saItem{background:var(--a-card2);border-radius:var(--r-m)}
+html .admin .saNote{background:var(--a-warn-bg);color:var(--a-warn);border-radius:var(--r-m)}
+html .admin .saErr{background:var(--a-bad-bg);color:var(--a-bad);border-radius:var(--r-m)}
+html .admin .saOk{background:var(--a-ok-bg);color:var(--a-ok);border-radius:var(--r-m)}
+html .admin .saPreview{border:1.5px dashed var(--a-accent);border-radius:var(--r-l)}
+html .admin .saList li button.saOrderBtn{border-radius:var(--r-m);background:var(--a-card);border-color:var(--a-line);box-shadow:none}
+
+/* wedding editor (admin-wedding-braya.css, "wb*") — the rose/gold heart badge is the wedding's own colour and stays */
+html .admin .wbSeg{border-radius:var(--r-m);background:var(--a-card)}
+html .admin .wbSeg button.on{background:var(--a-btn);color:var(--a-on)}
+html .admin .wbTitle:focus{border-color:var(--a-accent)}
+html .admin .wbPreview iframe{border-radius:var(--r-l);box-shadow:none}
+html .admin .wbToast{background:var(--a-text);color:var(--a-bg);border-radius:var(--r-m);box-shadow:var(--a-pop)}
+
+/* live visitors map pins: flat ink-blue marker instead of the purple/magenta glow */
+html .admin .lvPage .lvPin b{background:var(--a-btn);background-image:none;box-shadow:0 2px 8px rgba(22,26,38,.28)}
+html .admin .lvPage .lvPin .lvPulse{background:rgba(46,70,180,.35)}
+html:root .admin.admin-dark .bcaBadge.paid,html:root .admin.admin-dark .bcaBadge.submitted{background:var(--a-warn-bg);color:var(--a-warn)}
+html:root .admin.admin-dark .bcaBadge.printed,html:root .admin.admin-dark .bcaBadge.delivered{background:var(--a-ok-bg);color:var(--a-ok)}
+html:root .admin.admin-dark .bcaBadge.cancelled{background:var(--a-bad-bg);color:var(--a-bad)}
